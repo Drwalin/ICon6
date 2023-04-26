@@ -12,7 +12,7 @@ option(ICON6_BUILD_TEST "Build tests" ON)
 add_subdirectory(enet)
 
 include_directories(./include/)
-include_directories(./enet/include/enet/)
+include_directories(./enet/include/)
 
 aux_source_directory(./include/icon6/ header_files)
 aux_source_directory(./src source_files)

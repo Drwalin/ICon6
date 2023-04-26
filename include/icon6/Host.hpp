@@ -24,44 +24,85 @@
 #include <string>
 #include <thread>
 #include <memory>
+#include <future>
+#include <atomic>
+#include <unordered_set>
+#include <mutex>
+#include <vector>
+
+#include "Peer.hpp"
+#include "Command.hpp"
 
 namespace ICon6 {
 	
-	enum MessageFlags {
-		SEQUENCED = ENET_PACKET_FLAG_RELIABLE,
-		UNSEQUENCED = ENET_PACKET_FLAG_RELIABLE | ENET_PACKET_FLAG_UNSEQUENCED,
-		UNRELIABLE = 0
-	};
-	
 	class Peer;
 	
-	class Host {
+	class Host final : public std::enable_shared_from_this<Host> {
 	public:
 		
-		Host();
+		// create host on 127.0.0.1:port
+		Host(uint16_t port, uint32_t maximumHostsNumber);
+		
+		// create client host on any port
+		Host(uint32_t maximumHostsNumber);
 		~Host();
 		
-		void RunAsync();
+		void Destroy();
 		
-		void OnConnect(void(*callback)(Peer*, uint32_t data));
-		void OnReceive(void(*callback)(Peer*, void* data, uint32_t size,
-					MessageFlags flags));
-		void OnDisconnect(void(*callback)(Peer*, uint32_t data));
+		void RunAsync();
+		void RunSync();
+		
+		void SetConnect(void(*callback)(Peer*));
+		void SetReceive(void(*callback)(Peer*, void* data, uint32_t size,
+					uint32_t flags));
+		void SetDisconnect(void(*callback)(Peer*, uint32_t disconnectData));
+		
+		void Stop();
+		void WaitStop();
 		
 	public:
-		// thread secure
+		// thread safe function to connect to a remote host
+		std::future<std::shared_ptr<Peer>> Connect(std::string address,
+				uint16_t port);
 		
-		std::shared_ptr<Peer> Connect(std::string ipAddress, uint16_t port);
+	public:
+		
+		void* userData;
+		std::shared_ptr<void> userSharedPointer;
+		
+		friend class Peer;
 		
 	private:
 		
+		void Init(ENetAddress* address, uint32_t maximumHostsNumber);
+		void DispatchEvent(ENetEvent& event);
+		void DispatchAllEventsFromQueue();
+		void DispatchPopedEventsFromQueue();
+		void EnqueueCommand(Command&& command);
+		
+	private:
+		
+		enum HostFlags : uint32_t {
+			RUNNING = 1,
+			TO_STOP = 1<<1,
+		};
+		
 		ENetHost* host;
+		std::atomic<uint32_t> flags;
 		
+		std::unordered_set<std::shared_ptr<Peer>> peers;
+	
+		std::mutex mutex;
+		std::vector<Command> enqueued_commands;
+		std::vector<Command> poped_commands;
 		
-		
+		void(*callbackOnConnect)(Peer*);
+		void(*callbackOnReceive)(Peer*, void* data, uint32_t size,
+					uint32_t flags);
+		void(*callbackOnDisconnect)(Peer*, uint32_t disconnectData);
 	};
 	
-	void Initialize();
+	uint32_t Initialize();
 	void Deinitialize();
 }
 
