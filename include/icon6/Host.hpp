@@ -33,12 +33,18 @@
 #include "Peer.hpp"
 #include "Command.hpp"
 
-namespace ICon6 {
+#define DEBUG(...) icon6::Debug(__FILE__,__LINE__,__VA_ARGS__)
+
+namespace icon6 {
+	void Debug(const char*file, int line,const char*fmt, ...);
 	
 	class Peer;
 	
 	class Host final : public std::enable_shared_from_this<Host> {
 	public:
+		
+		static std::shared_ptr<Host> Make(uint16_t port,
+				uint32_t maximumHostsNumber);
 		
 		// create host on 127.0.0.1:port
 		Host(uint16_t port, uint32_t maximumHostsNumber);
@@ -83,7 +89,7 @@ namespace ICon6 {
 	private:
 		
 		enum HostFlags : uint32_t {
-			RUNNING = 1,
+			RUNNING = 1<<0,
 			TO_STOP = 1<<1,
 		};
 		

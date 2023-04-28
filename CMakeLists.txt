@@ -10,6 +10,7 @@ option(ICON6_BUILD_EXAMPLES "Build examples" ON)
 option(ICON6_BUILD_TEST "Build tests" ON)
 
 add_subdirectory(enet)
+target_compile_definitions(enet PRIVATE -DENET_DEBUG)
 
 include_directories(./include/)
 include_directories(./enet/include/)
@@ -30,10 +31,10 @@ target_link_libraries(icon6 enet)
 # 	target_link_libraries(tests icon6)
 # endif()
 
-# if(BUILD_EXAMPLES)
-# 	add_executable(example1
-# 		examples/Example1
-# 	)
-# 	target_link_libraries(example1 icon6)
-# endif()
+if(ICON6_BUILD_EXAMPLES)
+	add_executable(example1
+		examples/example1
+	)
+	target_link_libraries(example1 icon6)
+endif()
 

@@ -28,7 +28,7 @@
 #include <memory>
 #include <atomic>
 
-namespace ICon6 {
+namespace icon6 {
 	
 	enum MessageFlags : uint32_t {
 		FLAG_SEQUENCED = 1<<0,
@@ -98,6 +98,7 @@ namespace ICon6 {
 			STATE_SENT_AND_RECEIVED_CERT,
 			STATE_AUTHENTICATED,
 			
+			STATE_BEFORE_ON_CONNECT_CALLBACK,
 			STATE_READY_TO_USE,
 		};
 		

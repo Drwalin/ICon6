@@ -27,7 +27,7 @@
 #include <memory>
 #include <vector>
 
-namespace ICon6 {
+namespace icon6 {
 	
 	class Host;
 	class Peer;
@@ -37,7 +37,7 @@ namespace ICon6 {
 		
 		std::vector<uint8_t> binaryData;
 		std::shared_ptr<void> customData;
-		
+
 		std::shared_ptr<Peer> peer;
 		std::shared_ptr<Host> host;
 		
