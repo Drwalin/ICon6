@@ -23,7 +23,6 @@
 
 #include <cinttypes>
 
-#include <string>
 #include <thread>
 #include <memory>
 #include <atomic>

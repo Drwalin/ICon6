@@ -21,11 +21,20 @@
 #include <chrono>
 #include <memory>
 #include <exception>
+#include <thread>
+#include <mutex>
+#include <vector>
+
+#ifdef ICON6_HOST_CPP_IMPLEMENTATION
+#error "ICon6 src/Host.cpp cannot be included before any indirect or direct inclusion of ICon6 include/icon6/Host.hpp"
+#endif
+
+#include "../concurrentqueue/concurrentqueue.h"
+#define ICON6_HOST_CPP_IMPLEMENTATION
 
 #include "../include/icon6/Peer.hpp"
 
 #include "../include/icon6/Host.hpp"
-
 
 
 namespace icon6 {
@@ -66,6 +75,7 @@ namespace icon6 {
 	
 	
 	void Host::Init(ENetAddress* address, uint32_t maximumHostsNumber) {
+		concurrentQueueCommands = new moodycamel::ConcurrentQueue<Command>();
 		flags = 0;
 		callbackOnConnect = nullptr;
 		callbackOnReceive = nullptr;
@@ -78,6 +88,8 @@ namespace icon6 {
 		WaitStop();
 		enet_host_destroy(host);
 		host = nullptr;
+		delete concurrentQueueCommands;
+		concurrentQueueCommands = nullptr;
 	}
 	
 	
@@ -159,10 +171,12 @@ namespace icon6 {
 	
 	void Host::DispatchAllEventsFromQueue() {
 		for(int i=0; i<10; ++i) {
-			{
-				std::lock_guard<std::mutex> lock(mutex);
-				std::swap(poped_commands, enqueued_commands);
-			}
+			size_t size = concurrentQueueCommands->size_approx();
+			poped_commands.resize(size);
+			size_t nextSize = concurrentQueueCommands
+				->try_dequeue_bulk(poped_commands.data(), size);
+			poped_commands.resize(nextSize);
+			
 			if(poped_commands.empty())
 				return;
 			for(Command& c : poped_commands) {
@@ -248,8 +262,7 @@ namespace icon6 {
 	}
 	
 	void Host::EnqueueCommand(Command&& command) {
-		std::lock_guard<std::mutex> lock(mutex);
-		enqueued_commands.emplace_back(std::move(command));
+		concurrentQueueCommands->enqueue(command);
 	}
 	
 	

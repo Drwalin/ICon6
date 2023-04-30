@@ -22,12 +22,10 @@
 #include <enet/enet.h>
 
 #include <string>
-#include <thread>
 #include <memory>
 #include <future>
 #include <atomic>
 #include <unordered_set>
-#include <mutex>
 #include <vector>
 
 #include "Peer.hpp"
@@ -98,8 +96,12 @@ namespace icon6 {
 		
 		std::unordered_set<std::shared_ptr<Peer>> peers;
 	
-		std::mutex mutex;
-		std::vector<Command> enqueued_commands;
+		union {
+			void *__concurrentQueueVoid;
+#ifdef ICON6_HOST_CPP_IMPLEMENTATION
+			moodycamel::ConcurrentQueue<Command> *concurrentQueueCommands;
+#endif
+		};
 		std::vector<Command> poped_commands;
 		
 		void(*callbackOnConnect)(Peer*);
