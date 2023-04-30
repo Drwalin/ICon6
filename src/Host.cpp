@@ -33,7 +33,6 @@ namespace icon6 {
 	void Debug(const char*file, int line,const char*fmt, ...) {
 		static std::atomic<int> globID = 1;
 		thread_local static int id = globID++;
-		return;
 		
 		va_list va;
 		va_start(va, fmt);
@@ -67,58 +66,44 @@ namespace icon6 {
 	
 	
 	void Host::Init(ENetAddress* address, uint32_t maximumHostsNumber) {
-		DEBUG("");
 		flags = 0;
 		callbackOnConnect = nullptr;
 		callbackOnReceive = nullptr;
 		callbackOnDisconnect = nullptr;
 		userData = nullptr;
 		host = enet_host_create(address, maximumHostsNumber, 2, 0, 0);
-		DEBUG("");
 	}
 	
 	void Host::Destroy() {
-		DEBUG("");
 		WaitStop();
 		enet_host_destroy(host);
 		host = nullptr;
-		DEBUG("");
 	}
 	
 	
 	void Host::RunAsync() {
-		DEBUG("");
 		flags = 0;
 		std::thread([](std::shared_ptr<Host> host){
-		DEBUG("");
 				host->RunSync();
-		DEBUG("");
 			}, shared_from_this()).detach();
-		DEBUG("");
 	}
 	
 	
 	void Host::RunSync() {
-		DEBUG("");
 		ENetEvent event;
 		flags = RUNNING;
-		DEBUG("");
 		uint32_t err;
 		while(!(flags & TO_STOP)) {
-			err = enet_host_service(host, &event, 100);
-		DEBUG("RUN SYNC LOOP %i ERR = %i", host->address.port, err);
+			err = enet_host_service(host, &event, 4);
 			DispatchAllEventsFromQueue();
 			DispatchEvent(event);
 		}
-		DEBUG("STARTING STOP ASYNC SEQUENCE OF HOST %i", host->address.port);
 		for(auto p : peers) {
 			enet_peer_disconnect(p->peer, 0);
 		}
-		for(int i=0; i<1000000 && enet_host_service(host, &event, 100) >= 0;
+		for(int i=0; i<1000000 && enet_host_service(host, &event, 10) >= 0;
 				++i) {
-		DEBUG("");
 			DispatchEvent(event);
-		DEBUG("TRYING TO STOP HOST %i", host->address.port);
 			if(event.type == ENET_EVENT_TYPE_CONNECT) {
 				enet_peer_disconnect(event.peer, 0);
 			} else if(event.type == ENET_EVENT_TYPE_NONE && i%10 == 0) {
@@ -130,14 +115,12 @@ namespace icon6 {
 				break;
 			}
 		}
-		DEBUG("STOPPED HOST %i", host->address.port);
 		flags &= ~RUNNING;
 	}
 	
 	void Host::DispatchEvent(ENetEvent& event) {
 		switch(event.type) {
 			case ENET_EVENT_TYPE_CONNECT:
-		DEBUG("%i EVENT CONNECT FROM %i\n\n\t\t\tCONNECT!!\n", host->address.port, event.peer->address.port);
 				{
 					if(event.peer->data == nullptr) {
 						std::shared_ptr<Peer> peer(new Peer(shared_from_this(),
@@ -150,7 +133,6 @@ namespace icon6 {
 				} break;
 			case ENET_EVENT_TYPE_RECEIVE:
 				if(callbackOnReceive) {
-		DEBUG("%i EVENT RECEIVE %i", host->address.port, event.peer->address.port);
 					// TODO: first check for peer state and whether handshake is
 					//       done and act accordingly
 					uint32_t flags = 0;
@@ -162,19 +144,15 @@ namespace icon6 {
 					Peer* peer = (Peer*)event.peer->data;
 					peer->CallCallbackReceive(event.packet->data,
 							event.packet->dataLength, flags);
-					DEBUG("             ---------------------        BEFORE PACKET DESTROY");
 					enet_packet_destroy(event.packet);
-					DEBUG("             ---------------------        AFTER PACKET DESTROY");
 				} break;
 			case ENET_EVENT_TYPE_DISCONNECT:
 				{
-		DEBUG("%i EVENT RECEIVE %i", host->address.port, event.peer->address.port);
 					Peer* peer = (Peer*)event.peer->data;
 					peer->CallCallbackDisconnect(event.data);
 					peers.erase(((Peer*)(event.peer->data))->shared_from_this());
 				} break;
-			default:
-				DEBUG("EVENT NONE OF HOST %i", host->address.port);
+			case ENET_EVENT_TYPE_NONE:
 				;
 		}
 	}
@@ -185,11 +163,9 @@ namespace icon6 {
 				std::lock_guard<std::mutex> lock(mutex);
 				std::swap(poped_commands, enqueued_commands);
 			}
-		DEBUG("DISPATCHING EVENTS OF HOST %i COUNT %i", host->address.port, poped_commands.size());
 			if(poped_commands.empty())
 				return;
 			for(Command& c : poped_commands) {
-		DEBUG("DISPATCHING EVENT FROM QUEUE");
 				c.CallCallback();
 				++i;
 			}
@@ -215,18 +191,15 @@ namespace icon6 {
 	}
 	
 	void Host::WaitStop() {
-		DEBUG("WAITING STOP HOST %i", host->address.port);
 		while(flags & RUNNING) {
-		DEBUG(" ... ... ... ... %i", host->address.port);
 			Stop();
-			std::this_thread::sleep_for(std::chrono::milliseconds(25));
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 	}
 	
 	
 	std::future<std::shared_ptr<Peer>> Host::Connect(std::string address,
 			uint16_t port) {
-		DEBUG("INIT CONNECT FROM HOST %i TO %i", host->address.port, port);
 		using PromiseType = std::promise<std::shared_ptr<Peer>>;
 		std::shared_ptr<PromiseType> promise = std::make_shared<PromiseType>();
 		std::thread([](std::string address, uint16_t port,
@@ -234,55 +207,40 @@ namespace icon6 {
 			std::shared_ptr<PromiseType> promise) {
 				std::shared_ptr<PromiseType> promise2
 					= std::make_shared<PromiseType>();
-				DEBUG("ASYNC FETCHING ADDRESS FOR CONNECTION FROM HOST %i TO %i", host->host->address.port, port);
 				Command command;
 				enet_address_set_host(&command.address, address.c_str());
-				DEBUG("CONNECTION ADDRESS RECEIVED WHEN CONNECTING FROM HOST %i TO %i -> %8.8X", host->host->address.port, port, command.address.host);
 				command.address.port = port;
 				command.customData = promise2;
 				command.host = host;
 				command.callback = [](Command&com){
-					DEBUG("EXECUTING CONNECT %i TO %i", com.host->host->address.port, com.address.port);
-					DEBUG("BEFORE enet_host_connect ERRNO = %i", errno);
 					ENetPeer* peer
 							= enet_host_connect(com.host->host, &com.address, 2, 0);
-					DEBUG("AFTER enet_host_connect ERRNO = %i", errno);
 					enet_host_flush(com.host->host);
-					DEBUG("AFTER enet_host_flush ERRNO = %i", errno);
 					std::shared_ptr<Peer> p(new Peer(com.host, peer));
 					peer->data = p.get();
 					com.host->peers.insert(p);
 					auto promise = std::static_pointer_cast<PromiseType>(
 							com.customData);
 					promise->set_value(p);
-					DEBUG("ADDED NOT CONNECTED YET PEER OBJECT TO PEERS LIST, AFTER CALLING enet_host_connect");
 				};
 				host->EnqueueCommand(std::move(command));
 				auto future = promise2->get_future();
-				DEBUG("WAITING FOR INTERNAL PEER FUTURE PROMISE");
 				future.wait();
-				DEBUG("INTERNAL PEER FUTURE PROMISE IS DONE");
-// 				if(!future.valid()) {
 				auto peer = future.get();
 				if(peer == nullptr) {
-					DEBUG("FUTURE PROMISE INVALID");
 					promise->set_value(nullptr);
 					return;
-				} else {
-					DEBUG("FUTURE PROMISE VALID");
 				}
 				
 				auto time_end = std::chrono::steady_clock::now()
 					+ std::chrono::seconds(2);
 				while(time_end > std::chrono::steady_clock::now()) {
 					if(peer->state == Peer::STATE_READY_TO_USE) {
-						DEBUG("FULFILLING PEER PROMISE WITH VALID OBJECT");
 						promise->set_value(peer);
 						return;
 					}
 					std::this_thread::sleep_for(std::chrono::milliseconds(4));
 				}
-				DEBUG("FULFILLING PEER PROMISE WITH nullptr");
 				promise->set_value(nullptr);
 				return;
 			}, address, port, shared_from_this(), promise).detach();
