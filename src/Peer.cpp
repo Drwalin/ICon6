@@ -28,7 +28,7 @@
 namespace icon6 {
 	Peer::Peer(std::shared_ptr<Host> host, ENetPeer* peer) : host(host),
 			peer(peer) {
-		DEBUG("");
+		DEBUG("SETTING peer->data TO this");
 		peer->data = this;
 		state = STATE_NONE;
 		callbackOnReceive = host->callbackOnReceive;
@@ -53,29 +53,38 @@ namespace icon6 {
 		com.peer = shared_from_this();
 		com.host = host;
 		com.callback = [](Command& com) {
-		DEBUG("CALLBACK SENDING %i TO %i", com.host->host->address.port, com.peer->peer->address);
+		DEBUG("CALLBACK SENDING %i TO %i", com.host->host->address.port, com.peer->peer->address.port);
 			// TODO: do encryption in place for com.binaryData
-			struct PacketWithData {
-				ENetPacket packet;
-				std::vector<uint8_t> data;
-				std::shared_ptr<Host> host;
-			};
-			PacketWithData *packet = new PacketWithData{{},
-				std::move(com.binaryData), com.host};
-			packet->packet.data = packet->data.data();
-			packet->packet.dataLength = packet->data.size();
-			packet->packet.referenceCount = 0;
-			packet->packet.flags = 0 |
+// 			struct PacketWithData {
+// 				ENetPacket packet;
+// 				std::vector<uint8_t> data;
+// 				std::shared_ptr<Host> host;
+// 			};
+// 			PacketWithData *packet = new PacketWithData{{},
+// 				std::move(com.binaryData), com.host};
+// 			packet->packet.data = packet->data.data();
+// 			packet->packet.dataLength = packet->data.size();
+// 			packet->packet.referenceCount = 0;
+// 			packet->packet.flags = 0 |
+// 				(com.flags&FLAG_SEQUENCED ? 0 : ENET_PACKET_FLAG_UNSEQUENCED) |
+// 				(com.flags&FLAG_RELIABLE ? ENET_PACKET_FLAG_RELIABLE : 0);
+// 			packet->packet.userData = packet;
+// 			packet->packet.freeCallback = [](ENetPacket*p) {
+// 		DEBUG("CALLBACK DELETE PACKET");
+// 				delete (PacketWithData*)(p->userData);
+// 			};
+// 			DEBUG("                     packet pointer = %p", &(packet->packet));
+// 			enet_peer_send(com.peer->peer,
+// 					com.flags&(FLAG_RELIABLE|FLAG_SEQUENCED) ? 0 : 1,
+// 					&(packet->packet));
+			
+			ENetPacket* packet = enet_packet_create(com.binaryData.data(),
+				com.binaryData.size(), 0 |
 				(com.flags&FLAG_SEQUENCED ? 0 : ENET_PACKET_FLAG_UNSEQUENCED) |
-				(com.flags&FLAG_RELIABLE ? ENET_PACKET_FLAG_RELIABLE : 0);
-			packet->packet.userData = packet;
-			packet->packet.freeCallback = [](ENetPacket*p) {
-		DEBUG("CALLBACK DELETE PACKET");
-				delete (PacketWithData*)(p->userData);
-			};
+				(com.flags&FLAG_RELIABLE ? ENET_PACKET_FLAG_RELIABLE : 0));
+			
 			enet_peer_send(com.peer->peer,
-					com.flags&(FLAG_RELIABLE|FLAG_SEQUENCED) ? 0 : 1,
-					&(packet->packet));
+					com.flags&(FLAG_RELIABLE|FLAG_SEQUENCED) ? 0 : 1, packet);
 		};
 		host->EnqueueCommand(std::move(com));
 	}
@@ -104,10 +113,11 @@ namespace icon6 {
 		if(host->callbackOnConnect)
 			host->callbackOnConnect(this);
 		state = STATE_READY_TO_USE;
+		DEBUG("AFTER HANDSHAKE AND CONNECTION CALLBACK        --- STATE = %i", peer->address.port, host->host->address.port, state);
 	}
 	
 	void Peer::CallCallbackReceive(void* data, uint32_t size, uint32_t flags) {
-		DEBUG("CALLBACK RECEIVE FROM PEER %i FROM HOST %i", peer->address.port, host->host->address.port);
+		DEBUG("CALLBACK RECEIVE FROM PEER %i FROM HOST %i    --- STATE = %i", peer->address.port, host->host->address.port, state);
 		switch(state) {
 		case STATE_READY_TO_USE:
 		DEBUG("CALLBACK RECEIVE STATE_READY_TO_USE FROM PEER %i FROM HOST %i", peer->address.port, host->host->address.port);
@@ -116,10 +126,10 @@ namespace icon6 {
 			} else if(host->callbackOnReceive) {
 				host->callbackOnReceive(this, data, size, flags);
 			}
+			break;
 		default:
 		DEBUG("CALLBACK RECEIVE INVALID STATE FROM PEER %i FROM HOST %i", peer->address.port, host->host->address.port);
-			throw "icon6::Peer::CallCallbackReceive other states handling is "
-				"not implemented yet";
+			throw "icon6::Peer::CallCallbackReceive other states handling is not implemented yet";
 		}
 	}
 	
