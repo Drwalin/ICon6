@@ -25,6 +25,15 @@ add_library(icon6 STATIC
 # TODO: add code to find if libsodium is installed on system
 target_link_libraries(icon6 enet sodium)
 
+add_executable(keygen src/keygen)
+target_link_libraries(keygen icon6)
+
+add_executable(certgen src/certgen)
+target_link_libraries(certgen icon6)
+
+add_executable(certreq src/certreq)
+target_link_libraries(certreq icon6)
+
 # if(ICON6_BUILD_TESTS)
 # 	add_executable(tests
 # 		tests/TestMain
