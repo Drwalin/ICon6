@@ -18,22 +18,12 @@ include_directories(./enet/include/)
 aux_source_directory(./include/icon6/ header_files)
 aux_source_directory(./src source_files)
 
-# how to integrate autotools with cmake [BEGIN]
-# https://stackoverflow.com/questions/5971921/building-a-library-using-autotools-from-cmake
-#	cmake_minimum_required(VERSION 2.8)
-#	project(test)
-#	include(ExternalProject)
-#	ExternalProject_Add(libantlr
-#		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libantlr
-#		CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/libantlr/configure --prefix=<INSTALL_DIR>
-#		BUILD_COMMAND ${MAKE})
-# how to integrate autotools with cmake [END]
-
 add_library(icon6 STATIC
 	${header_files}
 	${source_files}
 )
-target_link_libraries(icon6 enet)
+# TODO: add code to find if libsodium is installed on system
+target_link_libraries(icon6 enet sodium)
 
 # if(ICON6_BUILD_TESTS)
 # 	add_executable(tests
