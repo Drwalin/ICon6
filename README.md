@@ -44,15 +44,15 @@ key derived from password with `crypto_pwhash` and given arguments
 
 ### Structure of certificate (Cert)
 
-- [2]  - certificate length (including 
+- [2]  - certificate length (including this field and parent signature)
 - [32] - public key
 - [32] - parent public key (the same as public key for self signed)
-- [8]  - expiration date in format: number of days since 1900.01.01
-- [8]  - issue date in format: number of days since 1900.01.01
+- [4]  - expiration date in format: number of days since 1900.01.01
+- [4]  - issue date in format: number of days since 1900.01.01
 - [2]  - N - number of bytes in certificate owner name
-- [N]  - certificate owner name
 - [2]  - M - number of bytes in certificate owner url
-- [N]  - certificate owner url
+- [N]  - certificate owner name (NULL terminated)
+- [M]  - certificate owner url (NULL terminated)
 - [64] - certificate signature by certificate owner
 - [64] - certificate signature by parent
 

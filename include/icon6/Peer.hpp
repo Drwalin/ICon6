@@ -27,6 +27,8 @@
 #include <memory>
 #include <atomic>
 
+#include "Cert.hpp"
+
 namespace icon6 {
 	
 	enum MessageFlags : uint32_t {
@@ -62,8 +64,8 @@ namespace icon6 {
 		
 		inline std::shared_ptr<Host> GetHost() { return host; }
 		
-		void SetReceiveCallback(void(*callback)(Peer*, void* data,
-					uint32_t size, uint32_t flags));
+		void SetReceiveCallback(void(*callback)(Peer*,
+					std::vector<uint8_t>& data, uint32_t flags));
 		void SetDisconnect(void(*callback)(Peer*, uint32_t disconnectData));
 		
 	public:
@@ -87,29 +89,41 @@ namespace icon6 {
 		};
 		
 		enum PeerConnectionState : uint32_t {
-			STATE_NONE = 0,
+			STATE_NONE,
 			
-			STATE_ZOMBIE = 1,
-			STATE_DISCONNECTED = 2,
+			STATE_ZOMBIE,
+			STATE_DISCONNECTED,
+			STATE_FAILED_TO_AUTHENTICATE,
+			STATE_FAILED_TO_VERIFY_MESSAGE,
 			
-			STATE_RECEIVED_CERT = 3,
-			STATE_SENT_CERT = 4,
-			STATE_SENT_AND_RECEIVED_CERT = 5,
-			STATE_AUTHENTICATED = 6,
+			STATE_SENT_CERT,
+			STATE_SENT_AND_RECEIVED_CERT,
 			
-			STATE_BEFORE_ON_CONNECT_CALLBACK = 7,
-			STATE_READY_TO_USE = 8,
+			STATE_SENT_KEX,
+			STATE_SENT_AND_RECEIVED_KEX,
+			
+			STATE_BEFORE_ON_CONNECT_CALLBACK,
+			STATE_READY_TO_USE,
 		};
 		
 		Peer(std::shared_ptr<Host> host, ENetPeer* peer);
 		
 	private:
 		
+		uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
+		uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
+		uint8_t sendingKey[32];
+		uint8_t receivingKey[32];
+		uint8_t peerPublicKey[crypto::SIGN_PUBLIC_KEY_BYTES];
+		uint32_t sendMessagesCounter;
+		
+		std::vector<uint8_t> receivedData;
+		
 		std::shared_ptr<Host> host;
 		ENetPeer* peer;
 		uint32_t state;
 		
-		void(*callbackOnReceive)(Peer*, void* data, uint32_t size,
+		void(*callbackOnReceive)(Peer*, std::vector<uint8_t>& data,
 					uint32_t flags);
 		void(*callbackOnDisconnect)(Peer*, uint32_t disconnectData);
 		

@@ -31,12 +31,20 @@
 #include "Peer.hpp"
 #include "Command.hpp"
 
+#include "Cert.hpp"
+
 #define DEBUG(...) icon6::Debug(__FILE__,__LINE__,__VA_ARGS__)
 
 namespace icon6 {
 	void Debug(const char*file, int line,const char*fmt, ...);
 	
 	class Peer;
+	
+	enum class PeerAcceptancePolicy {
+		ACCEPT_ALL,
+		ACCEPT_DIRECTLY_TRUSTED,
+		ACCEPT_INDIRECTLY_TRUSTED_BY_CA,
+	};
 	
 	class Host final : public std::enable_shared_from_this<Host> {
 	public:
@@ -51,13 +59,21 @@ namespace icon6 {
 		Host(uint32_t maximumHostsNumber);
 		~Host();
 		
+		void SetCertificatePolicy(PeerAcceptancePolicy peerAcceptancePolicy);
+		void AddTrustedRootCA(std::shared_ptr<crypto::Cert> rootCA);
+		void SetSelfCertificate(std::shared_ptr<crypto::Cert> root);
+		void InitRandomSelfsignedCertificate();
+		
 		void Destroy();
 		
 		void RunAsync();
 		void RunSync();
+		void RunSingleLoop(uint32_t maxWaitTimeMilliseconds = 4);
+		
+		void DisconnectAllGracefully();
 		
 		void SetConnect(void(*callback)(Peer*));
-		void SetReceive(void(*callback)(Peer*, void* data, uint32_t size,
+		void SetReceive(void(*callback)(Peer*, std::vector<uint8_t>& data,
 					uint32_t flags));
 		void SetDisconnect(void(*callback)(Peer*, uint32_t disconnectData));
 		
@@ -86,6 +102,12 @@ namespace icon6 {
 		
 	private:
 		
+// 		std::shared_ptr<crypto::Cert> cert;
+		std::shared_ptr<crypto::CertKey> certKey;
+// 		std::vector<std::shared_ptr<crypto::Cert>> trustedRootCertificates;
+		PeerAcceptancePolicy peerAcceptancePolicy;
+		
+		
 		enum HostFlags : uint32_t {
 			RUNNING = 1<<0,
 			TO_STOP = 1<<1,
@@ -105,7 +127,7 @@ namespace icon6 {
 		std::vector<Command> poped_commands;
 		
 		void(*callbackOnConnect)(Peer*);
-		void(*callbackOnReceive)(Peer*, void* data, uint32_t size,
+		void(*callbackOnReceive)(Peer*, std::vector<uint8_t>& data,
 					uint32_t flags);
 		void(*callbackOnDisconnect)(Peer*, uint32_t disconnectData);
 	};

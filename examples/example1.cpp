@@ -18,16 +18,16 @@ int main() {
 	auto host1 = icon6::Host::Make(4000, 16);
 	auto host2 = icon6::Host::Make(4001, 16);
 	
-	host1->SetReceive([](icon6::Peer*p, void* data, uint32_t size,
+	host1->SetReceive([](icon6::Peer*p, std::vector<uint8_t>& data,
 				uint32_t flags){
-			printf(" message in host1: %s\n", data);
+			printf(" message in host1: %s\n", data.data());
 			fflush(stdout);
 		});
-	host2->SetReceive([](icon6::Peer*p, void* data, uint32_t size,
+	host2->SetReceive([](icon6::Peer*p, std::vector<uint8_t>& data,
 				uint32_t flags){
-			printf(" message in host2: %s\n", data);
+			printf(" message in host2: %s\n", data.data());
 			fflush(stdout);
-			std::string res = (char*)data;
+			std::string res = (char*)data.data();
 			res = "Response " + res;
 			p->Send(res.c_str(), res.size(), flags);
 		});

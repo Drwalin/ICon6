@@ -40,7 +40,9 @@ namespace crypto {
 	class CertReq final {
 	public:
 		
-		
+		CertReq(std::shared_ptr<class Cert> parentCert,
+				std::shared_ptr<class CertKey> certKey);
+
 		
 		friend class Cert;
 		
@@ -75,13 +77,16 @@ namespace crypto {
 				uint32_t passwordLength, uint32_t opslimit = 2,
 				uint32_t memlimit = 64*1024*1024) const;
 		
+		void CopyPublicKey(void* data);
+		const uint8_t *const GetPublicKey() const { return publicKey; }
+		
 	private:
 		
 		CertKey();
 		
 	private:
 		
-		uint8_t privateKey[SIGN_SECRET_KEY_BYTES];
+		uint8_t secretKey[SIGN_SECRET_KEY_BYTES];
 		uint8_t publicKey[SIGN_PUBLIC_KEY_BYTES];
 	};
 	
@@ -98,9 +103,9 @@ namespace crypto {
 		Cert(std::string fileName); // load cert from file
 		Cert(void* certBinary, uint32_t certBinaryLength); // copy cert from
 														   // binary
-		Cert(CertReq* certReq, CertKey* parentCertKey, Cert* parentCert);
+		Cert(CertReq* certReq, std::shared_ptr<CertKey> parentCertKey, std::shared_ptr<Cert> parentCert);
 				// sign certificate with parent cert
-		Cert(CertReq* selfSignedCert, CertKey* selfKey);
+		Cert(CertReq* selfSignedCert, std::shared_ptr<CertKey> selfKey);
 		
 	private:
 		

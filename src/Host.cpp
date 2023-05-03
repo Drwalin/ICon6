@@ -74,6 +74,32 @@ namespace icon6 {
 	}
 	
 	
+	
+	
+	void Host::SetCertificatePolicy(PeerAcceptancePolicy peerAcceptancePolicy) {
+		if(peerAcceptancePolicy == PeerAcceptancePolicy::ACCEPT_ALL) {
+			this->peerAcceptancePolicy = peerAcceptancePolicy;
+		} else {
+			throw "Please use only Host::SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL)";
+		}
+	}
+	
+	void Host::AddTrustedRootCA(std::shared_ptr<crypto::Cert> rootCA) {
+		throw "Host::SetSelfCertificate not implemented yet. Please use only Host::SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL)";
+	}
+	
+	void Host::SetSelfCertificate(std::shared_ptr<crypto::Cert> root) {
+		throw "Host::SetSelfCertificate not implemented yet. Please use only Host::InitRandomSelfsignedCertificate()";
+	}
+	
+	void Host::InitRandomSelfsignedCertificate() {
+		certKey = crypto::CertKey::GenerateKey();
+		// TODO: generate self signed certificate
+	}
+	
+	
+	
+	
 	void Host::Init(ENetAddress* address, uint32_t maximumHostsNumber) {
 		concurrentQueueCommands = new moodycamel::ConcurrentQueue<Command>();
 		flags = 0;
@@ -82,6 +108,8 @@ namespace icon6 {
 		callbackOnDisconnect = nullptr;
 		userData = nullptr;
 		host = enet_host_create(address, maximumHostsNumber, 2, 0, 0);
+		SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL);
+		InitRandomSelfsignedCertificate();
 	}
 	
 	void Host::Destroy() {
@@ -102,17 +130,17 @@ namespace icon6 {
 	
 	
 	void Host::RunSync() {
-		ENetEvent event;
 		flags = RUNNING;
-		uint32_t err;
-		while(!(flags & TO_STOP)) {
-			err = enet_host_service(host, &event, 4);
-			DispatchAllEventsFromQueue();
-			DispatchEvent(event);
+		while(flags & RUNNING) {
+			RunSingleLoop(4);
 		}
+	}
+	
+	void Host::DisconnectAllGracefully() {
 		for(auto p : peers) {
 			enet_peer_disconnect(p->peer, 0);
 		}
+		ENetEvent event;
 		for(int i=0; i<1000000 && enet_host_service(host, &event, 10) >= 0;
 				++i) {
 			DispatchEvent(event);
@@ -127,7 +155,21 @@ namespace icon6 {
 				break;
 			}
 		}
-		flags &= ~RUNNING;
+	}
+	
+	void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds) {
+		if(flags & TO_STOP) {
+			DisconnectAllGracefully();
+			flags &= ~RUNNING;
+		} else {
+			flags |= RUNNING;
+			ENetEvent event;
+			while(!(flags & TO_STOP)) {
+				enet_host_service(host, &event, maxWaitTimeMilliseconds);
+				DispatchAllEventsFromQueue();
+				DispatchEvent(event);
+			}
+		}
 	}
 	
 	void Host::DispatchEvent(ENetEvent& event) {
@@ -191,7 +233,7 @@ namespace icon6 {
 		callbackOnConnect = callback;
 	}
 	
-	void Host::SetReceive(void(*callback)(Peer*, void* data, uint32_t size,
+	void Host::SetReceive(void(*callback)(Peer*, std::vector<uint8_t>& data,
 				uint32_t flags)) {
 		callbackOnReceive = callback;
 	}
