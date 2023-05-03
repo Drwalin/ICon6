@@ -22,9 +22,9 @@
 
 #include "../include/icon6/Host.hpp"
 #include "../include/icon6/Command.hpp"
+#include "../include/icon6/Cert.hpp"
 
 #include "../include/icon6/Peer.hpp"
-#include "icon6/Cert.hpp"
 
 namespace icon6 {
 	Peer::Peer(std::shared_ptr<Host> host, ENetPeer* peer) : host(host),
@@ -90,6 +90,23 @@ namespace icon6 {
 		};
 		host->EnqueueCommand(std::move(com));
 	}
+	
+	void Peer::SendReliableSequenced(const void* data, uint32_t bytes) {
+		Send(data, bytes, FLAG_RELIABLE | FLAG_SEQUENCED);
+	}
+	
+	void Peer::SendReliableUnsequenced(const void* data, uint32_t bytes) {
+		Send(data, bytes, FLAG_RELIABLE);
+	}
+	
+	void Peer::SendUnreliableSequenced(const void* data, uint32_t bytes) {
+		Send(data, bytes, FLAG_SEQUENCED);
+	}
+	
+	void Peer::SendUnreliableUnsequenced(const void* data, uint32_t bytes) {
+		Send(data, bytes, 0);
+	}
+	
 	
 	void Peer::Disconnect(uint32_t disconnectData) {
 		Command com;

@@ -73,6 +73,8 @@ key derived from password with `crypto_pwhash` and given arguments
 | 64    |            | **owner signature** of `data[0 : B-Y-Z]`
 | 64    |            | **parent signature** of `data[0 : B-Z]` (created with **owner public key** for self signed)
 
+##### Possible values for ROLE in certificate version #1
+
 | value LE | description
 | -------- | -----------
 | 0        | Root CA - only signing
