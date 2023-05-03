@@ -31,30 +31,56 @@ implemented.
 
 ### Structure of saved certificate key (CertKey)
 
-- [4]  - opslimit argument for `crypto_pwhash`
-- [4]  - memlimit argument for `crypto_pwhash`
-- [16] - salt for key derivation (`crypto_pwhash`)
-- [24] - nonce
-- [32] - private key
-- [64] - public key
-- [16] - mac
+| bytes | description 
+| ----- | ----------- 
+| 4     | opslimit argument for `crypto_pwhash`
+| 4     | memlimit argument for `crypto_pwhash`
+| 16    | salt for key derivation (`crypto_pwhash`)
+| 24    | nonce
+| 32    | private key
+| 64    | public key
+| 16    | mac
 
-(private key | public key) are encrypted with xchacha20-poly1305-ietf with
+(private key | public key) are encrypted with chacha20-poly1305-ietf with
 key derived from password with `crypto_pwhash` and given arguments
 
 ### Structure of certificate (Cert)
 
-- [2]  - certificate length (including this field and parent signature)
-- [32] - public key
-- [32] - parent public key (the same as public key for self signed)
-- [4]  - expiration date in format: number of days since 1900.01.01
-- [4]  - issue date in format: number of days since 1900.01.01
-- [2]  - N - number of bytes in certificate owner name
-- [2]  - M - number of bytes in certificate owner url
-- [N]  - certificate owner name (NULL terminated)
-- [M]  - certificate owner url (NULL terminated)
-- [64] - certificate signature by certificate owner
-- [64] - certificate signature by parent
+| bytes | value name | description 
+| ----- | ---------- | ----------- 
+| 4     |            | version of certificate, unsigned integer saved in LE order
+| 4     | B          | **certificate size** in bytes, unsigned integer saved in LE order
+| X     |            | certificate data
+| Y     |            | **owner signature** of `data[0 : B-Y-Z]`
+| Z     |            | **parent signature** of `data[0 : B-Z]` (created with **owner public key** for self signed)
+
+#### Certificate version #1
+
+| bytes | value name | description 
+| ----- | ---------- | ----------- 
+| 4     |            | version of certificate, must be 1
+| 4     | B          | **certificate size** in bytes, unsigned integer saved in LE order
+| 32    |            | **owner public key** 
+| 32    |            | **parent public key** (same as **owner public key** for self signed)
+| 4     |            | **depth** of this certificate in certificate chain
+| 20    |            | **issue date** in string format `YYYY-MM-DD_HH:mm:ss` in UTC-0 time `NULL`-terminated
+| 20    |            | **expire date** in string format `YYYY-MM-DD_HH:mm:ss` in UTC-0 time `NULL`-terminated
+| 4     |            | **ROLE**
+| 4     | M          | number of bytes in **owner name**
+| 4     | N          | number of bytes in **owner url**
+| M     |            | **onwer name** `NULL`-terminated
+| N     |            | **owner url** `NULL`-terminated
+| 64    |            | **owner signature** of `data[0 : B-Y-Z]`
+| 64    |            | **parent signature** of `data[0 : B-Z]` (created with **owner public key** for self signed)
+
+| value LE | description
+| -------- | -----------
+| 0        | Root CA - only signing
+| 1        | Not root CA, but only signing
+| 2        | Server certificate - for accepting communication in ICon6
+| 3        | Client one-time self signed certificate 
+
+Only signing curve used is `ed25519`.
 
 ### Structure of certificate request (CertReq)
 

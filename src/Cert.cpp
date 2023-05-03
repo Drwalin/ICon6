@@ -25,7 +25,7 @@ namespace crypto {
 	
 	std::shared_ptr<CertKey> CertKey::GenerateKey() {
 		std::shared_ptr<CertKey> key(new CertKey());
-		crypto_sign_keypair(key->publicKey, key->secretKey);
+		crypto_sign_ed25519_keypair(key->publicKey, key->secretKey);
 		return key;
 	}
 	
@@ -39,13 +39,13 @@ namespace crypto {
 	
 	void CertKey::Sign(uint8_t signature[SIGNATURE_BYTES], const void* message,
 			uint32_t messageLength) {
-		crypto_sign_detached(signature, nullptr, (const uint8_t*)message,
+		crypto_sign_ed25519_detached(signature, nullptr, (const uint8_t*)message,
 				messageLength, secretKey);
 	}
 	
 	bool CertKey::Verify(const uint8_t signature[SIGNATURE_BYTES],
 			const void* message, uint32_t messageLength) {
-		return !crypto_sign_verify_detached(signature, (const uint8_t*)message,
+		return !crypto_sign_ed25519_verify_detached(signature, (const uint8_t*)message,
 				messageLength, publicKey);
 	}
 	

@@ -57,7 +57,7 @@ namespace icon6 {
 			// TODO: do encryption in place for com.binaryData
 			constexpr uint32_t nonceSize = sizeof(sendMessagesCounter);
 			constexpr uint32_t macSize
-				= crypto_aead_xchacha20poly1305_ietf_ABYTES;
+				= crypto_aead_chacha20poly1305_ietf_ABYTES;
 			const uint32_t packetSize = com.binaryData.size() + nonceSize
 				+ macSize;
 			uint8_t channel = com.flags&(FLAG_RELIABLE|FLAG_SEQUENCED) ? 0 : 1;
@@ -70,14 +70,14 @@ namespace icon6 {
 			com.peer->sendMessagesCounter++;
 			
 			
-			uint8_t nonce[crypto_aead_xchacha20poly1305_ietf_NPUBBYTES];
+			uint8_t nonce[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
 			memset(nonce, 0, sizeof(nonce));
 			*(decltype(sendMessagesCounter)*)nonce
 				= htonl(com.peer->sendMessagesCounter);
 			*(decltype(sendMessagesCounter)*)(packet->data)
 				= htonl(com.peer->sendMessagesCounter);
 			
-			crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+			crypto_aead_chacha20poly1305_ietf_encrypt_detached(
 					packet->data+nonceSize,
 					packet->data+nonceSize+com.binaryData.size(), nullptr,
 					com.binaryData.data(), com.binaryData.size(),
@@ -150,7 +150,7 @@ namespace icon6 {
 				enet_peer_disconnect(peer, 1);
 				return;
 			}
-			if(crypto_sign_verify_detached((uint8_t*)data+crypto::KEX_PUBLIC_KEY_BYTES,
+			if(crypto_sign_ed25519_verify_detached((uint8_t*)data+crypto::KEX_PUBLIC_KEY_BYTES,
 						(uint8_t*)data, crypto::KEX_PUBLIC_KEY_BYTES,
 						peerPublicKey)) {
 				DEBUG("Failed to verify kex message");
@@ -194,8 +194,8 @@ namespace icon6 {
 			{
 				constexpr uint32_t nonceSize = sizeof(sendMessagesCounter);
 				constexpr uint32_t macSize
-					= crypto_aead_xchacha20poly1305_ietf_ABYTES;
-				uint8_t nonce[crypto_aead_xchacha20poly1305_ietf_NPUBBYTES];
+					= crypto_aead_chacha20poly1305_ietf_ABYTES;
+				uint8_t nonce[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
 				memset(nonce, 0, sizeof(nonce));
 				memcpy(nonce, data, nonceSize);
 				
@@ -204,9 +204,9 @@ namespace icon6 {
 				
 				
 				receivedData.resize(size-nonceSize
-							-crypto_aead_xchacha20poly1305_ietf_ABYTES);
+							-crypto_aead_chacha20poly1305_ietf_ABYTES);
 				
-				if(crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
+				if(crypto_aead_chacha20poly1305_ietf_decrypt_detached(
 						receivedData.data(), nullptr,
 						(uint8_t*)data+nonceSize,
 						receivedData.size(),

@@ -63,6 +63,7 @@ namespace icon6 {
 		void AddTrustedRootCA(std::shared_ptr<crypto::Cert> rootCA);
 		void SetSelfCertificate(std::shared_ptr<crypto::Cert> root);
 		void InitRandomSelfsignedCertificate();
+		void SetPolicyMaximumDepthOfCertificateAcceptable(uint32_t maxDepth);
 		
 		void Destroy();
 		
@@ -105,7 +106,8 @@ namespace icon6 {
 // 		std::shared_ptr<crypto::Cert> cert;
 		std::shared_ptr<crypto::CertKey> certKey;
 // 		std::vector<std::shared_ptr<crypto::Cert>> trustedRootCertificates;
-		PeerAcceptancePolicy peerAcceptancePolicy;
+		PeerAcceptancePolicy peerAcceptancePolicy = PeerAcceptancePolicy::ACCEPT_ALL;
+// 		uint32_t maxCertificateDepthAcceptable = 16;
 		
 		
 		enum HostFlags : uint32_t {
