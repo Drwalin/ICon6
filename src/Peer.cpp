@@ -44,12 +44,14 @@ namespace icon6 {
 	}
 	
 	void Peer::Send(const void* data, uint32_t bytes, uint32_t flags) {
+		Send(std::vector<uint8_t>((uint8_t*)data, (uint8_t*)data+bytes), flags);
+	}
+	
+	void Peer::Send(std::vector<uint8_t>&& data, uint32_t flags) {
 		if(state != STATE_READY_TO_USE) {
 			throw "Peer::Send Handshake is not finished yet. Sending is not posible.";
 		}
-		Command com;
-		com.binaryData.insert(com.binaryData.begin(), (uint8_t*)data,
-				(uint8_t*)data+bytes);
+		Command com{std::move(data)};
 		com.flags = flags;
 		com.peer = shared_from_this();
 		com.host = host;
@@ -89,6 +91,22 @@ namespace icon6 {
 					channel, packet);
 		};
 		host->EnqueueCommand(std::move(com));
+	}
+	
+	void Peer::SendReliableSequenced(std::vector<uint8_t>&& data) {
+		Send(std::move(data), FLAG_RELIABLE | FLAG_SEQUENCED);
+	}
+	
+	void Peer::SendReliableUnsequenced(std::vector<uint8_t>&& data) {
+		Send(std::move(data), FLAG_RELIABLE);
+	}
+	
+	void Peer::SendUnreliableSequenced(std::vector<uint8_t>&& data) {
+		Send(std::move(data), FLAG_SEQUENCED);
+	}
+	
+	void Peer::SendUnreliableUnsequenced(std::vector<uint8_t>&& data) {
+		Send(std::move(data), 0);
 	}
 	
 	void Peer::SendReliableSequenced(const void* data, uint32_t bytes) {

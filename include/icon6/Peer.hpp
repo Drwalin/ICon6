@@ -43,11 +43,17 @@ namespace icon6 {
 		
 		~Peer();
 		
+		void Send(std::vector<uint8_t>&& data, uint32_t flags);
+		void SendReliableSequenced(std::vector<uint8_t>&& data);
+		void SendReliableUnsequenced(std::vector<uint8_t>&& data);
+		void SendUnreliableSequenced(std::vector<uint8_t>&& data);
+		void SendUnreliableUnsequenced(std::vector<uint8_t>&& data);
 		void Send(const void* data, uint32_t bytes, uint32_t flags);
 		void SendReliableSequenced(const void* data, uint32_t bytes);
 		void SendReliableUnsequenced(const void* data, uint32_t bytes);
 		void SendUnreliableSequenced(const void* data, uint32_t bytes);
 		void SendUnreliableUnsequenced(const void* data, uint32_t bytes);
+		
 		void Disconnect(uint32_t disconnectData);
 		
 		inline uint32_t GetMTU() const { return peer->mtu; }
