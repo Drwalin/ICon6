@@ -27,7 +27,7 @@
 #include <memory>
 #include <atomic>
 
-#include "Cert.hpp"
+#include "ConnectionEncryptionState.hpp"
 
 namespace icon6 {
 	
@@ -38,26 +38,29 @@ namespace icon6 {
 	
 	class Host;
 	
-	class Peer final : public std::enable_shared_from_this<Peer> {
+	class Peer final : public ConnectionEncryptionState {
 	public:
 		
 		~Peer();
 		
 		void Send(std::vector<uint8_t>&& data, uint32_t flags);
-		void SendReliableSequenced(std::vector<uint8_t>&& data);
-		void SendReliableUnsequenced(std::vector<uint8_t>&& data);
-		void SendUnreliableSequenced(std::vector<uint8_t>&& data);
-		void SendUnreliableUnsequenced(std::vector<uint8_t>&& data);
-		void Send(const void* data, uint32_t bytes, uint32_t flags);
-		void SendReliableSequenced(const void* data, uint32_t bytes);
-		void SendReliableUnsequenced(const void* data, uint32_t bytes);
-		void SendUnreliableSequenced(const void* data, uint32_t bytes);
-		void SendUnreliableUnsequenced(const void* data, uint32_t bytes);
+		inline void SendReliableSequenced(std::vector<uint8_t>&& data);
+		inline void SendReliableUnsequenced(std::vector<uint8_t>&& data);
+		inline void SendUnreliableSequenced(std::vector<uint8_t>&& data);
+		inline void SendUnreliableUnsequenced(std::vector<uint8_t>&& data);
+		inline void Send(const void* data, uint32_t bytes, uint32_t flags);
+		inline void SendReliableSequenced(const void* data, uint32_t bytes);
+		inline void SendReliableUnsequenced(const void* data, uint32_t bytes);
+		inline void SendUnreliableSequenced(const void* data, uint32_t bytes);
+		inline void SendUnreliableUnsequenced(const void* data, uint32_t bytes);
 		
 		void Disconnect(uint32_t disconnectData);
 		
 		inline uint32_t GetMTU() const { return peer->mtu; }
-		inline uint32_t GetEncryptedMTU() const { return peer->mtu-12-16-4; }
+		inline uint32_t GetEncryptedMTU() const {
+			return peer->mtu -
+				ConnectionEncryptionState::GetEncryptedMessageOverhead();
+		}
 		inline uint32_t GetRoundtripTime() const {
 			return peer->roundTripTime >= 2 ? peer->roundTripTime : 2;
 		}
@@ -71,6 +74,7 @@ namespace icon6 {
 		}
 		
 		friend class Host;
+		friend class ConnectionEncryptionState;
 		
 		inline std::shared_ptr<Host> GetHost() { return host; }
 		
@@ -85,9 +89,7 @@ namespace icon6 {
 		
 	private:
 		
-		void StartHandshake();
-		
-		void CallCallbackReceive(void* data, uint32_t size, uint32_t flags);
+		void CallCallbackReceive(uint8_t* data, uint32_t size, uint32_t flags);
 		void CallCallbackDisconnect(uint32_t data);
 		
 		void Destroy();
@@ -98,47 +100,57 @@ namespace icon6 {
 			INTERNAL_UNRELIABLE = 0,
 		};
 		
-		enum PeerConnectionState : uint32_t {
-			STATE_NONE,
-			
-			STATE_ZOMBIE,
-			STATE_DISCONNECTED,
-			STATE_FAILED_TO_AUTHENTICATE,
-			STATE_FAILED_TO_VERIFY_MESSAGE,
-			
-			STATE_SENT_CERT,
-			STATE_SENT_AND_RECEIVED_CERT,
-			
-			STATE_SENT_KEX,
-			STATE_SENT_AND_RECEIVED_KEX,
-			
-			STATE_BEFORE_ON_CONNECT_CALLBACK,
-			STATE_READY_TO_USE,
-		};
 		
 		Peer(std::shared_ptr<Host> host, ENetPeer* peer);
 		
 	private:
 		
-		uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
-		uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
-		uint8_t sendingKey[32];
-		uint8_t receivingKey[32];
-		uint8_t peerPublicKey[crypto::SIGN_PUBLIC_KEY_BYTES];
-		uint32_t sendMessagesCounter;
-		
 		std::vector<uint8_t> receivedData;
 		
 		std::shared_ptr<Host> host;
 		ENetPeer* peer;
-		uint32_t state;
 		
 		void(*callbackOnReceive)(Peer*, std::vector<uint8_t>& data,
 					uint32_t flags);
 		void(*callbackOnDisconnect)(Peer*, uint32_t disconnectData);
-		
-		
 	};
+	
+	
+	inline void Peer::SendReliableSequenced(std::vector<uint8_t>&& data) {
+		Send(std::move(data), FLAG_RELIABLE | FLAG_SEQUENCED);
+	}
+	
+	inline void Peer::SendReliableUnsequenced(std::vector<uint8_t>&& data) {
+		Send(std::move(data), FLAG_RELIABLE);
+	}
+	
+	inline void Peer::SendUnreliableSequenced(std::vector<uint8_t>&& data) {
+		Send(std::move(data), FLAG_SEQUENCED);
+	}
+	
+	inline void Peer::SendUnreliableUnsequenced(std::vector<uint8_t>&& data) {
+		Send(std::move(data), 0);
+	}
+	
+	inline void Peer::Send(const void* data, uint32_t bytes, uint32_t flags) {
+		Send(std::vector<uint8_t>((uint8_t*)data, (uint8_t*)data+bytes), flags);
+	}
+	
+	inline void Peer::SendReliableSequenced(const void* data, uint32_t bytes) {
+		Send(data, bytes, FLAG_RELIABLE | FLAG_SEQUENCED);
+	}
+	
+	inline void Peer::SendReliableUnsequenced(const void* data, uint32_t bytes) {
+		Send(data, bytes, FLAG_RELIABLE);
+	}
+	
+	inline void Peer::SendUnreliableSequenced(const void* data, uint32_t bytes) {
+		Send(data, bytes, FLAG_SEQUENCED);
+	}
+	
+	inline void Peer::SendUnreliableUnsequenced(const void* data, uint32_t bytes) {
+		Send(data, bytes, 0);
+	}
 }
 
 #endif

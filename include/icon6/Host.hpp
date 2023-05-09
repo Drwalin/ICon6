@@ -39,6 +39,7 @@ namespace icon6 {
 	void Debug(const char*file, int line,const char*fmt, ...);
 	
 	class Peer;
+	class ConnectionEncryptionState;
 	
 	enum class PeerAcceptancePolicy {
 		ACCEPT_ALL,
@@ -92,6 +93,7 @@ namespace icon6 {
 		std::shared_ptr<void> userSharedPointer;
 		
 		friend class Peer;
+		friend class ConnectionEncryptionState;
 		
 	private:
 		

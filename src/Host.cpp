@@ -291,7 +291,7 @@ namespace icon6 {
 				auto time_end = std::chrono::steady_clock::now()
 					+ std::chrono::seconds(2);
 				while(time_end > std::chrono::steady_clock::now()) {
-					if(peer->state == Peer::STATE_READY_TO_USE) {
+					if(peer->state == STATE_READY_TO_USE) {
 						promise->set_value(peer);
 						return;
 					}
