@@ -31,26 +31,58 @@
 
 namespace icon6 {
 	
-	class Writer {
+	class Writer;
+	
+	namespace impl {
+		class BitsWriter {
+		public:
+			
+			inline BitsWriter(std::vector<uint8_t>& buffer);
+			inline ~BitsWriter();
+			
+			inline Writer& ignore(uint32_t bits);
+			inline Writer& ignore_byte_perfect();
+			inline Writer& reserve_bits(uint32_t bits);
+			
+			inline Writer& op(const std::string& str);
+			inline Writer& op(const std::string_view str);
+			inline Writer& op(const std::vector<uint8_t>& binary);
+			// constant size byte array
+			inline Writer& op(const uint8_t* data, const uint32_t bytes);
+			
+			inline Writer& op(uint8_t v,  uint32_t bits) { return push_bits(v, bits); }
+			inline Writer& op(uint16_t v, uint32_t bits) { return push_bits(v, bits); }
+			inline Writer& op(uint32_t v, uint32_t bits) { return push_bits(v, bits); }
+			inline Writer& op(uint64_t v, uint32_t bits) { return push_bits(v, bits); }
+			inline Writer& op(int8_t v,   uint32_t bits) { return push_bits(v, bits); }
+			inline Writer& op(int16_t v,  uint32_t bits) { return push_bits(v, bits); }
+			inline Writer& op(int32_t v,  uint32_t bits) { return push_bits(v, bits); }
+			inline Writer& op(int64_t v,  uint32_t bits) { return push_bits(v, bits); }
+			
+			inline Writer& push_bits(uint8_t v, uint32_t bits);
+			inline Writer& push_bits(uint16_t v, uint32_t bits);
+			inline Writer& push_bits(uint32_t v, uint32_t bits);
+			inline Writer& push_bits(uint64_t v, uint32_t bits);
+			inline Writer& push_bits(int8_t v, uint32_t bits);
+			inline Writer& push_bits(int16_t v, uint32_t bits);
+			inline Writer& push_bits(int32_t v, uint32_t bits);
+			inline Writer& push_bits(int64_t v, uint32_t bits);
+			
+		private:
+			
+			std::vector<uint8_t>& buffer;
+			uint32_t byteOffset;
+			uint32_t bitOffset;
+		};
+	} // namespace impl
+	
+	class Writer : public impl::BitsWriter {
 	public:
-		inline Writer(std::vector<uint8_t>& buffer);
+		
+		inline Writer(std::vector<uint8_t>& buffer) : BitsWriter(buffer) {}
 		inline ~Writer();
 		
 		
-		inline Writer& op(const std::string_view str);
-		inline Writer& op(const std::vector<uint8_t>& binary);
-		// constant size byte array
-		inline Writer& op(const uint8_t* data, const uint32_t bytes);
-		
-		
-		inline Writer& ignore(uint32_t bits);
-		inline Writer& ignore_byte_perfect();
-		inline Writer& reserve_bits(uint32_t bits);
-		
-		inline Writer& op(uint64_t value, uint32_t bits);
-		inline Writer& op(uint64_t value, uint64_t min, uint32_t bits);
-		inline Writer& op(int64_t value, uint32_t bits);
-		inline Writer& op(int64_t value, int64_t min, uint32_t bits);
 		
 		
 		inline Writer& op(float value) { return op(*(uint32_t*)&value, 32); }
@@ -59,8 +91,12 @@ namespace icon6 {
 		inline Writer& op(float value, float min, float max, uint32_t bits);
 		inline Writer& op(double value, double min, double max, uint32_t bits);
 		
+		inline Writer& op(float value, float offset, float min, float max, uint32_t bits);
+		inline Writer& op(double value, double offset, double min, double max, uint32_t bits);
+		
 	public: // array types serialization
 		
+		// const size array
 		template<typename T, typename... Args>
 		inline Writer& op(const T* data, const uint32_t elements, Args... args) {
 			for(uint32_t i=0; i<elements; ++i)
@@ -94,136 +130,180 @@ namespace icon6 {
 		
 	public:
 		
-		inline Writer& op(uint8_t v,  uint32_t bits) { return op((uint64_t)v, bits); }
-		inline Writer& op(uint16_t v, uint32_t bits) { return op((uint64_t)v, bits); }
-		inline Writer& op(uint32_t v, uint32_t bits) { return op((uint64_t)v, bits); }
-		inline Writer& op(int8_t v,  uint32_t bits) { return op((int64_t)v, bits); }
-		inline Writer& op(int16_t v, uint32_t bits) { return op((int64_t)v, bits); }
-		inline Writer& op(int32_t v, uint32_t bits) { return op((int64_t)v, bits); }
-		
-		inline Writer& op(uint8_t v,  uint64_t min, uint32_t bits) { return op((uint64_t)v, min, bits); }
-		inline Writer& op(uint16_t v, uint64_t min, uint32_t bits) { return op((uint64_t)v, min, bits); }
-		inline Writer& op(uint32_t v, uint64_t min, uint32_t bits) { return op((uint64_t)v, min, bits); }
-		inline Writer& op(int8_t v,  uint64_t min, uint32_t bits) { return op((int64_t)v, min, bits); }
-		inline Writer& op(int16_t v, uint64_t min, uint32_t bits) { return op((int64_t)v, min, bits); }
-		inline Writer& op(int32_t v, uint64_t min, uint32_t bits) { return op((int64_t)v, min, bits); }
-		
-		inline Writer& op(int8_t v) { return op(v, 8); }
-		inline Writer& op(int16_t v) { return op(v, 16); }
-		inline Writer& op(int32_t v) { return op(v, 32); }
-		inline Writer& op(int64_t v) { return op(v, 64); }
-		
-		inline Writer& op(uint8_t v) { return op(v, 8); }
+		inline Writer& op(int8_t v)   { return op(v,  8); }
+		inline Writer& op(int16_t v)  { return op(v, 16); }
+		inline Writer& op(int32_t v)  { return op(v, 32); }
+		inline Writer& op(int64_t v)  { return op(v, 64); }
+		inline Writer& op(uint8_t v)  { return op(v,  8); }
 		inline Writer& op(uint16_t v) { return op(v, 16); }
 		inline Writer& op(uint32_t v) { return op(v, 32); }
 		inline Writer& op(uint64_t v) { return op(v, 64); }
 		
-	private:
+		inline Writer& op(uint8_t v,   uint8_t min, uint32_t bits) { return push_bits(v-min, bits); }
+		inline Writer& op(uint16_t v, uint16_t min, uint32_t bits) { return push_bits(v-min, bits); }
+		inline Writer& op(uint32_t v, uint32_t min, uint32_t bits) { return push_bits(v-min, bits); }
+		inline Writer& op(uint64_t v, uint64_t min, uint32_t bits) { return push_bits(v-min, bits); }
+		inline Writer& op(int8_t v,    uint8_t min, uint32_t bits) { return push_bits(v-min, bits); }
+		inline Writer& op(int16_t v,  uint16_t min, uint32_t bits) { return push_bits(v-min, bits); }
+		inline Writer& op(int32_t v,  uint32_t min, uint32_t bits) { return push_bits(v-min, bits); }
+		inline Writer& op(int64_t v,  uint64_t min, uint32_t bits) { return push_bits(v-min, bits); }
 		
-		std::vector<uint8_t>& buffer;
-		uint32_t byteOffset;
-		uint32_t bitOffset;
+		inline Writer& op(uint8_t v,  uint32_t bits) { return push_bits(v, bits); }
+		inline Writer& op(uint16_t v, uint32_t bits) { return push_bits(v, bits); }
+		inline Writer& op(uint32_t v, uint32_t bits) { return push_bits(v, bits); }
+		inline Writer& op(uint64_t v, uint32_t bits) { return push_bits(v, bits); }
+		inline Writer& op(int8_t v,   uint32_t bits) { return push_bits(v, bits); }
+		inline Writer& op(int16_t v,  uint32_t bits) { return push_bits(v, bits); }
+		inline Writer& op(int32_t v,  uint32_t bits) { return push_bits(v, bits); }
+		inline Writer& op(int64_t v,  uint32_t bits) { return push_bits(v, bits); }
 	};
 	
 	
 	
-	inline Writer::Writer(std::vector<uint8_t>& buffer) : buffer(buffer) {
+	
+	inline Writer& Writer::op(float value, float min, float max, uint32_t bits) {
+		float fmask = (((uint64_t)1)<<(bits-1ll))-1ll;
+		float pv = value * fmask / (max-min);
+		uint32_t v = pv+0.4f;
+		return push_bits(v, bits);
+	}
+	
+	inline Writer& Writer::op(double value, double min, double max, uint32_t bits) {
+		float fmask = (((uint64_t)1)<<(bits-1ll))-1ll;
+		float pv = value * fmask / (max-min);
+		uint32_t v = pv+0.5;
+		return push_bits(v, bits);
+	}
+	
+	
+	inline Writer& Writer::op(float value, float offset, float min, float max, uint32_t bits) {
+		return op(value + offset, min, max, bits);
+	}
+	
+	inline Writer& Writer::op(double value, double offset, double min, double max, uint32_t bits) {
+		return op(value + offset, min, max, bits);
+	}
+	
+	
+	
+namespace impl {
+	inline BitsWriter::BitsWriter(std::vector<uint8_t>& buffer) : buffer(buffer) {
 		byteOffset = 0;
 		bitOffset = 0;
 	}
 	
-	inline Writer::~Writer() {
+	inline BitsWriter::~BitsWriter() {
 		ignore_byte_perfect();
 		buffer.resize(byteOffset);
 	}
 	
 	
-	inline Writer& Writer::op(const std::string_view str) {
+	
+	inline Writer& BitsWriter::op(const std::string& str) {
 		return op((const uint8_t*)str.data(), str.size()+1);
 	}
 	
-	inline Writer& Writer::op(const std::vector<uint8_t>& binary) {
+	inline Writer& BitsWriter::op(const std::string_view str) {
+		return op((const uint8_t*)str.data(), str.size()+1);
+	}
+	
+	inline Writer& BitsWriter::op(const std::vector<uint8_t>& binary) {
 		return op(binary.data(), binary.size());
 	}
 	
-	inline Writer& Writer::op(const uint8_t* data, const uint32_t bytes) {
+	inline Writer& BitsWriter::op(const uint8_t* data, const uint32_t bytes) {
 		ignore_byte_perfect();
 		buffer.insert(buffer.begin()+byteOffset, data, data+bytes);
 		byteOffset += bytes;
-		return *this;
+		return *(Writer*)this;
 	}
 	
 	
 	
-	inline Writer& Writer::ignore(uint32_t bits) {
+	inline Writer& BitsWriter::ignore(uint32_t bits) {
 		bitOffset += bits;
 		byteOffset += bitOffset>>3;
 		bitOffset &= 7;
-		buffer.resize(byteOffset + ((7+bitOffset)>>1));
-		return *this;
+		buffer.resize(byteOffset + ((7+bitOffset)>>3));
+		return *(Writer*)this;
 	}
 	
-	inline Writer& Writer::ignore_byte_perfect() {
+	inline Writer& BitsWriter::ignore_byte_perfect() {
 		if((bitOffset & 7) > 0)
 			ignore(8 - (bitOffset & 7));
-		return *this;
+		return *(Writer*)this;
 	}
 	
-	inline Writer& Writer::reserve_bits(uint32_t bits) {
+	inline Writer& BitsWriter::reserve_bits(uint32_t bits) {
 		uint32_t bytes = byteOffset + ((bitOffset+bits+7)>>3);
 		buffer.resize(bytes);
-		return *this;
+		return *(Writer*)this;
 	}
 	
 	
 	
-	inline Writer& Writer::op(uint64_t value, uint64_t min, uint32_t bits) {
-		return op(value-min, bits);
-	}
-	inline Writer& Writer::op(int64_t value, int64_t min, uint32_t bits) {
-		return op((uint64_t)(value-min), bits);
-	}
+	inline Writer& BitsWriter::push_bits(int8_t v,  uint32_t bits) { return push_bits((uint8_t)v, bits); }
+	inline Writer& BitsWriter::push_bits(int16_t v, uint32_t bits) { return push_bits((uint16_t)v, bits); }
+	inline Writer& BitsWriter::push_bits(int32_t v, uint32_t bits) { return push_bits((uint32_t)v, bits); }
+	inline Writer& BitsWriter::push_bits(int64_t v, uint32_t bits) { return push_bits((uint64_t)v, bits); }
+	
+	inline Writer& BitsWriter::push_bits(uint8_t v, uint32_t bits) { return push_bits((uint64_t)v, bits); }
+	inline Writer& BitsWriter::push_bits(uint16_t v, uint32_t bits) { return push_bits((uint64_t)v, bits); }
+	inline Writer& BitsWriter::push_bits(uint32_t v, uint32_t bits) { return push_bits((uint64_t)v, bits); }
 	
 	
 	
-	
-	
-	inline Writer& Writer::op(uint64_t value, uint32_t bits) {
+	inline Writer& BitsWriter::push_bits(uint64_t v, uint32_t bits) {
 		reserve_bits(bits);
-		uint8_t* ptr = buffer.data()+byteOffset + (bitOffset>>3);
-		
-		
-		
-		uint32_t bytes = bits>>3;
-		for(int i=0; i<bytes; ++i) {
+		uint32_t dstsize = (8-bitOffset) & 7;
+		if(dstsize) {
+			dstsize = std::min(dstsize, bits);
+			bits -= dstsize;
 			
+			uint8_t mask = 1 << (dstsize-1);
+			buffer[byteOffset] |= (v&mask) << bitOffset;
 		}
-		if(bits & 7) {
+		
+		uint32_t off = dstsize;
+		uint32_t fullBytes = (bits-off)>>3;
+		off -= 8;
+		switch(fullBytes) {
+			case 8:
+				buffer[++byteOffset] = v>>((off+=8));
+				buffer[++byteOffset] = v>>((off+=8));
+				buffer[++byteOffset] = v>>((off+=8));
+				buffer[++byteOffset] = v>>((off+=8));
+				buffer[++byteOffset] = v>>((off+=8));
+				buffer[++byteOffset] = v>>((off+=8));
+				buffer[++byteOffset] = v>>((off+=8));
+				buffer[++byteOffset] = v>>((off+=8));
+				break;
+			case 7:
+				buffer[++byteOffset] = v>>((off+=8));
+			case 6:
+				buffer[++byteOffset] = v>>((off+=8));
+			case 5:
+				buffer[++byteOffset] = v>>((off+=8));
+			case 4:
+				buffer[++byteOffset] = v>>((off+=8));
+			case 3:
+				buffer[++byteOffset] = v>>((off+=8));
+			case 2:
+				buffer[++byteOffset] = v>>((off+=8));
+			case 1:
+				buffer[++byteOffset] = v>>((off+=8));
+			case 0:
+				if(bits - off) {
+					bitOffset = bits-off;
+					uint8_t mask = (1<<bitOffset)-1;
+					buffer[byteOffset] = (v>>off) & mask;
+				}
 		}
-		
-		
-		
-		bitOffset += bits;
-		byteOffset += bitOffset>>3;
-		bitOffset &= 7;
-		return *this;
+		return *(Writer*)this;
 	}
 	
-	inline Writer& Writer::op(int64_t value, uint32_t bits) {
-		if(value < 0)
-			op(1, 1);
-		else
-			op(0, 1);
-		op(value, bits-1);
-		return *this;
-	}
-	
-	
-	
-	inline Writer& Writer::op(float value, float min, float max, uint32_t bits);
-	inline Writer& Writer::op(double value, double min, double max, uint32_t bits);
-	
-}
+} // namespace impl
+} // namespace icon6
 
 #endif
 
