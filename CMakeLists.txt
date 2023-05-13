@@ -12,6 +12,8 @@ option(ICON6_BUILD_TEST "Build tests" ON)
 add_subdirectory(enet)
 target_compile_definitions(enet PRIVATE -DENET_DEBUG)
 
+add_subdirectory(bitscpp)
+
 include_directories(./include/)
 include_directories(./enet/include/)
 

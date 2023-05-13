@@ -4,3 +4,6 @@
 [submodule "concurrentqueue"]
 	path = concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue.git
+[submodule "bitscpp"]
+	path = bitscpp
+	url = https://github.com/Drwalin/bitscpp.git
