@@ -22,75 +22,80 @@
 #include <string>
 #include <unordered_map>
 
+#include <bitscpp/ByteWriterExtensions.hpp>
+#include <bitscpp/ByteReaderExtensions.hpp>
+
 #include "Host.hpp"
 #include "Peer.hpp"
-#include "Serializer.hpp"
 
 namespace icon6 {
 	
-	struct MessageConverter {
-		template<typename T>
-		static MessageConverter Construct(
-				void (*deserialize)(const uint8_t*, uint32_t, T*),
-				void (*serialize)(std::vector<uint8_t>& data, const T*),
-				void(*onReceive)(Peer& peer, T& message)
-			) {
-			return {deserialize, serialize, onReceive, sizeof(T)};
+	class MessageConverter {
+	public:
+		virtual ~MessageConverter() = default;
+		virtual void Call(Peer* peer, bitscpp::ByteReader& reader,
+				uint32_t flags) = 0;
+	};
+	
+	template<typename T>
+	class MessageConverterSpec : public MessageConverter {
+	public:
+		MessageConverterSpec(void(*onReceive)(Peer* peer, T&& message,
+					uint32_t flags)) : onReceive(onReceive) {
 		}
 		
-		void (*const deserialize)(const uint8_t *data, uint32_t size, void* value);
-		void (*const serialize)(std::vector<uint8_t>& data, const void* value);
-		void(*onReceive)(Peer& peer, class XXX& message);
-		const size_t size;
+		virtual ~MessageConverterSpec() = default;
+		virtual void Call(Peer* peer, bitscpp::ByteReader& reader,
+				uint32_t flags) override {
+			T message;
+			reader.op(message);
+			onReceive(peer, std::move(message), flags);
+		}
+		
+	private:
+		
+		void(*const onReceive)(Peer* peer, T&& message, uint32_t flags);
 	};
 
 	class MessagePassingEnvironment {
 	public:
 		
-		MessagePassingEnvironment(std::shared_ptr<Host> host);
+		using ReceiveCallback = void(*)(Peer* peer, void* message, uint32_t flags);
 		
-		template<typename T>
-		void RegisterMessage(std::string name,
-				void(*onReceive)(Peer& peer, T& message));
-		
-		template<typename T>
-		void Send(std::shared_ptr<Peer> peer, const std::string& name, T& value,
+		void OnReceive(Peer* peer, const uint8_t* data, uint32_t size,
 				uint32_t flags);
 		
-		void OnReceive(const uint8_t* data, uint32_t size);
+		template<typename T>
+		void RegisterMessage(const char* name,
+				void(*onReceive)(Peer* peer, T&& message, uint32_t flags)) {
+			registeredMessages[name]
+				= std::make_shared<MessageConverterSpec<T>>(onReceive);
+		}
+		
+		template<typename T>
+		void RegisterMessage(const std::string& name,
+				void(*onReceive)(Peer* peer, T&& message, uint32_t flags)) {
+			registeredMessages[name]
+				= std::make_shared<MessageConverterSpec<T>>(onReceive);
+		}
+		
+		template<typename T>
+		void Send(Peer* peer, const std::string& name, const T& message,
+				uint32_t flags) {
+			std::vector<uint8_t> buffer;
+			{
+				bitscpp::ByteWriter writer(buffer);
+				writer.op(name);
+				writer.op(message);
+			}
+			peer->Send(std::move(buffer), flags);
+		}
 		
 	private:
 		
-		std::shared_ptr<Host> host;
-		
-		std::unordered_map<std::string, MessageConverter> registeredMessages;
+		std::unordered_map<std::string, std::shared_ptr<MessageConverter>>
+			registeredMessages;
 	};
-	
-	
-	template<typename T>
-	void MessagePassingEnvironment::RegisterMessage(std::string name,
-			void(*onReceive)(Peer& peer, T& message)) {
-		registeredMessages[name] = MessageConverter::Construct<T>(
-				[](const uint8_t*data, uint32_t size, T*value) {
-					Serializer s(data, size);
-					value->__Deserialize(s);
-				},
-				[](std::vector<uint8_t>& data, const T*value) {
-					Serializer s(data);
-					value->__Serialize(s);
-				},
-				onReceive
-			);
-	}
-
-	template<typename T>
-	void MessagePassingEnvironment::Send(std::shared_ptr<Peer> peer,
-			const std::string& name, T& value, uint32_t flags) {
-		std::vector<uint8_t> data;
-		Serializer s(data);
-		value->__Serialize(s);
-		peer->Send(std::move(data), flags);
-	}
 }
 
 #endif

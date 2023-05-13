@@ -16,6 +16,7 @@ add_subdirectory(bitscpp)
 
 include_directories(./include/)
 include_directories(./enet/include/)
+include_directories(./bitscpp/include/)
 
 aux_source_directory(./include/icon6/ header_files)
 aux_source_directory(./src source_files)
@@ -48,5 +49,9 @@ if(ICON6_BUILD_EXAMPLES)
 		examples/example1
 	)
 	target_link_libraries(example1 icon6)
+	add_executable(example2
+		examples/example2
+	)
+	target_link_libraries(example2 icon6)
 endif()
 
