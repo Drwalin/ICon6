@@ -4,7 +4,7 @@
 #include <chrono>
 #include <memory>
 #include <thread>
-	
+
 std::shared_ptr<icon6::MessagePassingEnvironment> mpe
 	= std::make_shared<icon6::MessagePassingEnvironment>();
 
@@ -14,12 +14,11 @@ int main() {
 	
 	icon6::Initialize();
 	
+	auto host1 = icon6::Host::Make(port1, 16);
+	auto host2 = icon6::Host::Make(port2, 16);
 	
-	auto host1 = icon6::Host::Make(4000, 16);
-	auto host2 = icon6::Host::Make(4001, 16);
-	
-	host1->userSharedPointer = mpe;
-	host2->userSharedPointer = mpe;
+	host1->SetMessagePassingEnvironment(mpe);
+	host2->SetMessagePassingEnvironment(mpe);
 	
 	mpe->RegisterMessage<std::vector<int>>("sum",
 			[](icon6::Peer*p, auto&& msg, uint32_t flags) {
@@ -38,19 +37,6 @@ int main() {
 				printf(" mult = %i\n", sum);
 			});
 	
-	host1->SetReceive([](icon6::Peer*p, std::vector<uint8_t>& data,
-				uint32_t flags){
-			std::reinterpret_pointer_cast<icon6::MessagePassingEnvironment>
-					(p->GetHost()->userSharedPointer)
-						->OnReceive(p, data.data(), data.size(), flags);
-		});
-	host2->SetReceive([](icon6::Peer*p, std::vector<uint8_t>& data,
-				uint32_t flags){
-			std::reinterpret_pointer_cast<icon6::MessagePassingEnvironment>
-					(p->GetHost()->userSharedPointer)
-						->OnReceive(p, data.data(), data.size(), flags);
-		});
-	
 	host1->RunAsync();
 	host2->RunAsync();
 	
@@ -59,7 +45,9 @@ int main() {
 	auto p1 = P1.get();
 	
 	if(p1 != nullptr) {
-		std::vector<int> s = {1,2,3,4,5};
+		mpe->Send<std::vector<int>>(p1.get(), "mult", {1,2,3,4,5}, 0);
+		
+		std::vector<int> s = {1,2,3,2,2,2,2,2,2,2,2};
 		mpe->Send(p1.get(), "mult", s, 0);
 		
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));

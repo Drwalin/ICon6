@@ -20,6 +20,8 @@
 #include <memory>
 #include <cstring>
 
+#include "../include/icon6/MessagePassingEnvironment.hpp"
+#include "../include/icon6/Cert.hpp"
 #include "../include/icon6/Host.hpp"
 #include "../include/icon6/Command.hpp"
 #include "../include/icon6/Cert.hpp"
@@ -51,7 +53,6 @@ namespace icon6 {
 		com.peer = shared_from_this();
 		com.host = host;
 		com.callback = [](Command& com) {
-			// TODO: do encryption in place for com.binaryData
 			const uint32_t packetSize = ConnectionEncryptionState
 				::GetEncryptedMessageLength(com.binaryData.size());
 			
@@ -110,8 +111,16 @@ namespace icon6 {
 						callbackOnReceive(this, receivedData, flags);
 					} else if(host->callbackOnReceive) {
 						host->callbackOnReceive(this, receivedData, flags);
+					} else {
+						std::shared_ptr<MessagePassingEnvironment> mpe =
+							this->GetHost()->GetMessagePassingEnvironment();
+						if(mpe) {
+							mpe->OnReceive(this, receivedData.data(),
+									receivedData.size(), flags);
+						}
 					}
 				}
+				fflush(stdout);
 			} break;
 			
 		case STATE_ZOMBIE:

@@ -15,8 +15,8 @@ int main() {
 			exit(311);
 		}).detach();
 	
-	auto host1 = icon6::Host::Make(4000, 16);
-	auto host2 = icon6::Host::Make(4001, 16);
+	auto host1 = icon6::Host::Make(port1, 16);
+	auto host2 = icon6::Host::Make(port2, 16);
 	
 	host1->SetReceive([](icon6::Peer*p, std::vector<uint8_t>& data,
 				uint32_t flags){

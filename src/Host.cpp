@@ -75,7 +75,6 @@ namespace icon6 {
 	
 	
 	
-	
 	void Host::SetCertificatePolicy(PeerAcceptancePolicy peerAcceptancePolicy) {
 		if(peerAcceptancePolicy == PeerAcceptancePolicy::ACCEPT_ALL) {
 			this->peerAcceptancePolicy = peerAcceptancePolicy;
@@ -96,6 +95,7 @@ namespace icon6 {
 		certKey = crypto::CertKey::GenerateKey();
 		// TODO: generate self signed certificate
 	}
+	
 	
 	
 	
@@ -181,20 +181,15 @@ namespace icon6 {
 							event.peer));
 						peers.insert(peer);
 					}
-					// TODO: instead of callback on connect do hand shake in
-					//       receive
 					((Peer*)event.peer->data)->StartHandshake();
 				} break;
 			case ENET_EVENT_TYPE_RECEIVE:
-				if(callbackOnReceive) {
-					// TODO: first check for peer state and whether handshake is
-					//       done and act accordingly
+				{
 					uint32_t flags = 0;
 					if(event.packet->flags & ENET_PACKET_FLAG_RELIABLE)
 						flags &= FLAG_RELIABLE;
 					if(!(event.packet->flags & ENET_PACKET_FLAG_UNSEQUENCED))
 						flags &= FLAG_SEQUENCED;
-					// TODO: decrypt here
 					Peer* peer = (Peer*)event.peer->data;
 					peer->CallCallbackReceive(event.packet->data,
 							event.packet->dataLength, flags);

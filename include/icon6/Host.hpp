@@ -40,6 +40,7 @@ namespace icon6 {
 	
 	class Peer;
 	class ConnectionEncryptionState;
+	class MessagePassingEnvironment;
 	
 	enum class PeerAcceptancePolicy {
 		ACCEPT_ALL,
@@ -52,6 +53,11 @@ namespace icon6 {
 		
 		static std::shared_ptr<Host> Make(uint16_t port,
 				uint32_t maximumHostsNumber);
+		
+		inline void SetMessagePassingEnvironment(
+				std::shared_ptr<MessagePassingEnvironment> mpe) { this->mpe = mpe; }
+		inline std::shared_ptr<MessagePassingEnvironment>
+			GetMessagePassingEnvironment() { return mpe; }
 		
 		// create host on 127.0.0.1:port
 		Host(uint16_t port, uint32_t maximumHostsNumber);
@@ -111,6 +117,7 @@ namespace icon6 {
 		PeerAcceptancePolicy peerAcceptancePolicy = PeerAcceptancePolicy::ACCEPT_ALL;
 // 		uint32_t maxCertificateDepthAcceptable = 16;
 		
+		std::shared_ptr<MessagePassingEnvironment> mpe;
 		
 		enum HostFlags : uint32_t {
 			RUNNING = 1<<0,
