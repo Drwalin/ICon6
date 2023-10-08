@@ -33,6 +33,7 @@
 #define ICON6_HOST_CPP_IMPLEMENTATION
 
 #include "../include/icon6/Peer.hpp"
+#include "../include/icon6/MessagePassingEnvironment.hpp"
 
 #include "../include/icon6/Host.hpp"
 
@@ -300,6 +301,18 @@ namespace icon6 {
 	
 	void Host::EnqueueCommand(Command&& command) {
 		concurrentQueueCommands->enqueue(command);
+	}
+	
+	void Host::SetMessagePassingEnvironment(
+			std::shared_ptr<MessagePassingEnvironment> mpe) {
+		this->mpe = mpe;
+		if(mpe) {
+			this->callbackOnReceive = [](Peer*peer, std::vector<uint8_t>& data,
+			uint32_t flags) {
+				peer->GetHost()->GetMessagePassingEnvironment()->
+					OnReceive(peer, data, flags);
+			};
+		}
 	}
 	
 	

@@ -109,15 +109,6 @@ namespace icon6 {
 				if(state == STATE_READY_TO_USE) {
 					if(callbackOnReceive) {
 						callbackOnReceive(this, receivedData, flags);
-					} else if(host->callbackOnReceive) {
-						host->callbackOnReceive(this, receivedData, flags);
-					} else {
-						std::shared_ptr<MessagePassingEnvironment> mpe =
-							this->GetHost()->GetMessagePassingEnvironment();
-						if(mpe) {
-							mpe->OnReceive(this, receivedData.data(),
-									receivedData.size(), flags);
-						}
 					}
 				}
 				fflush(stdout);

@@ -19,8 +19,10 @@
 #ifndef ICON6_MESSAGE_PASSING_ENVIRONMENT_HPP
 #define ICON6_MESSAGE_PASSING_ENVIRONMENT_HPP
 
+#include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <bitscpp/ByteWriterExtensions.hpp>
 #include <bitscpp/ByteReaderExtensions.hpp>
@@ -30,10 +32,14 @@
 
 namespace icon6 {
 	
+	class MessagePassingEnvironment;
+	
 	class MessageConverter {
 	public:
 		virtual ~MessageConverter() = default;
-		virtual void Call(Peer* peer, bitscpp::ByteReader<true>& reader,
+		
+		virtual void Call(MessagePassingEnvironment& mpe,
+				Peer* peer, bitscpp::ByteReader<true>& reader,
 				uint32_t flags) = 0;
 	};
 	
@@ -45,7 +51,9 @@ namespace icon6 {
 		}
 		
 		virtual ~MessageConverterSpec() = default;
-		virtual void Call(Peer* peer, bitscpp::ByteReader<true>& reader,
+		
+		virtual void Call(MessagePassingEnvironment& mpe,
+				Peer* peer, bitscpp::ByteReader<true>& reader,
 				uint32_t flags) override {
 			T message;
 			reader.op(message);
@@ -56,21 +64,17 @@ namespace icon6 {
 		
 		void(*const onReceive)(Peer* peer, T&& message, uint32_t flags);
 	};
-
-	class MessagePassingEnvironment {
+	
+	
+	
+	class MessagePassingEnvironment :
+		public std::enable_shared_from_this<MessagePassingEnvironment> {
 	public:
 		
 		using ReceiveCallback = void(*)(Peer* peer, void* message, uint32_t flags);
 		
-		void OnReceive(Peer* peer, const uint8_t* data, uint32_t size,
+		void OnReceive(Peer* peer, std::vector<uint8_t>& data,
 				uint32_t flags);
-		
-		template<typename T>
-		void RegisterMessage(const char* name,
-				void(*onReceive)(Peer* peer, T&& message, uint32_t flags)) {
-			registeredMessages[name]
-				= std::make_shared<MessageConverterSpec<T>>(onReceive);
-		}
 		
 		template<typename T>
 		void RegisterMessage(const std::string& name,
@@ -91,7 +95,7 @@ namespace icon6 {
 			peer->Send(std::move(buffer), flags);
 		}
 		
-	private:
+	protected:
 		
 		std::unordered_map<std::string, std::shared_ptr<MessageConverter>>
 			registeredMessages;

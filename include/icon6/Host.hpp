@@ -54,8 +54,8 @@ namespace icon6 {
 		static std::shared_ptr<Host> Make(uint16_t port,
 				uint32_t maximumHostsNumber);
 		
-		inline void SetMessagePassingEnvironment(
-				std::shared_ptr<MessagePassingEnvironment> mpe) { this->mpe = mpe; }
+		void SetMessagePassingEnvironment(
+				std::shared_ptr<MessagePassingEnvironment> mpe);
 		inline std::shared_ptr<MessagePassingEnvironment>
 			GetMessagePassingEnvironment() { return mpe; }
 		

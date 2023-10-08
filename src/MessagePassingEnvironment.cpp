@@ -20,13 +20,13 @@
 
 namespace icon6 {
 	void MessagePassingEnvironment::OnReceive(Peer* peer,
-			const uint8_t* data, uint32_t size, uint32_t flags) {
-		bitscpp::ByteReader reader(data, size);
+			std::vector<uint8_t>& data, uint32_t flags) {
+		bitscpp::ByteReader reader(data.data(), data.size());
 		std::string name;
 		reader.op(name);
 		auto it = registeredMessages.find(name);
 		if(registeredMessages.end() != it) {
-			it->second->Call(peer, reader, flags);
+			it->second->Call(*this, peer, reader, flags);
 		}
 	}
 }
