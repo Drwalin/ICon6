@@ -20,50 +20,48 @@
 #define ICON6_METHOD_INVOCATION_ENVIRONMENT_HPP
 
 #include "MessagePassingEnvironment.hpp"
+#include <memory>
 
 namespace icon6 {
 namespace rmi {
 	
-	template<typename Tclass, typename Targ>
-	class MessageMethodInvocationConverterSpec : public MessageConverter {
+	
+	class MethodInvokeConverter {
 	public:
-		MessageMethodInvocationConverterSpec(void(*onReceive)(Peer* peer,
-			Targ&& message, uint32_t flags), class Class* _class) :
-				onReceive(onReceive), _class(_class) {
-		}
+		virtual ~MethodInvokeConverter() = default;
 		
-		virtual ~MessageMethodInvocationConverterSpec() = default;
-		
-		virtual void Call(MessagePassingEnvironment& mpe,
+		virtual void Call(void* objectPtr,
 				Peer* peer, bitscpp::ByteReader<true>& reader,
-				uint32_t flags) override {
-			Targ message;
-			reader.op(message);
-			onReceive(peer, std::move(message), flags);
-		}
-		
-	private:
-		
-		void(*const onReceive)(Peer* peer, Targ&& message, uint32_t flags);
-		class Class* _class;
+				uint32_t flags) = 0;
 	};
 	
 	
-	class Class {
+	
+	class Class : public std::enable_shared_from_this<Class> {
 	public:
 		
-		Class* parentClass;
-		std::unordered_set<Class*> inheritedClasses;
-		std::string name;
+		Class(std::shared_ptr<Class> parentClass, std::string name,
+				std::shared_ptr<void> (*constructor)());
 		
-		std::unordered_map<std::string, std::shared_ptr<MessageConverter>> methods;
+		void AddMethod(std::string methodName, std::shared_ptr<MethodInvokeConverter> converter);
+		void UnwindMethodsIntoDerivedClasses();
+		
+		Class const* parentClass;
+		std::unordered_set<Class*> inheritedClasses;
+		const std::string name;
+		
+		std::shared_ptr<void> (*constructor)();
+		
+		std::unordered_map<std::string, std::shared_ptr<MethodInvokeConverter>> methods;
 	};
+	
+	
 	
 	class Object {
 	public:
 		
-		Class* obejctClass;
 		std::shared_ptr<void> objectPtr;
+		Class* obejctClass;
 	};
 	
 	
@@ -71,13 +69,133 @@ namespace rmi {
 	class MethodInvocationEnvironment : public MessagePassingEnvironment {
 	public:
 		
+		std::shared_ptr<Class> GetClassByName(std::string name);
+		
+		virtual void OnReceive(Peer* peer, std::vector<uint8_t>& data,
+				uint32_t flags) override;
+		
+		template<typename T>
+		void RegisterClass(std::string className,
+				std::shared_ptr<Class> parentClass)
+		{
+			auto cls = std::make_shared<Class>(parentClass, className,
+					[]()->std::shared_ptr<void>{
+						return std::make_shared<T>();
+					}
+					);
+			classes[className] = cls;
+			if(parentClass == nullptr)
+				baseClasses[className] = cls;
+		}
+		
+		template<typename Tclass, typename Targ>
+		void RegisterMemberFunction(std::string className,
+									std::string methodName,
+									void (Tclass::*memberFunction)(
+										Peer*,
+										uint32_t flags,
+										Targ&& data)
+									);
+		
+		template<typename T>
+		std::shared_ptr<T> GetObject(uint64_t id)
+		{
+			auto it = objects.find(id);
+			if(it != objects.end())
+				return std::static_pointer_cast<T>(it->second.objectPtr);
+			return nullptr;
+		}
+		
+		template<typename T>
+		std::shared_ptr<T> CreateLocalObject(std::string className, uint64_t &id)
+		{
+			static uint64_t ids = 1;
+			id = ++ids;
+			auto cls = GetClassByName(className);
+			if(cls) {
+				auto obj = cls->constructor();
+				objects[id] = Object{obj, cls.get()};
+				return std::static_pointer_cast<T>(obj);
+			}
+			return nullptr;
+		}
+		
+		
+		template<typename T>
+		void SendInvoke(Peer* peer, uint64_t objectId, const std::string& name,
+				const T& message, uint32_t flags) {
+			std::vector<uint8_t> buffer;
+			{
+				bitscpp::ByteWriter writer(buffer);
+				writer.op((uint8_t)0);
+				writer.op(objectId);
+				writer.op(name);
+				writer.op(message);
+			}
+			peer->Send(std::move(buffer), flags);
+		}
+		
 		
 	protected:
 		
-		std::unordered_map<size_t, std::shared_ptr<void>> objects;
+		std::unordered_map<size_t, Object> objects;
+		std::unordered_map<std::string, std::shared_ptr<Class>> classes;
+		std::unordered_map<std::string, std::shared_ptr<Class>> baseClasses;
 		
 	};
 	
+	
+	
+	template<typename Tclass, typename Targ>
+	class MessageNetworkAwareMethodInvocationConverterSpec : public MethodInvokeConverter {
+	public:
+		MessageNetworkAwareMethodInvocationConverterSpec(
+				Class* _class,
+				void(Tclass::*memberFunction)(Peer* peer, uint32_t flags, Targ&& message)) :
+				onReceive(memberFunction), _class(_class)
+		{
+		}
+		
+		virtual ~MessageNetworkAwareMethodInvocationConverterSpec() = default;
+		
+		virtual void Call(void* objectPtr,
+				Peer* peer, bitscpp::ByteReader<true>& reader,
+				uint32_t flags) override
+		{
+			Tclass* ptr = (Tclass*)objectPtr;
+			Targ message;
+			reader.op(message);
+			(ptr->*onReceive)(peer, flags, std::move(message));
+		}
+		
+	private:
+		
+		void(Tclass::*onReceive)(Peer* peer, uint32_t flags, Targ&& message);
+		class Class* _class;
+	};
+	
+	
+	
+	template<typename Tclass, typename Targ>
+	void MethodInvocationEnvironment::RegisterMemberFunction(
+			std::string className,
+			std::string methodName,
+			void (Tclass::*memberFunction)(
+				Peer*,
+				uint32_t flags,
+				Targ&& data)
+			)
+	{
+		std::shared_ptr<Class> cls = GetClassByName(className);
+		if(cls) {
+			cls->methods[methodName] = std::make_shared<
+				MessageNetworkAwareMethodInvocationConverterSpec<Tclass, Targ>>(
+						cls.get(), memberFunction
+					);
+		} else {
+			throw std::string("No class named '") + className + "' found.";
+		}
+	}
 }
 }
 

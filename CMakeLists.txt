@@ -53,5 +53,9 @@ if(ICON6_BUILD_EXAMPLES)
 		examples/example2
 	)
 	target_link_libraries(example2 icon6)
+	add_executable(example3
+		examples/example3
+	)
+	target_link_libraries(example3 icon6)
 endif()
 

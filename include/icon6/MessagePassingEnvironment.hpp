@@ -73,7 +73,7 @@ namespace icon6 {
 		
 		using ReceiveCallback = void(*)(Peer* peer, void* message, uint32_t flags);
 		
-		void OnReceive(Peer* peer, std::vector<uint8_t>& data,
+		virtual void OnReceive(Peer* peer, std::vector<uint8_t>& data,
 				uint32_t flags);
 		
 		template<typename T>
