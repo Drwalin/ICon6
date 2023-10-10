@@ -82,8 +82,6 @@ namespace rmi {
 					}
 					);
 			classes[className] = cls;
-			if(parentClass == nullptr)
-				baseClasses[className] = cls;
 		}
 		
 		template<typename Tclass, typename Targ>
@@ -138,8 +136,6 @@ namespace rmi {
 		
 		std::unordered_map<size_t, Object> objects;
 		std::unordered_map<std::string, std::shared_ptr<Class>> classes;
-		std::unordered_map<std::string, std::shared_ptr<Class>> baseClasses;
-		
 	};
 	
 	
