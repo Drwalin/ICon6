@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "../include/icon6/ProcedureExecutionCommand.hpp"
+
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 
 namespace icon6 {
@@ -74,7 +76,19 @@ namespace rmi {
 				auto cls = object->second.obejctClass;
 				auto method = cls->methods.find(name);
 				if(method != cls->methods.end()) {
-					method->second->Call(object->second.objectPtr, peer, reader, flags);
+					auto mtd = method->second;
+					if(mtd->executionQueue) {
+						mtd->executionQueue->EnqueueCall(
+							ProcedureExecutionCommand(
+									peer,
+									flags,
+									data,
+									reader.get_offset(),
+									object->second.objectPtr,
+									mtd));
+					} else {
+						mtd->Call(object->second.objectPtr, peer, reader, flags);
+					}
 				} else { // method name does not exists
 					// TODO: do something, show error or anything
 				}

@@ -33,6 +33,8 @@ namespace rmi {
 		virtual void Call(std::shared_ptr<void> objectPtr,
 				Peer* peer, bitscpp::ByteReader<true>& reader,
 				uint32_t flags) = 0;
+		
+		std::shared_ptr<ProcedureExecutionQueue> executionQueue;
 	};
 	
 	
@@ -85,13 +87,15 @@ namespace rmi {
 		}
 		
 		template<typename Tclass, typename Targ>
-		void RegisterMemberFunction(std::string className,
-									std::string methodName,
-									void (Tclass::*memberFunction)(
-										Peer*,
-										uint32_t flags,
-										Targ&& data)
-									);
+		void RegisterMemberFunction(
+				std::string className,
+				std::string methodName,
+				void (Tclass::*memberFunction)(
+					Peer*,
+					uint32_t flags,
+					Targ&& data),
+				std::shared_ptr<ProcedureExecutionQueue> executionQueue=nullptr
+			);
 		
 		template<typename T>
 		std::shared_ptr<T> GetObject(uint64_t id)
@@ -177,16 +181,18 @@ namespace rmi {
 			void (Tclass::*memberFunction)(
 				Peer*,
 				uint32_t flags,
-				Targ&& data)
+				Targ&& data),
+			std::shared_ptr<ProcedureExecutionQueue> executionQueue
 			)
 	{
 		std::shared_ptr<Class> cls = GetClassByName(className);
 		if(cls) {
-			cls->RegisterMethod(methodName, std::make_shared<
+			auto mtd = std::make_shared<
 				MessageNetworkAwareMethodInvocationConverterSpec<Tclass, Targ>>(
 						cls.get(), memberFunction
-					)
-				);
+					);
+			mtd->executionQueue = executionQueue;
+			cls->RegisterMethod(methodName, mtd);
 		} else {
 			throw std::string("No class named '") + className + "' found.";
 		}

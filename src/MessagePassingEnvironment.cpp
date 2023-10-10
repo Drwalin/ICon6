@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "../include/icon6/ProcedureExecutionCommand.hpp"
+
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 
 namespace icon6 {
@@ -26,7 +28,18 @@ namespace icon6 {
 		reader.op(name);
 		auto it = registeredMessages.find(name);
 		if(registeredMessages.end() != it) {
-			it->second->Call(peer, reader, flags);
+			auto mtd = it->second;
+			if(mtd->executionQueue) {
+				mtd->executionQueue->EnqueueCall(
+					ProcedureExecutionCommand(
+							peer,
+							flags,
+							data,
+							reader.get_offset(),
+							mtd));
+			} else {
+				mtd->Call(peer, reader, flags);
+			}
 		}
 	}
 }

@@ -33,6 +33,7 @@
 namespace icon6 {
 	
 	class MessagePassingEnvironment;
+	class ProcedureExecutionQueue;
 	
 	class MessageConverter {
 	public:
@@ -42,6 +43,8 @@ namespace icon6 {
 				Peer* peer,
 				bitscpp::ByteReader<true>& reader,
 				uint32_t flags) = 0;
+		
+		std::shared_ptr<ProcedureExecutionQueue> executionQueue;
 	};
 	
 	template<typename T>
@@ -79,10 +82,13 @@ namespace icon6 {
 				uint32_t flags);
 		
 		template<typename T>
-		void RegisterMessage(const std::string& name,
-				void(*onReceive)(Peer* peer, T&& message, uint32_t flags)) {
-			registeredMessages[name]
-				= std::make_shared<MessageConverterSpec<T>>(onReceive);
+		void RegisterMessage(
+				const std::string& name,
+				void(*onReceive)(Peer* peer, T&& message, uint32_t flags),
+				std::shared_ptr<ProcedureExecutionQueue> executionQueue=nullptr) {
+			auto func = std::make_shared<MessageConverterSpec<T>>(onReceive);
+			func->executionQueue = executionQueue;
+			registeredMessages[name] = func;
 		}
 		
 		template<typename T>
