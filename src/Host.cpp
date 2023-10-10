@@ -209,7 +209,7 @@ namespace icon6 {
 	
 	void Host::DispatchAllEventsFromQueue() {
 		for(int i=0; i<10; ++i) {
-			size_t size = concurrentQueueCommands->size_approx();
+			size_t size = std::max<size_t>(1, concurrentQueueCommands->size_approx());
 			poped_commands.resize(size);
 			size_t nextSize = concurrentQueueCommands
 				->try_dequeue_bulk(poped_commands.data(), size);

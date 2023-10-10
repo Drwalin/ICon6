@@ -19,8 +19,6 @@
 #ifndef ICON6_COMMAND_HPP
 #define ICON6_COMMAND_HPP
 
-#include <enet/enet.h>
-
 #include <cinttypes>
 
 #include <string>

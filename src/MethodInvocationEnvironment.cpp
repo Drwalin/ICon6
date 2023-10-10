@@ -74,7 +74,7 @@ namespace rmi {
 				auto cls = object->second.obejctClass;
 				auto method = cls->methods.find(name);
 				if(method != cls->methods.end()) {
-					method->second->Call(object->second.objectPtr.get(), peer, reader, flags);
+					method->second->Call(object->second.objectPtr, peer, reader, flags);
 				} else { // method name does not exists
 					// TODO: do something, show error or anything
 				}

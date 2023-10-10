@@ -38,8 +38,9 @@ namespace icon6 {
 	public:
 		virtual ~MessageConverter() = default;
 		
-		virtual void Call(MessagePassingEnvironment& mpe,
-				Peer* peer, bitscpp::ByteReader<true>& reader,
+		virtual void Call(
+				Peer* peer,
+				bitscpp::ByteReader<true>& reader,
 				uint32_t flags) = 0;
 	};
 	
@@ -52,8 +53,9 @@ namespace icon6 {
 		
 		virtual ~MessageConverterSpec() = default;
 		
-		virtual void Call(MessagePassingEnvironment& mpe,
-				Peer* peer, bitscpp::ByteReader<true>& reader,
+		virtual void Call(
+				Peer* peer,
+				bitscpp::ByteReader<true>& reader,
 				uint32_t flags) override {
 			T message;
 			reader.op(message);

@@ -30,7 +30,7 @@ namespace rmi {
 	public:
 		virtual ~MethodInvokeConverter() = default;
 		
-		virtual void Call(void* objectPtr,
+		virtual void Call(std::shared_ptr<void> objectPtr,
 				Peer* peer, bitscpp::ByteReader<true>& reader,
 				uint32_t flags) = 0;
 	};
@@ -152,14 +152,14 @@ namespace rmi {
 		
 		virtual ~MessageNetworkAwareMethodInvocationConverterSpec() = default;
 		
-		virtual void Call(void* objectPtr,
+		virtual void Call(std::shared_ptr<void> objectPtr,
 				Peer* peer, bitscpp::ByteReader<true>& reader,
 				uint32_t flags) override
 		{
-			Tclass* ptr = (Tclass*)objectPtr;
+			std::shared_ptr<Tclass> ptr = std::static_pointer_cast<Tclass>(objectPtr);
 			Targ message;
 			reader.op(message);
-			(ptr->*onReceive)(peer, flags, std::move(message));
+			(ptr.get()->*onReceive)(peer, flags, std::move(message));
 		}
 		
 	private:

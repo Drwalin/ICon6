@@ -26,7 +26,7 @@ namespace icon6 {
 		reader.op(name);
 		auto it = registeredMessages.find(name);
 		if(registeredMessages.end() != it) {
-			it->second->Call(*this, peer, reader, flags);
+			it->second->Call(peer, reader, flags);
 		}
 	}
 }
