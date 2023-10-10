@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON6_METHOD_INVOKE_CONVERTER_HPP
-#define ICON6_METHOD_INVOKE_CONVERTER_HPP
+#ifndef ICON6_METHOD_INVOCATION_CONVERTER_HPP
+#define ICON6_METHOD_INVOCATION_CONVERTER_HPP
 
 #include <memory>
 #include <string>
@@ -38,9 +38,9 @@ namespace rmi {
 	
 	class Class;
 	
-	class MethodInvokeConverter {
+	class MethodInvocationConverter {
 	public:
-		virtual ~MethodInvokeConverter() = default;
+		virtual ~MethodInvocationConverter() = default;
 		
 		virtual void Call(std::shared_ptr<void> objectPtr,
 				Peer* peer, bitscpp::ByteReader<true>& reader,
@@ -50,7 +50,7 @@ namespace rmi {
 	};
 	
 	template<typename Tclass, typename Targ>
-	class MessageNetworkAwareMethodInvocationConverterSpec : public MethodInvokeConverter {
+	class MessageNetworkAwareMethodInvocationConverterSpec : public MethodInvocationConverter {
 	public:
 		MessageNetworkAwareMethodInvocationConverterSpec(
 				Class* _class,

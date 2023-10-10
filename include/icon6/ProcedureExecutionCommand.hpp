@@ -31,7 +31,7 @@ namespace icon6 {
 	
 	class MessageConverter;
 	namespace rmi {
-		class MethodInvokeConverter;
+		class MethodInvocationConverter;
 	}
 
 	class ProcedureExecutionCommand {
@@ -58,7 +58,7 @@ namespace icon6 {
 				std::vector<uint8_t> &binaryData,
 				size_t readOffset,
 				std::shared_ptr<void> objectPtr,
-				std::shared_ptr<rmi::MethodInvokeConverter> methodInvoker);
+				std::shared_ptr<rmi::MethodInvocationConverter> methodInvoker);
 		
 		void Execute();
 		

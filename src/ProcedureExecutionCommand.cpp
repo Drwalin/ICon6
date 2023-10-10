@@ -58,7 +58,7 @@ namespace icon6 {
 			std::vector<uint8_t>& binaryData,
 			size_t readOffset,
 			std::shared_ptr<void> objectPtr,
-			std::shared_ptr<rmi::MethodInvokeConverter> methodInvoker) :
+			std::shared_ptr<rmi::MethodInvocationConverter> methodInvoker) :
 		peer(peer->shared_from_this()),
 		flags(flags),
 		readOffset(readOffset),
@@ -72,7 +72,7 @@ namespace icon6 {
 	void ProcedureExecutionCommand::Execute()
 	{
 		if(objectPtr) {
-			auto mtd = std::static_pointer_cast<rmi::MethodInvokeConverter>(
+			auto mtd = std::static_pointer_cast<rmi::MethodInvocationConverter>(
 					messageOrMethodConverter);
 			bitscpp::ByteReader reader(binaryData.data()+readOffset,
 					binaryData.size()-readOffset);

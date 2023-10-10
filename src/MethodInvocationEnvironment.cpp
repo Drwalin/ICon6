@@ -41,7 +41,7 @@ namespace rmi {
 	}
 
 	void Class::RegisterMethod(std::string methodName,
-						  std::shared_ptr<MethodInvokeConverter> converter)
+						  std::shared_ptr<MethodInvocationConverter> converter)
 	{
 		methods[methodName] = converter;
 		for(Class* cls : inheritedClasses) {

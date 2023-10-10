@@ -21,7 +21,7 @@
 
 #include <memory>
 
-#include "MethondInvokeConverter.hpp"
+#include "MethodInvocationConverter.hpp"
 
 #include "MessagePassingEnvironment.hpp"
 
@@ -34,9 +34,9 @@ namespace rmi {
 		Class(std::shared_ptr<Class> parentClass, std::string name,
 				std::shared_ptr<void> (*constructor)());
 		
-		void RegisterMethod(std::string methodName, std::shared_ptr<MethodInvokeConverter> converter);
+		void RegisterMethod(std::string methodName, std::shared_ptr<MethodInvocationConverter> converter);
 		
-		std::unordered_map<std::string, std::shared_ptr<MethodInvokeConverter>> methods;
+		std::unordered_map<std::string, std::shared_ptr<MethodInvocationConverter>> methods;
 		std::shared_ptr<void> (*const constructor)();
 		
 		Class *const parentClass;
