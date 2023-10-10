@@ -24,7 +24,7 @@ namespace icon6 {
 namespace rmi {
 	Class::Class(std::shared_ptr<Class> parentClass, std::string name,
 			std::shared_ptr<void> (*constructor)()) :
-		parentClass(parentClass.get()), name(name), constructor(constructor)
+		constructor(constructor), parentClass(parentClass.get()), name(name)
 	{
 		if(parentClass) {
 			parentClass->inheritedClasses.insert(this);

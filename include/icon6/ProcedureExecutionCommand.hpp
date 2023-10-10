@@ -24,13 +24,12 @@
 #include <string>
 #include <memory>
 #include <vector>
-#include <functional>
 
 namespace icon6 {
 	
 	class Peer;
-	class MessageConverter;
 	
+	class MessageConverter;
 	namespace rmi {
 		class MethodInvokeConverter;
 	}
@@ -44,7 +43,7 @@ namespace icon6 {
 		~ProcedureExecutionCommand();
 		
 		
-		ProcedureExecutionCommand& operator=(ProcedureExecutionCommand&&) = default;;
+		ProcedureExecutionCommand& operator=(ProcedureExecutionCommand&&) = default;
 		
 		ProcedureExecutionCommand(
 				Peer *peer,
@@ -91,6 +90,7 @@ namespace icon6 {
 		};
 	};
 }
+
 
 #endif
 

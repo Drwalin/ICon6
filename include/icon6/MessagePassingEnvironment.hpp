@@ -25,52 +25,14 @@
 #include <vector>
 
 #include <bitscpp/ByteWriterExtensions.hpp>
-#include <bitscpp/ByteReaderExtensions.hpp>
 
 #include "Host.hpp"
 #include "Peer.hpp"
+#include "MessageConverter.hpp"
 
 namespace icon6 {
 	
-	class MessagePassingEnvironment;
 	class ProcedureExecutionQueue;
-	
-	class MessageConverter {
-	public:
-		virtual ~MessageConverter() = default;
-		
-		virtual void Call(
-				Peer* peer,
-				bitscpp::ByteReader<true>& reader,
-				uint32_t flags) = 0;
-		
-		std::shared_ptr<ProcedureExecutionQueue> executionQueue;
-	};
-	
-	template<typename T>
-	class MessageConverterSpec : public MessageConverter {
-	public:
-		MessageConverterSpec(void(*onReceive)(Peer* peer, T&& message,
-					uint32_t flags)) : onReceive(onReceive) {
-		}
-		
-		virtual ~MessageConverterSpec() = default;
-		
-		virtual void Call(
-				Peer* peer,
-				bitscpp::ByteReader<true>& reader,
-				uint32_t flags) override {
-			T message;
-			reader.op(message);
-			onReceive(peer, std::move(message), flags);
-		}
-		
-	private:
-		
-		void(*const onReceive)(Peer* peer, T&& message, uint32_t flags);
-	};
-	
-	
 	
 	class MessagePassingEnvironment :
 		public std::enable_shared_from_this<MessagePassingEnvironment> {
