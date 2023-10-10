@@ -43,16 +43,14 @@ namespace rmi {
 		Class(std::shared_ptr<Class> parentClass, std::string name,
 				std::shared_ptr<void> (*constructor)());
 		
-		void AddMethod(std::string methodName, std::shared_ptr<MethodInvokeConverter> converter);
-		void UnwindMethodsIntoDerivedClasses();
-		
-		Class const* parentClass;
-		std::unordered_set<Class*> inheritedClasses;
-		const std::string name;
-		
-		std::shared_ptr<void> (*constructor)();
+		void RegisterMethod(std::string methodName, std::shared_ptr<MethodInvokeConverter> converter);
 		
 		std::unordered_map<std::string, std::shared_ptr<MethodInvokeConverter>> methods;
+		std::shared_ptr<void> (*const constructor)();
+		
+		Class *const parentClass;
+		std::unordered_set<Class*> inheritedClasses;
+		const std::string name;
 	};
 	
 	
@@ -188,10 +186,11 @@ namespace rmi {
 	{
 		std::shared_ptr<Class> cls = GetClassByName(className);
 		if(cls) {
-			cls->methods[methodName] = std::make_shared<
+			cls->RegisterMethod(methodName, std::make_shared<
 				MessageNetworkAwareMethodInvocationConverterSpec<Tclass, Targ>>(
 						cls.get(), memberFunction
-					);
+					)
+				);
 		} else {
 			throw std::string("No class named '") + className + "' found.";
 		}

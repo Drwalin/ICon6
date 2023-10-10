@@ -13,6 +13,11 @@ public:
 	~TestClass() = default;
 	virtual void Method(icon6::Peer *peer, uint32_t flags, int&& arg) {
 		printf("Called TestClass::Method on %p with %i\n", (void*)this, arg);
+		fflush(stdout);
+	}
+	virtual void Method2(icon6::Peer *peer, uint32_t flags, std::string&& arg) {
+		printf("Called TestClass::Method2 on %p with %s\n", (void*)this, arg.c_str());
+		fflush(stdout);
 	}
 };
 
@@ -21,6 +26,11 @@ public:
 	~InheritedClass() = default;
 	virtual void Method(icon6::Peer *peer, uint32_t flags, int&& arg) override {
 		printf("Called InheritedClass::Method on %p with %i\n", (void*)this, arg);
+		fflush(stdout);
+	}
+	virtual void Method2(icon6::Peer *peer, uint32_t flags, std::string&& arg) override {
+		printf("Called InheritedClass::Method2 on %p with %s\n", (void*)this, arg.c_str());
+		fflush(stdout);
 	}
 };
 
@@ -54,11 +64,9 @@ int main() {
 			});
 	
 	mpe->RegisterClass<TestClass>("TestClass", nullptr);
-	mpe->RegisterMemberFunction<TestClass, int>("TestClass", "Method", &TestClass::Method);
+	mpe->RegisterMemberFunction<TestClass>("TestClass", "Method", &TestClass::Method);
 	mpe->RegisterClass<InheritedClass>("InheritedClass", mpe->GetClassByName("TestClass"));
-// 	mpe->RegisterMemberFunction<InheritedClass, int>("InheritedClass", "Method", &InheritedClass::Method);
-	
-	mpe->GetClassByName("TestClass")->UnwindMethodsIntoDerivedClasses();
+	mpe->RegisterMemberFunction<TestClass>("TestClass", "Method2", &TestClass::Method2);
 	
 	uint64_t obj[2];
 	mpe->CreateLocalObject<void>("TestClass", obj[0]);
@@ -67,7 +75,7 @@ int main() {
 	host1->RunAsync();
 	host2->RunAsync();
 	
-	auto P1 = host1->Connect("192.168.0.150", 4001);
+	auto P1 = host1->Connect("localhost", 4001);
 	P1.wait();
 	auto p1 = P1.get();
 	
@@ -79,6 +87,9 @@ int main() {
 		
 		mpe->SendInvoke(p1.get(), obj[0], "Method", 123, 0);
 		mpe->SendInvoke(p1.get(), obj[1], "Method", 4567, 0);
+		
+		mpe->SendInvoke(p1.get(), obj[0], "Method2", "asdf", 0);
+		mpe->SendInvoke(p1.get(), obj[1], "Method2", "qwerty", 0);
 		
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 		

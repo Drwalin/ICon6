@@ -24,25 +24,28 @@ namespace rmi {
 			std::shared_ptr<void> (*constructor)()) :
 		parentClass(parentClass.get()), name(name), constructor(constructor)
 	{
-		if(parentClass)
+		if(parentClass) {
 			parentClass->inheritedClasses.insert(this);
+			Class* parenting = parentClass.get();
+			while(parenting) {
+				for(auto mtd : parenting->methods) {
+					if(methods.count(mtd.first) == 0) {
+						methods[mtd.first] = mtd.second;
+					}
+				}
+				parenting = parenting->parentClass;
+			}
+		}
 	}
 
-	void Class::AddMethod(std::string methodName,
+	void Class::RegisterMethod(std::string methodName,
 						  std::shared_ptr<MethodInvokeConverter> converter)
 	{
 		methods[methodName] = converter;
-	}
-	
-	void Class::UnwindMethodsIntoDerivedClasses()
-	{
 		for(Class* cls : inheritedClasses) {
-			for(auto mtd : methods) {
-				if(cls->methods.count(mtd.first) == 0) {
-					cls->methods[mtd.first] = mtd.second;
-				}
+			if(cls->methods.count(methodName) == 0) {
+				cls->RegisterMethod(methodName, converter);
 			}
-			cls->UnwindMethodsIntoDerivedClasses();
 		}
 	}
 	
