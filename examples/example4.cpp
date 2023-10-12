@@ -1,5 +1,5 @@
 
-#include "../include/icon6/ProcedureExecutionCommand.hpp"
+#include "../include/icon6/CommandExecutionQueue.hpp"
 #include "../include/icon6/Host.hpp"
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 #include <chrono>
@@ -48,12 +48,12 @@ public:
 };
 
 
-std::shared_ptr<icon6::ProcedureExecutionQueue> exeQueue
-	= std::make_shared<icon6::ProcedureExecutionQueue>();
+std::shared_ptr<icon6::CommandExecutionQueue> exeQueue
+	= std::make_shared<icon6::CommandExecutionQueue>();
 
 void ThreadQueueProcessing()
 {
-	std::vector<icon6::ProcedureExecutionCommand> commands;
+	std::vector<icon6::Command> commands;
 	while(exeQueue) {
 		commands.clear();
 		exeQueue->TryDequeueBulkAny(commands);

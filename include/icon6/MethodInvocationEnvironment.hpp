@@ -81,7 +81,7 @@ namespace rmi {
 					Peer*,
 					uint32_t flags,
 					Targ&& data),
-				std::shared_ptr<ProcedureExecutionQueue> executionQueue=nullptr
+				std::shared_ptr<CommandExecutionQueue> executionQueue=nullptr
 			)
 		{
 			std::shared_ptr<Class> cls = GetClassByName(className);

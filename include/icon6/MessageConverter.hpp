@@ -29,7 +29,7 @@
 namespace icon6 {
 	
 	class MessagePassingEnvironment;
-	class ProcedureExecutionQueue;
+	class CommandExecutionQueue;
 	
 	class MessageConverter {
 	public:
@@ -40,7 +40,7 @@ namespace icon6 {
 				bitscpp::ByteReader<true>& reader,
 				uint32_t flags) = 0;
 		
-		std::shared_ptr<ProcedureExecutionQueue> executionQueue;
+		std::shared_ptr<CommandExecutionQueue> executionQueue;
 	};
 	
 	template<typename T>

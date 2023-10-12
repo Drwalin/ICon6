@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../include/icon6/ProcedureExecutionCommand.hpp"
-
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 
 namespace icon6 {
@@ -78,14 +76,15 @@ namespace rmi {
 				if(method != cls->methods.end()) {
 					auto mtd = method->second;
 					if(mtd->executionQueue) {
-						mtd->executionQueue->EnqueueCall(
-							ProcedureExecutionCommand(
-									peer,
-									flags,
-									data,
-									reader.get_offset(),
-									object->second.objectPtr,
-									mtd));
+						Command command{commands::ExecuteRMI{}};
+						commands::ExecuteRMI& com = command.executeRMI;
+						com.peer = peer->shared_from_this();
+						com.flags = flags;
+						com.binaryData.swap(data);
+						com.readOffset = reader.get_offset();
+						com.methodInvoker = mtd;
+						com.objectPtr = object->second.objectPtr,
+						mtd->executionQueue->EnqueueCommand(std::move(command));
 					} else {
 						mtd->Call(object->second.objectPtr, peer, reader, flags);
 					}

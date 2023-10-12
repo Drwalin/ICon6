@@ -32,7 +32,7 @@
 
 namespace icon6 {
 	
-	class ProcedureExecutionQueue;
+	class CommandExecutionQueue;
 	
 	class MessagePassingEnvironment :
 		public std::enable_shared_from_this<MessagePassingEnvironment> {
@@ -47,7 +47,7 @@ namespace icon6 {
 		void RegisterMessage(
 				const std::string& name,
 				void(*onReceive)(Peer* peer, T&& message, uint32_t flags),
-				std::shared_ptr<ProcedureExecutionQueue> executionQueue=nullptr) {
+				std::shared_ptr<CommandExecutionQueue> executionQueue=nullptr) {
 			auto func = std::make_shared<MessageConverterSpec<T>>(onReceive);
 			func->executionQueue = executionQueue;
 			registeredMessages[name] = func;

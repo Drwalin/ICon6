@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../include/icon6/ProcedureExecutionCommand.hpp"
+#include "../include/icon6/CommandExecutionQueue.hpp"
 
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 
@@ -30,13 +30,14 @@ namespace icon6 {
 		if(registeredMessages.end() != it) {
 			auto mtd = it->second;
 			if(mtd->executionQueue) {
-				mtd->executionQueue->EnqueueCall(
-					ProcedureExecutionCommand(
-							peer,
-							flags,
-							data,
-							reader.get_offset(),
-							mtd));
+				Command command{commands::ExecuteRPC{}};
+				commands::ExecuteRPC& com = command.executeRPC;
+				com.peer = peer->shared_from_this();
+				com.flags = flags;
+				com.binaryData.swap(data);
+				com.readOffset = reader.get_offset();
+				com.messageConverter = mtd;
+				mtd->executionQueue->EnqueueCommand(std::move(command));
 			} else {
 				mtd->Call(peer, reader, flags);
 			}

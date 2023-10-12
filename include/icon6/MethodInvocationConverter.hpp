@@ -32,7 +32,7 @@
 
 namespace icon6 {
 	
-	class ProcedureExecutionQueue;
+	class CommandExecutionQueue;
 	
 namespace rmi {
 	
@@ -46,7 +46,7 @@ namespace rmi {
 				Peer* peer, bitscpp::ByteReader<true>& reader,
 				uint32_t flags) = 0;
 		
-		std::shared_ptr<ProcedureExecutionQueue> executionQueue;
+		std::shared_ptr<CommandExecutionQueue> executionQueue;
 	};
 	
 	template<typename Tclass, typename Targ>
