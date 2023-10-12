@@ -35,12 +35,7 @@ namespace icon6 {
 		void EnqueueCommand(Command&& command);
 		void TryDequeueBulkAny(std::vector<Command>& commands);
 		
-		union {
-			void *__concurrentQueueVoid;
-#ifdef ICON6_COMMAND_EXECUTION_QUEUE_CPP_IMPLEMENTATION
-			moodycamel::ConcurrentQueue<Command> *concurrentQueueCommands;
-#endif
-		};
+		void *concurrentQueueCommands;
 	};
 }
 

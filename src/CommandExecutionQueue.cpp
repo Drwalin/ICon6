@@ -18,40 +18,41 @@
 
 #include "../concurrentqueue/concurrentqueue.h"
 
-#define ICON6_COMMAND_EXECUTION_QUEUE_CPP_IMPLEMENTATION
-#include "../include/icon6/CommandExecutionQueue.hpp"
-
 #include "../../bitscpp/include/bitscpp/ByteReader.hpp"
 
 #include "../include/icon6/Peer.hpp"
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 
+#include "../include/icon6/CommandExecutionQueue.hpp"
+
 namespace icon6 {
+	using QueueType = moodycamel::ConcurrentQueue<Command>;
+	
 	CommandExecutionQueue::CommandExecutionQueue()
 	{
-		concurrentQueueCommands = new moodycamel::ConcurrentQueue<Command>();
+		concurrentQueueCommands = new QueueType();
 	}
 	
 	CommandExecutionQueue::~CommandExecutionQueue()
 	{
-		delete concurrentQueueCommands;
+		delete (QueueType*)concurrentQueueCommands;
 		concurrentQueueCommands = nullptr;
 	}
 
 	void CommandExecutionQueue::EnqueueCommand(Command&& command)
 	{
-		concurrentQueueCommands->enqueue(std::move(command));
+		((QueueType*)concurrentQueueCommands)->enqueue(std::move(command));
 	}
 	
 	void CommandExecutionQueue::TryDequeueBulkAny(std::vector<Command>& commands)
 	{
 		commands.clear();
-		size_t size = concurrentQueueCommands->size_approx();
+		size_t size = ((QueueType*)concurrentQueueCommands)->size_approx();
 		if(size == 0)
 			size = 1;
 		commands.resize(size);
-		size_t nextSize = concurrentQueueCommands
+		size_t nextSize = ((QueueType*)concurrentQueueCommands)
 			->try_dequeue_bulk(commands.data(), size);
 		commands.resize(nextSize);
 	}
