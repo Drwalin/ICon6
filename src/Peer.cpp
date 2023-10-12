@@ -48,37 +48,42 @@ namespace icon6 {
 		if(state != STATE_READY_TO_USE) {
 			throw "Peer::Send Handshake is not finished yet. Sending is not posible.";
 		}
-		Command com{std::move(data)};
+		Command command{commands::ExecuteSend{}};
+		commands::ExecuteSend& com = command.executeSend;
 		com.flags = flags;
 		com.peer = shared_from_this();
-		com.host = host;
-		com.callback = [](Command& com) {
-			const uint32_t packetSize = ConnectionEncryptionState
-				::GetEncryptedMessageLength(com.binaryData.size());
-			
-			ENetPacket* packet = enet_packet_create(nullptr,
-				packetSize, 0 |
-				(com.flags&FLAG_SEQUENCED ? 0 : ENET_PACKET_FLAG_UNSEQUENCED) |
-				(com.flags&FLAG_RELIABLE ? ENET_PACKET_FLAG_RELIABLE : 0));
-			
-			com.peer->EncryptMessage(packet->data,
-					com.binaryData.data(), com.binaryData.size(), com);
-			
-			uint8_t channel = com.flags&(FLAG_RELIABLE|FLAG_SEQUENCED) ? 0 : 1;
-			enet_peer_send(com.peer->peer,
-					channel, packet);
-		};
-		host->EnqueueCommand(std::move(com));
+		com.data = std::move(data);
+		host->EnqueueCommand(std::move(command));
 	}
 	
+	void Peer::_InternalSend(std::vector<uint8_t>& data, uint32_t flags)
+	{
+		const uint32_t packetSize = ConnectionEncryptionState
+			::GetEncryptedMessageLength(data.size());
+		
+		ENetPacket* packet = enet_packet_create(nullptr,
+			packetSize, 0 |
+			(flags&FLAG_SEQUENCED ? 0 : ENET_PACKET_FLAG_UNSEQUENCED) |
+			(flags&FLAG_RELIABLE ? ENET_PACKET_FLAG_RELIABLE : 0));
+		
+		EncryptMessage(packet->data, data.data(), data.size(), flags);
+		
+		uint8_t channel = flags&(FLAG_RELIABLE|FLAG_SEQUENCED) ? 0 : 1;
+		enet_peer_send(peer, channel, packet);
+	}
 	
-	void Peer::Disconnect(uint32_t disconnectData) {
-		Command com;
+	void Peer::Disconnect(uint32_t disconnectData)
+	{
+		Command command{commands::ExecuteDisconnect{}};
+		commands::ExecuteDisconnect& com = command.executeDisconnect;
 		com.peer = shared_from_this();
-		com.host = host;
-		com.callback = [](Command& com) {
-			enet_peer_disconnect(com.peer->peer, 0);
-		};
+		com.disconnectData = disconnectData;
+		host->EnqueueCommand(std::move(command));
+	}
+	
+	void Peer::_InternalDisconnect(uint32_t disconnectData)
+	{
+		enet_peer_disconnect(peer, disconnectData);
 	}
 	
 	void Peer::SetReceiveCallback(void(*callback)(Peer*,

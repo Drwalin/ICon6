@@ -39,10 +39,10 @@ namespace icon6 {
 	
 	
 	void ConnectionEncryptionState::EncryptMessage(uint8_t* cipher,
-			const uint8_t* message, uint32_t messageLength, Command& com) {
+			const uint8_t* message, uint32_t messageLength, uint32_t flags) {
 		constexpr uint32_t nonceSize = sizeof(sendMessagesCounter);
 		uint8_t ad[sizeof(sendMessagesCounter)];
-		*(decltype(sendMessagesCounter)*)ad = htonl(com.flags);
+		*(decltype(sendMessagesCounter)*)ad = htonl(flags);
 		sendMessagesCounter++;
 		
 		uint8_t nonce[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
@@ -54,8 +54,8 @@ namespace icon6 {
 		
 		crypto_aead_chacha20poly1305_ietf_encrypt_detached(
 				cipher + nonceSize,
-				cipher + nonceSize + com.binaryData.size(), nullptr,
-				com.binaryData.data(), com.binaryData.size(),
+				cipher + nonceSize + messageLength, nullptr,
+				message, messageLength,
 				ad, sizeof(ad),
 				nullptr,
 				nonce, sendingKey);

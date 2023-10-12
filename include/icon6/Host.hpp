@@ -19,8 +19,6 @@
 #ifndef ICON6_HOST_HPP
 #define ICON6_HOST_HPP
 
-#include <enet/enet.h>
-
 #include <string>
 #include <memory>
 #include <future>
@@ -28,8 +26,11 @@
 #include <unordered_set>
 #include <vector>
 
+#include <enet/enet.h>
+
 #include "Peer.hpp"
 #include "Command.hpp"
+#include "CommandExecutionQueue.hpp"
 
 #include "Cert.hpp"
 
@@ -90,8 +91,19 @@ namespace icon6 {
 		
 	public:
 		// thread safe function to connect to a remote host
-		std::future<std::shared_ptr<Peer>> Connect(std::string address,
-				uint16_t port);
+		std::future<std::shared_ptr<Peer>> ConnectPromise(
+				std::string address,
+				uint16_t port
+				);
+		// thread safe function to connect to a remote host
+		void Connect(
+				std::string address,
+				uint16_t port,
+				commands::ExecuteOnPeer&& onConnected,
+				std::shared_ptr<CommandExecutionQueue> queue=nullptr
+				);
+		
+		std::shared_ptr<Peer> _InternalConnect(ENetAddress address);
 		
 	public:
 		

@@ -218,7 +218,7 @@ namespace icon6 {
 			if(poped_commands.empty())
 				return;
 			for(Command& c : poped_commands) {
-				c.CallCallback();
+				c.Execute();
 				++i;
 			}
 			poped_commands.clear();
@@ -249,58 +249,65 @@ namespace icon6 {
 		}
 	}
 	
+	std::future<std::shared_ptr<Peer>> Host::ConnectPromise(
+			std::string address,
+			uint16_t port
+			)
+	{
+		std::shared_ptr<std::promise<std::shared_ptr<Peer>>> promise =
+			std::make_shared<std::promise<std::shared_ptr<Peer>>>();
+		commands::ExecuteOnPeer onConnected;
+		onConnected.customSharedData = promise;
+		onConnected.function = [](auto peer, auto data, auto customSharedData)
+			{
+				std::shared_ptr<std::promise<std::shared_ptr<Peer>>> promise
+					= std::static_pointer_cast<
+						std::promise<std::shared_ptr<Peer>>>
+							(customSharedData);
+				promise->set_value(peer);
+			};
+		auto future = promise->get_future();
+		Connect(address, port, std::move(onConnected), nullptr);
+		return future;
+	}
 	
-	std::future<std::shared_ptr<Peer>> Host::Connect(std::string address,
-			uint16_t port) {
-		using PromiseType = std::promise<std::shared_ptr<Peer>>;
-		std::shared_ptr<PromiseType> promise = std::make_shared<PromiseType>();
-		std::thread([](std::string address, uint16_t port,
-					std::shared_ptr<Host> host,
-			std::shared_ptr<PromiseType> promise) {
-				std::shared_ptr<PromiseType> promise2
-					= std::make_shared<PromiseType>();
-				Command command;
-				enet_address_set_host(&command.address, address.c_str());
-				command.address.port = port;
-				command.customData = promise2;
-				command.host = host;
-				command.callback = [](Command&com){
-					ENetPeer* peer
-							= enet_host_connect(com.host->host, &com.address, 2, 0);
-					enet_host_flush(com.host->host);
-					std::shared_ptr<Peer> p(new Peer(com.host, peer));
-					peer->data = p.get();
-					com.host->peers.insert(p);
-					auto promise = std::static_pointer_cast<PromiseType>(
-							com.customData);
-					promise->set_value(p);
-				};
+	void Host::Connect(
+			std::string address,
+			uint16_t port,
+			commands::ExecuteOnPeer&& onConnected,
+			std::shared_ptr<CommandExecutionQueue> queue)
+	{
+		std::thread(
+			[](
+				std::string address,
+				uint16_t port,
+				std::shared_ptr<Host> host,
+				commands::ExecuteOnPeer&& onConnected,
+				std::shared_ptr<CommandExecutionQueue> queue
+			) {
+				Command command(commands::ExecuteConnect{});
+				commands::ExecuteConnect& com = command.executeConnect;
+				com.onConnected = std::move(onConnected);
+				com.executionQueue = queue;
+				enet_address_set_host(&com.address, address.c_str());
+				com.address.port = port;
+				com.host = host;
 				host->EnqueueCommand(std::move(command));
-				auto future = promise2->get_future();
-				future.wait();
-				auto peer = future.get();
-				if(peer == nullptr) {
-					promise->set_value(nullptr);
-					return;
-				}
-				
-				auto time_end = std::chrono::steady_clock::now()
-					+ std::chrono::seconds(2);
-				while(time_end > std::chrono::steady_clock::now()) {
-					if(peer->state == STATE_READY_TO_USE) {
-						promise->set_value(peer);
-						return;
-					}
-					std::this_thread::sleep_for(std::chrono::milliseconds(4));
-				}
-				promise->set_value(nullptr);
-				return;
-			}, address, port, shared_from_this(), promise).detach();
-		return promise->get_future();
+			}, address, port, shared_from_this(), std::move(onConnected), queue).detach();
+	}
+	
+	std::shared_ptr<Peer> Host::_InternalConnect(ENetAddress address) {
+		ENetPeer* peer
+				= enet_host_connect(host, &address, 2, 0);
+		enet_host_flush(host);
+		std::shared_ptr<Peer> p(new Peer(shared_from_this(), peer));
+		peer->data = p.get();
+		peers.insert(p);
+		return p;
 	}
 	
 	void Host::EnqueueCommand(Command&& command) {
-		concurrentQueueCommands->enqueue(command);
+		concurrentQueueCommands->enqueue(std::move(command));
 	}
 	
 	void Host::SetMessagePassingEnvironment(

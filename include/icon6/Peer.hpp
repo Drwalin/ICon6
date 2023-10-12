@@ -87,6 +87,11 @@ namespace icon6 {
 		void* userData;
 		std::shared_ptr<void> userSharedPointer;
 		
+	public:
+		
+		void _InternalSend(std::vector<uint8_t>& data, uint32_t flags);
+		void _InternalDisconnect(uint32_t disconnectData);
+		
 	private:
 		
 		void CallCallbackReceive(uint8_t* data, uint32_t size, uint32_t flags);
@@ -100,6 +105,8 @@ namespace icon6 {
 			INTERNAL_UNRELIABLE = 0,
 		};
 		
+		
+	protected:
 		
 		Peer(std::shared_ptr<Host> host, ENetPeer* peer);
 		

@@ -75,9 +75,18 @@ int main() {
 	host1->RunAsync();
 	host2->RunAsync();
 	
-	auto P1 = host1->Connect("localhost", 4001);
+	auto P1 = host1->ConnectPromise("localhost", 4001);
 	P1.wait();
 	auto p1 = P1.get();
+	
+	auto time_end = std::chrono::steady_clock::now()
+					+ std::chrono::seconds(2);
+				while(time_end > std::chrono::steady_clock::now()) {
+					if(p1->GetState() == icon6::STATE_READY_TO_USE) {
+						break;
+					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				}
 	
 	if(p1 != nullptr) {
 		mpe->Send<std::vector<int>>(p1.get(), "mult", {1,2,3,4,5}, 0);

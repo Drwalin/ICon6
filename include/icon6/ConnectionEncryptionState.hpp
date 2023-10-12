@@ -66,7 +66,7 @@ namespace icon6 {
 			return rawMessageLength + GetEncryptedMessageOverhead();
 		}
 		void EncryptMessage(uint8_t* cipher, const uint8_t* message,
-				uint32_t messageLength, Command& com);
+				uint32_t messageLength, uint32_t flags);
 		void DecryptMessage(std::vector<uint8_t>& receivedData,
 				uint8_t* cipher, uint32_t cipherLength, uint32_t flags);
 		
@@ -78,6 +78,8 @@ namespace icon6 {
 		
 		inline Peer* GetPeer() { return (Peer*)this; }
 		std::shared_ptr<Host> GetHost();
+		
+		inline PeerConnectionState GetState() const { return state; }
 		
 	protected:
 		
