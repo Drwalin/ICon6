@@ -141,13 +141,8 @@ namespace icon6 {
 		
 		std::unordered_set<std::shared_ptr<Peer>> peers;
 	
-		union {
-			void *__concurrentQueueVoid;
-#ifdef ICON6_HOST_CPP_IMPLEMENTATION
-			moodycamel::ConcurrentQueue<Command> *concurrentQueueCommands;
-#endif
-		};
-		std::vector<Command> poped_commands;
+		std::shared_ptr<CommandExecutionQueue> commandQueue;
+		std::vector<Command> popedCommands;
 		
 		void(*callbackOnConnect)(Peer*);
 		void(*callbackOnReceive)(Peer*, std::vector<uint8_t>& data,
