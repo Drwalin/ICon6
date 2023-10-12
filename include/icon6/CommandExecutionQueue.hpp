@@ -21,6 +21,7 @@
 
 #include <memory>
 #include <vector>
+#include <atomic>
 
 #include "Command.hpp"
 
@@ -35,6 +36,24 @@ namespace icon6 {
 		void EnqueueCommand(Command&& command);
 		void TryDequeueBulkAny(std::vector<Command>& commands);
 		
+		void RunAsyncExecution(uint32_t sleepMicrosecondsOnNoActions);
+		void QueueStopAsyncExecution();
+		void WaitStopAsyncExecution();
+		bool IsRunningAsync() const;
+		
+	private:
+		
+		enum AsyncExecutionFlags {
+			STARTING_RUNNING = 1,
+			IS_RUNNING = 2,
+			QUEUE_STOP = 4,
+			STOPPED = 0
+		};
+		
+		void _InternalExecuteLoop(uint32_t sleepMicrosecondsOnNoActions);
+		std::atomic<uint32_t> asyncExecutionFlags;
+		
+	private:
 		void *concurrentQueueCommands;
 	};
 }
