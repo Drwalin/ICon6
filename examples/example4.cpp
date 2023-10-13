@@ -48,25 +48,15 @@ public:
 };
 
 
-std::shared_ptr<icon6::CommandExecutionQueue> exeQueue
-	= std::make_shared<icon6::CommandExecutionQueue>();
-
-void ThreadQueueProcessing()
-{
-	std::vector<icon6::Command> commands;
-	while(exeQueue) {
-		commands.clear();
-		exeQueue->TryDequeueBulkAny(commands);
-		for(auto& com : commands) {
-			com.Execute();
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
-}
-
 int main() {
 	
-	std::thread exeQueueThread = std::thread(ThreadQueueProcessing);
+	std::shared_ptr<icon6::CommandExecutionQueue> exeQueue
+		= std::make_shared<icon6::CommandExecutionQueue>();
+	
+	exeQueue->RunAsyncExecution(exeQueue, 1000);
+	while(!exeQueue->IsRunningAsync())
+	{
+	}
 	
 	uint16_t port1 = 4000, port2 = 4001;
 	
@@ -144,8 +134,8 @@ int main() {
 	
 	icon6::Deinitialize();
 	
+	exeQueue->WaitStopAsyncExecution();
 	exeQueue = nullptr;
-	exeQueueThread.join();
 	
 	return 0;
 }

@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <chrono>
+
 #include "../concurrentqueue/concurrentqueue.h"
 
 #include "../../bitscpp/include/bitscpp/ByteReader.hpp"
@@ -25,7 +27,6 @@
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 
 #include "../include/icon6/CommandExecutionQueue.hpp"
-#include <chrono>
 
 namespace icon6 {
 	using QueueType = moodycamel::ConcurrentQueue<Command>;
@@ -75,30 +76,29 @@ namespace icon6 {
 	}
 	
 	bool CommandExecutionQueue::IsRunningAsync() const {
-		return asyncExecutionFlags & IS_RUNNING;
+		return asyncExecutionFlags.load() & IS_RUNNING;
 	}
 
 	void CommandExecutionQueue::RunAsyncExecution(
+			std::shared_ptr<CommandExecutionQueue> queue,
 			uint32_t sleepMicrosecondsOnNoActions)
 	{
-		asyncExecutionFlags = STARTING_RUNNING;
 		std::thread(
-				std::bind(
-					&CommandExecutionQueue::_InternalExecuteLoop,
-					this,
-					sleepMicrosecondsOnNoActions
-				)
+				&CommandExecutionQueue::_InternalExecuteLoop,
+				queue,
+				sleepMicrosecondsOnNoActions
 			).detach();
 	}
 	
 	void CommandExecutionQueue::_InternalExecuteLoop(
+			std::shared_ptr<CommandExecutionQueue> queue,
 			uint32_t sleepMicrosecondsOnNoActions)
 	{
-		auto guard = shared_from_this();
-		asyncExecutionFlags ^= (STARTING_RUNNING | IS_RUNNING);
+		std::shared_ptr<CommandExecutionQueue> guard = queue;
+		guard->asyncExecutionFlags = IS_RUNNING;
 		std::vector<Command> commands;
-		while(asyncExecutionFlags == IS_RUNNING) {
-			TryDequeueBulkAny(commands);
+		while(guard->asyncExecutionFlags.load() == IS_RUNNING) {
+			guard->TryDequeueBulkAny(commands);
 			if(commands.empty()) {
 				if(sleepMicrosecondsOnNoActions == 0) {
 					std::this_thread::yield();
@@ -114,7 +114,7 @@ namespace icon6 {
 				commands.clear();
 			}
 		}
-		asyncExecutionFlags |= IS_RUNNING;
+		guard->asyncExecutionFlags = STOPPED;
 	}
 }
 

@@ -36,7 +36,9 @@ namespace icon6 {
 		void EnqueueCommand(Command&& command);
 		void TryDequeueBulkAny(std::vector<Command>& commands);
 		
-		void RunAsyncExecution(uint32_t sleepMicrosecondsOnNoActions);
+		static void RunAsyncExecution(
+				std::shared_ptr<CommandExecutionQueue> queue,
+				uint32_t sleepMicrosecondsOnNoActions);
 		void QueueStopAsyncExecution();
 		void WaitStopAsyncExecution();
 		bool IsRunningAsync() const;
@@ -50,7 +52,9 @@ namespace icon6 {
 			STOPPED = 0
 		};
 		
-		void _InternalExecuteLoop(uint32_t sleepMicrosecondsOnNoActions);
+		static void _InternalExecuteLoop(
+				std::shared_ptr<CommandExecutionQueue> queue,
+				uint32_t sleepMicrosecondsOnNoActions);
 		std::atomic<uint32_t> asyncExecutionFlags;
 		
 	private:
