@@ -76,7 +76,7 @@ class MethodInvocationEnvironment : public MessagePassingEnvironment
 	template <typename Tclass, typename Targ>
 	void RegisterMemberFunction(
 		std::string className, std::string methodName,
-		void (Tclass::*memberFunction)(Peer *, uint32_t flags, Targ &&data),
+		void (Tclass::*memberFunction)(Peer *, uint32_t flags, Targ data),
 		std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
 	{
 		std::shared_ptr<Class> cls = GetClassByName(className);

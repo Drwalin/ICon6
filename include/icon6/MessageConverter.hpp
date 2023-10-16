@@ -46,7 +46,7 @@ class MessageConverter
 template <typename T> class MessageConverterSpec : public MessageConverter
 {
   public:
-	MessageConverterSpec(void (*onReceive)(Peer *peer, T &&message,
+	MessageConverterSpec(void (*onReceive)(Peer *peer, T message,
 										   uint32_t flags))
 		: onReceive(onReceive)
 	{
@@ -57,13 +57,17 @@ template <typename T> class MessageConverterSpec : public MessageConverter
 	virtual void Call(Peer *peer, bitscpp::ByteReader<true> &reader,
 					  uint32_t flags) override
 	{
-		T message;
+		typename std::remove_const<
+			typename std::remove_reference<T>::type>::type message;
 		reader.op(message);
-		onReceive(peer, std::move(message), flags);
+		if constexpr (std::is_rvalue_reference<T>::value)
+			onReceive(peer, std::move(message), flags);
+		else
+			onReceive(peer, message, flags);
 	}
 
   private:
-	void (*const onReceive)(Peer *peer, T &&message, uint32_t flags);
+	void (*const onReceive)(Peer *peer, T message, uint32_t flags);
 };
 
 } // namespace icon6

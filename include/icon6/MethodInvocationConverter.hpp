@@ -21,6 +21,7 @@
 
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -59,7 +60,7 @@ class MessageNetworkAwareMethodInvocationConverterSpec
 	MessageNetworkAwareMethodInvocationConverterSpec(
 		Class *_class,
 		void (Tclass::*memberFunction)(Peer *peer, uint32_t flags,
-									   Targ &&message))
+									   Targ message))
 		: onReceive(memberFunction), _class(_class)
 	{
 	}
@@ -72,13 +73,17 @@ class MessageNetworkAwareMethodInvocationConverterSpec
 	{
 		std::shared_ptr<Tclass> ptr =
 			std::static_pointer_cast<Tclass>(objectPtr);
-		Targ message;
+		typename std::remove_const<
+			typename std::remove_reference<Targ>::type>::type message;
 		reader.op(message);
-		(ptr.get()->*onReceive)(peer, flags, std::move(message));
+		if constexpr (std::is_rvalue_reference<Targ>::value)
+			(ptr.get()->*onReceive)(peer, flags, std::move(message));
+		else
+			(ptr.get()->*onReceive)(peer, flags, message);
 	}
 
   private:
-	void (Tclass::*onReceive)(Peer *peer, uint32_t flags, Targ &&message);
+	void (Tclass::*onReceive)(Peer *peer, uint32_t flags, Targ message);
 	class Class *_class;
 };
 

@@ -12,12 +12,13 @@ class TestClass
 {
   public:
 	~TestClass() = default;
-	virtual void Method(icon6::Peer *peer, uint32_t flags, int &&arg)
+	virtual void Method(icon6::Peer *peer, uint32_t flags, int &arg)
 	{
 		printf("Called TestClass::Method on %p with %i\n", (void *)this, arg);
 		fflush(stdout);
 	}
-	virtual void Method2(icon6::Peer *peer, uint32_t flags, std::string &&arg)
+	virtual void Method2(icon6::Peer *peer, uint32_t flags,
+						 const std::string &&arg)
 	{
 		printf("Called TestClass::Method2 on %p with %s\n", (void *)this,
 			   arg.c_str());
@@ -29,14 +30,14 @@ class InheritedClass : public TestClass
 {
   public:
 	~InheritedClass() = default;
-	virtual void Method(icon6::Peer *peer, uint32_t flags, int &&arg) override
+	virtual void Method(icon6::Peer *peer, uint32_t flags, int &arg) override
 	{
 		printf("Called InheritedClass::Method on %p with %i\n", (void *)this,
 			   arg);
 		fflush(stdout);
 	}
 	virtual void Method2(icon6::Peer *peer, uint32_t flags,
-						 std::string &&arg) override
+						 const std::string &&arg) override
 	{
 		printf("Called InheritedClass::Method2 on %p with %s\n", (void *)this,
 			   arg.c_str());
@@ -57,16 +58,17 @@ int main()
 	host1->SetMessagePassingEnvironment(mpe);
 	host2->SetMessagePassingEnvironment(mpe);
 
-	mpe->RegisterMessage<std::vector<int>>(
-		"sum", [](icon6::Peer *p, auto &&msg, uint32_t flags) {
+	mpe->RegisterMessage<const std::vector<int>>(
+		"sum", [](icon6::Peer *p, const std::vector<int> msg, uint32_t flags) {
 			int sum = 0;
 			for (int i = 0; i < msg.size(); ++i)
 				sum += msg[i];
 			printf(" sum = %i\n", sum);
 		});
 
-	mpe->RegisterMessage<std::vector<int>>(
-		"mult", [](icon6::Peer *p, auto &&msg, uint32_t flags) {
+	mpe->RegisterMessage<const std::vector<int> &>(
+		"mult",
+		[](icon6::Peer *p, const std::vector<int> &msg, uint32_t flags) {
 			mpe->Send(p, "sum", msg, 0);
 			int sum = 1;
 			for (int i = 0; i < msg.size(); ++i)
