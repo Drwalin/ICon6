@@ -25,42 +25,40 @@
 
 #include "Command.hpp"
 
-namespace icon6 {
-	class CommandExecutionQueue:
-		std::enable_shared_from_this<CommandExecutionQueue> {
-	public:
-		
-		CommandExecutionQueue();
-		~CommandExecutionQueue();
-		
-		void EnqueueCommand(Command&& command);
-		void TryDequeueBulkAny(std::vector<Command>& commands);
-		
-		static void RunAsyncExecution(
-				std::shared_ptr<CommandExecutionQueue> queue,
-				uint32_t sleepMicrosecondsOnNoActions);
-		void QueueStopAsyncExecution();
-		void WaitStopAsyncExecution();
-		bool IsRunningAsync() const;
-		
-	private:
-		
-		enum AsyncExecutionFlags {
-			STARTING_RUNNING = 1,
-			IS_RUNNING = 2,
-			QUEUE_STOP = 4,
-			STOPPED = 0
-		};
-		
-		static void _InternalExecuteLoop(
-				std::shared_ptr<CommandExecutionQueue> queue,
-				uint32_t sleepMicrosecondsOnNoActions);
-		std::atomic<uint32_t> asyncExecutionFlags;
-		
-	private:
-		void *concurrentQueueCommands;
+namespace icon6
+{
+class CommandExecutionQueue
+	: std::enable_shared_from_this<CommandExecutionQueue>
+{
+  public:
+	CommandExecutionQueue();
+	~CommandExecutionQueue();
+
+	void EnqueueCommand(Command &&command);
+	void TryDequeueBulkAny(std::vector<Command> &commands);
+
+	static void RunAsyncExecution(std::shared_ptr<CommandExecutionQueue> queue,
+								  uint32_t sleepMicrosecondsOnNoActions);
+	void QueueStopAsyncExecution();
+	void WaitStopAsyncExecution();
+	bool IsRunningAsync() const;
+
+  private:
+	enum AsyncExecutionFlags {
+		STARTING_RUNNING = 1,
+		IS_RUNNING = 2,
+		QUEUE_STOP = 4,
+		STOPPED = 0
 	};
-}
+
+	static void
+	_InternalExecuteLoop(std::shared_ptr<CommandExecutionQueue> queue,
+						 uint32_t sleepMicrosecondsOnNoActions);
+	std::atomic<uint32_t> asyncExecutionFlags;
+
+  private:
+	void *concurrentQueueCommands;
+};
+} // namespace icon6
 
 #endif
-

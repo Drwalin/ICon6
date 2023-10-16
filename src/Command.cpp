@@ -26,87 +26,71 @@
 
 #include "../include/icon6/Command.hpp"
 
-namespace icon6 {
-namespace commands {
-	void ExecuteOnPeer::Execute()
-	{
-		function(peer, data, customSharedData);
-	}
-	
-	void ExecuteRPC::Execute()
-	{
-		bitscpp::ByteReader<true> reader(binaryData.data()+readOffset,
-				binaryData.size()-readOffset);
-		messageConverter->Call(peer.get(), reader, flags);
-	}
-	
-	void ExecuteRMI::Execute()
-	{
-		bitscpp::ByteReader<true> reader(binaryData.data()+readOffset,
-				binaryData.size()-readOffset);
-		methodInvoker->Call(objectPtr, peer.get(), reader, flags);
-	}
-	
-	void ExecuteConnect::Execute()
-	{
-		onConnected.peer = host->_InternalConnect(address);
-		if(executionQueue)
-			executionQueue->EnqueueCommand(Command(std::move(onConnected)));
-		else
-			onConnected.Execute();
-	}
-	
-	void ExecuteSend::Execute()
-	{
-		peer->_InternalSend(data, flags);
-	}
-	
-	void ExecuteDisconnect::Execute()
-	{
-		peer->_InternalDisconnect(disconnectData);
-	}
-	
-	void ExecuteFunctionPointer::Execute()
-	{
-		function();
+namespace icon6
+{
+namespace commands
+{
+void ExecuteOnPeer::Execute() { function(peer, data, customSharedData); }
+
+void ExecuteRPC::Execute()
+{
+	bitscpp::ByteReader<true> reader(binaryData.data() + readOffset,
+									 binaryData.size() - readOffset);
+	messageConverter->Call(peer.get(), reader, flags);
+}
+
+void ExecuteRMI::Execute()
+{
+	bitscpp::ByteReader<true> reader(binaryData.data() + readOffset,
+									 binaryData.size() - readOffset);
+	methodInvoker->Call(objectPtr, peer.get(), reader, flags);
+}
+
+void ExecuteConnect::Execute()
+{
+	onConnected.peer = host->_InternalConnect(address);
+	if (executionQueue)
+		executionQueue->EnqueueCommand(Command(std::move(onConnected)));
+	else
+		onConnected.Execute();
+}
+
+void ExecuteSend::Execute() { peer->_InternalSend(data, flags); }
+
+void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(disconnectData); }
+
+void ExecuteFunctionPointer::Execute() { function(); }
+} // namespace commands
+
+using namespace commands;
+
+Command::Command() : hasValue(false) {}
+
+Command::Command(Command &&other)
+{
+	this->hasValue = false;
+	(*this) = std::move(other);
+}
+
+Command &Command::operator=(Command &&other)
+{
+	if (hasValue)
+		this->~Command();
+	struct _CopyTypeStruct {
+		uint8_t b[sizeof(Command)];
+	};
+	*(_CopyTypeStruct *)this = *(_CopyTypeStruct *)&other;
+	other.hasValue = false;
+	return *this;
+}
+
+Command::~Command()
+{
+	if (hasValue) {
+		((BaseCommandExecute *)(&executeOnPeer))->~BaseCommandExecute();
+		hasValue = false;
 	}
 }
 
-	using namespace commands;
-
-	Command::Command() : hasValue(false)
-	{
-	}
-	
-	Command::Command(Command&& other)
-	{
-		this->hasValue = false;
-		(*this) = std::move(other);
-	}
-
-	Command& Command::operator=(Command&& other)
-	{
-		if(hasValue)
-			this->~Command();
-		struct _CopyTypeStruct {
-			uint8_t b[sizeof(Command)];
-		};
-		*(_CopyTypeStruct*)this = *(_CopyTypeStruct*)&other;
-		other.hasValue = false;
-		return *this;
-	}
-	
-	Command::~Command()
-	{
-		if(hasValue) {
-			((BaseCommandExecute*)(&executeOnPeer))->~BaseCommandExecute();
-			hasValue = false;
-		}
-	}
-	
-	void Command::Execute()
-	{
-		((BaseCommandExecute*)(&executeOnPeer))->Execute();
-	}
-}
-
+void Command::Execute() { ((BaseCommandExecute *)(&executeOnPeer))->Execute(); }
+} // namespace icon6

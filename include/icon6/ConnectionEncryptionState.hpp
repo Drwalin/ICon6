@@ -27,72 +27,71 @@
 
 #include "Cert.hpp"
 
-namespace icon6 {
-	
-	enum PeerConnectionState : uint32_t {
-		STATE_NONE,
+namespace icon6
+{
 
-		STATE_ZOMBIE,
-		STATE_DISCONNECTED,
-		STATE_FAILED_TO_AUTHENTICATE,
-		STATE_FAILED_TO_VERIFY_MESSAGE,
+enum PeerConnectionState : uint32_t {
+	STATE_NONE,
 
-		STATE_SENT_CERT,
-		STATE_SENT_AND_RECEIVED_CERT,
+	STATE_ZOMBIE,
+	STATE_DISCONNECTED,
+	STATE_FAILED_TO_AUTHENTICATE,
+	STATE_FAILED_TO_VERIFY_MESSAGE,
 
-		STATE_SENT_KEX,
-		STATE_SENT_AND_RECEIVED_KEX,
+	STATE_SENT_CERT,
+	STATE_SENT_AND_RECEIVED_CERT,
 
-		STATE_BEFORE_ON_CONNECT_CALLBACK,
-		STATE_READY_TO_USE,
-	};
-	
-	class Peer;
-	class Command;
-	class Host;
-	
-	class ConnectionEncryptionState :
-		public std::enable_shared_from_this<Peer> {
-	public:
-		
-		ConnectionEncryptionState();
-		~ConnectionEncryptionState();
-	
-		static constexpr uint32_t GetEncryptedMessageOverhead() {
-			return sizeof(sendMessagesCounter)
-				+ crypto_aead_chacha20poly1305_ietf_ABYTES;
-		}
-		inline static uint32_t GetEncryptedMessageLength(uint32_t rawMessageLength) {
-			return rawMessageLength + GetEncryptedMessageOverhead();
-		}
-		void EncryptMessage(uint8_t* cipher, const uint8_t* message,
-				uint32_t messageLength, uint32_t flags);
-		void DecryptMessage(std::vector<uint8_t>& receivedData,
-				uint8_t* cipher, uint32_t cipherLength, uint32_t flags);
-		
-		void StartHandshake();
-		void ReceivedWhenStateSentCert(uint8_t* data, uint32_t size,
-				uint32_t flags);
-		void ReceivedWhenStateSentKex(uint8_t* data, uint32_t size,
-				uint32_t flags);
-		
-		inline Peer* GetPeer() { return (Peer*)this; }
-		std::shared_ptr<Host> GetHost();
-		
-		inline PeerConnectionState GetState() const { return state; }
-		
-	protected:
-		
-		uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
-		uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
-		uint8_t sendingKey[32];
-		uint8_t receivingKey[32];
-		uint8_t peerPublicKey[crypto::SIGN_PUBLIC_KEY_BYTES];
-		uint32_t sendMessagesCounter;
-		
-		PeerConnectionState state;
-	};
-}
+	STATE_SENT_KEX,
+	STATE_SENT_AND_RECEIVED_KEX,
+
+	STATE_BEFORE_ON_CONNECT_CALLBACK,
+	STATE_READY_TO_USE,
+};
+
+class Peer;
+class Command;
+class Host;
+
+class ConnectionEncryptionState : public std::enable_shared_from_this<Peer>
+{
+  public:
+	ConnectionEncryptionState();
+	~ConnectionEncryptionState();
+
+	static constexpr uint32_t GetEncryptedMessageOverhead()
+	{
+		return sizeof(sendMessagesCounter) +
+			   crypto_aead_chacha20poly1305_ietf_ABYTES;
+	}
+	inline static uint32_t GetEncryptedMessageLength(uint32_t rawMessageLength)
+	{
+		return rawMessageLength + GetEncryptedMessageOverhead();
+	}
+	void EncryptMessage(uint8_t *cipher, const uint8_t *message,
+						uint32_t messageLength, uint32_t flags);
+	void DecryptMessage(std::vector<uint8_t> &receivedData, uint8_t *cipher,
+						uint32_t cipherLength, uint32_t flags);
+
+	void StartHandshake();
+	void ReceivedWhenStateSentCert(uint8_t *data, uint32_t size,
+								   uint32_t flags);
+	void ReceivedWhenStateSentKex(uint8_t *data, uint32_t size, uint32_t flags);
+
+	inline Peer *GetPeer() { return (Peer *)this; }
+	std::shared_ptr<Host> GetHost();
+
+	inline PeerConnectionState GetState() const { return state; }
+
+  protected:
+	uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
+	uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
+	uint8_t sendingKey[32];
+	uint8_t receivingKey[32];
+	uint8_t peerPublicKey[crypto::SIGN_PUBLIC_KEY_BYTES];
+	uint32_t sendMessagesCounter;
+
+	PeerConnectionState state;
+};
+} // namespace icon6
 
 #endif
-

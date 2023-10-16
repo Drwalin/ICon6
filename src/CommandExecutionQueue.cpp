@@ -28,93 +28,90 @@
 
 #include "../include/icon6/CommandExecutionQueue.hpp"
 
-namespace icon6 {
-	using QueueType = moodycamel::ConcurrentQueue<Command>;
-	
-	CommandExecutionQueue::CommandExecutionQueue()
-	{
-		asyncExecutionFlags = STOPPED;
-		concurrentQueueCommands = new QueueType();
-	}
-	
-	CommandExecutionQueue::~CommandExecutionQueue()
-	{
-		WaitStopAsyncExecution();
-		delete (QueueType*)concurrentQueueCommands;
-		concurrentQueueCommands = nullptr;
-	}
+namespace icon6
+{
+using QueueType = moodycamel::ConcurrentQueue<Command>;
 
-	void CommandExecutionQueue::EnqueueCommand(Command&& command)
-	{
-		((QueueType*)concurrentQueueCommands)->enqueue(std::move(command));
-	}
-	
-	void CommandExecutionQueue::TryDequeueBulkAny(
-			std::vector<Command>& commands)
-	{
-		commands.clear();
-		size_t size = ((QueueType*)concurrentQueueCommands)->size_approx();
-		if(size == 0)
-			size = 1;
-		commands.resize(size);
-		size_t nextSize = ((QueueType*)concurrentQueueCommands)
-			->try_dequeue_bulk(commands.data(), size);
-		commands.resize(nextSize);
-	}
-	
-	void CommandExecutionQueue::QueueStopAsyncExecution() {
-		asyncExecutionFlags |= QUEUE_STOP;
-	}
-	
-	void CommandExecutionQueue::WaitStopAsyncExecution() {
-		QueueStopAsyncExecution();
-		while(IsRunningAsync()) {
-			std::this_thread::sleep_for(
-					std::chrono::microseconds(
-						10));
-		}
-	}
-	
-	bool CommandExecutionQueue::IsRunningAsync() const {
-		return asyncExecutionFlags.load() & IS_RUNNING;
-	}
+CommandExecutionQueue::CommandExecutionQueue()
+{
+	asyncExecutionFlags = STOPPED;
+	concurrentQueueCommands = new QueueType();
+}
 
-	void CommandExecutionQueue::RunAsyncExecution(
-			std::shared_ptr<CommandExecutionQueue> queue,
-			uint32_t sleepMicrosecondsOnNoActions)
-	{
-		std::thread(
-				&CommandExecutionQueue::_InternalExecuteLoop,
-				queue,
-				sleepMicrosecondsOnNoActions
-			).detach();
-	}
-	
-	void CommandExecutionQueue::_InternalExecuteLoop(
-			std::shared_ptr<CommandExecutionQueue> queue,
-			uint32_t sleepMicrosecondsOnNoActions)
-	{
-		std::shared_ptr<CommandExecutionQueue> guard = queue;
-		guard->asyncExecutionFlags = IS_RUNNING;
-		std::vector<Command> commands;
-		while(guard->asyncExecutionFlags.load() == IS_RUNNING) {
-			guard->TryDequeueBulkAny(commands);
-			if(commands.empty()) {
-				if(sleepMicrosecondsOnNoActions == 0) {
-					std::this_thread::yield();
-				} else {
-					std::this_thread::sleep_for(
-							std::chrono::microseconds(
-								sleepMicrosecondsOnNoActions));
-				}
-			} else {
-				for(Command&com : commands) {
-					com.Execute();
-				}
-				commands.clear();
-			}
-		}
-		guard->asyncExecutionFlags = STOPPED;
+CommandExecutionQueue::~CommandExecutionQueue()
+{
+	WaitStopAsyncExecution();
+	delete (QueueType *)concurrentQueueCommands;
+	concurrentQueueCommands = nullptr;
+}
+
+void CommandExecutionQueue::EnqueueCommand(Command &&command)
+{
+	((QueueType *)concurrentQueueCommands)->enqueue(std::move(command));
+}
+
+void CommandExecutionQueue::TryDequeueBulkAny(std::vector<Command> &commands)
+{
+	commands.clear();
+	size_t size = ((QueueType *)concurrentQueueCommands)->size_approx();
+	if (size == 0)
+		size = 1;
+	commands.resize(size);
+	size_t nextSize = ((QueueType *)concurrentQueueCommands)
+						  ->try_dequeue_bulk(commands.data(), size);
+	commands.resize(nextSize);
+}
+
+void CommandExecutionQueue::QueueStopAsyncExecution()
+{
+	asyncExecutionFlags |= QUEUE_STOP;
+}
+
+void CommandExecutionQueue::WaitStopAsyncExecution()
+{
+	QueueStopAsyncExecution();
+	while (IsRunningAsync()) {
+		std::this_thread::sleep_for(std::chrono::microseconds(10));
 	}
 }
 
+bool CommandExecutionQueue::IsRunningAsync() const
+{
+	return asyncExecutionFlags.load() & IS_RUNNING;
+}
+
+void CommandExecutionQueue::RunAsyncExecution(
+	std::shared_ptr<CommandExecutionQueue> queue,
+	uint32_t sleepMicrosecondsOnNoActions)
+{
+	std::thread(&CommandExecutionQueue::_InternalExecuteLoop, queue,
+				sleepMicrosecondsOnNoActions)
+		.detach();
+}
+
+void CommandExecutionQueue::_InternalExecuteLoop(
+	std::shared_ptr<CommandExecutionQueue> queue,
+	uint32_t sleepMicrosecondsOnNoActions)
+{
+	std::shared_ptr<CommandExecutionQueue> guard = queue;
+	guard->asyncExecutionFlags = IS_RUNNING;
+	std::vector<Command> commands;
+	while (guard->asyncExecutionFlags.load() == IS_RUNNING) {
+		guard->TryDequeueBulkAny(commands);
+		if (commands.empty()) {
+			if (sleepMicrosecondsOnNoActions == 0) {
+				std::this_thread::yield();
+			} else {
+				std::this_thread::sleep_for(
+					std::chrono::microseconds(sleepMicrosecondsOnNoActions));
+			}
+		} else {
+			for (Command &com : commands) {
+				com.Execute();
+			}
+			commands.clear();
+		}
+	}
+	guard->asyncExecutionFlags = STOPPED;
+}
+} // namespace icon6

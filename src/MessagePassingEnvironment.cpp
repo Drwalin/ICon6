@@ -20,28 +20,30 @@
 
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 
-namespace icon6 {
-	void MessagePassingEnvironment::OnReceive(Peer* peer,
-			std::vector<uint8_t>& data, uint32_t flags) {
-		bitscpp::ByteReader reader(data.data(), data.size());
-		std::string name;
-		reader.op(name);
-		auto it = registeredMessages.find(name);
-		if(registeredMessages.end() != it) {
-			auto mtd = it->second;
-			if(mtd->executionQueue) {
-				Command command{commands::ExecuteRPC{}};
-				commands::ExecuteRPC& com = command.executeRPC;
-				com.peer = peer->shared_from_this();
-				com.flags = flags;
-				com.binaryData.swap(data);
-				com.readOffset = reader.get_offset();
-				com.messageConverter = mtd;
-				mtd->executionQueue->EnqueueCommand(std::move(command));
-			} else {
-				mtd->Call(peer, reader, flags);
-			}
+namespace icon6
+{
+void MessagePassingEnvironment::OnReceive(Peer *peer,
+										  std::vector<uint8_t> &data,
+										  uint32_t flags)
+{
+	bitscpp::ByteReader reader(data.data(), data.size());
+	std::string name;
+	reader.op(name);
+	auto it = registeredMessages.find(name);
+	if (registeredMessages.end() != it) {
+		auto mtd = it->second;
+		if (mtd->executionQueue) {
+			Command command{commands::ExecuteRPC{}};
+			commands::ExecuteRPC &com = command.executeRPC;
+			com.peer = peer->shared_from_this();
+			com.flags = flags;
+			com.binaryData.swap(data);
+			com.readOffset = reader.get_offset();
+			com.messageConverter = mtd;
+			mtd->executionQueue->EnqueueCommand(std::move(command));
+		} else {
+			mtd->Call(peer, reader, flags);
 		}
 	}
 }
-
+} // namespace icon6

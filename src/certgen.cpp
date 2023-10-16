@@ -18,10 +18,4 @@
 
 #include <sodium.h>
 
-int main(int argc, char** argv, char** env) {
-	
-	
-	
-}
-
-
+int main(int argc, char **argv, char **env) {}

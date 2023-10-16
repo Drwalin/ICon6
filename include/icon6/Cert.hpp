@@ -27,101 +27,98 @@
 
 #include <sodium.h>
 
-namespace icon6 {
-namespace crypto {
-	
-	constexpr size_t KEX_PUBLIC_KEY_BYTES = crypto_kx_PUBLICKEYBYTES;
-	constexpr size_t KEX_SECRET_KEY_BYTES = crypto_kx_SECRETKEYBYTES;
-	
-	constexpr size_t SIGN_PUBLIC_KEY_BYTES = crypto_sign_PUBLICKEYBYTES;
-	constexpr size_t SIGN_SECRET_KEY_BYTES = crypto_sign_SECRETKEYBYTES;
-	constexpr size_t SIGNATURE_BYTES = crypto_sign_BYTES;
-	
-	class CertReq final {
-	public:
-		
-		CertReq(std::shared_ptr<class Cert> parentCert,
-				std::shared_ptr<class CertKey> certKey);
+namespace icon6
+{
+namespace crypto
+{
 
-		
-		friend class Cert;
-		
-	private:
-		
-		std::vector<uint8_t> binaryCertReq;
-		
-		uint8_t *publicKey;
-		uint8_t *parentPublicKey;
-		
-		uint8_t *selfSignature;
-		
-		char *url;
-		char *name;
-	};
-	
-	class CertKey final {
-	public:
-		
-		static std::shared_ptr<CertKey> GenerateKey();
-		static std::shared_ptr<CertKey> LoadKey(std::string fileName,
-				const char* password, uint32_t passwordLength);
-		
-		~CertKey();
-		
-		void Sign(uint8_t signature[SIGNATURE_BYTES], const void* message,
+constexpr size_t KEX_PUBLIC_KEY_BYTES = crypto_kx_PUBLICKEYBYTES;
+constexpr size_t KEX_SECRET_KEY_BYTES = crypto_kx_SECRETKEYBYTES;
+
+constexpr size_t SIGN_PUBLIC_KEY_BYTES = crypto_sign_PUBLICKEYBYTES;
+constexpr size_t SIGN_SECRET_KEY_BYTES = crypto_sign_SECRETKEYBYTES;
+constexpr size_t SIGNATURE_BYTES = crypto_sign_BYTES;
+
+class CertReq final
+{
+  public:
+	CertReq(std::shared_ptr<class Cert> parentCert,
+			std::shared_ptr<class CertKey> certKey);
+
+	friend class Cert;
+
+  private:
+	std::vector<uint8_t> binaryCertReq;
+
+	uint8_t *publicKey;
+	uint8_t *parentPublicKey;
+
+	uint8_t *selfSignature;
+
+	char *url;
+	char *name;
+};
+
+class CertKey final
+{
+  public:
+	static std::shared_ptr<CertKey> GenerateKey();
+	static std::shared_ptr<CertKey> LoadKey(std::string fileName,
+											const char *password,
+											uint32_t passwordLength);
+
+	~CertKey();
+
+	void Sign(uint8_t signature[SIGNATURE_BYTES], const void *message,
+			  uint32_t messageLength);
+	bool Verify(const uint8_t signature[SIGNATURE_BYTES], const void *message,
 				uint32_t messageLength);
-		bool Verify(const uint8_t signature[SIGNATURE_BYTES],
-				const void* message, uint32_t messageLength);
-		
-		void SaveFile(std::string fileName, const char* password,
-				uint32_t passwordLength, uint32_t opslimit = 2,
-				uint32_t memlimit = 64*1024*1024) const;
-		
-		void CopyPublicKey(void* data);
-		const uint8_t *const GetPublicKey() const { return publicKey; }
-		
-	private:
-		
-		CertKey();
-		
-	private:
-		
-		uint8_t secretKey[SIGN_SECRET_KEY_BYTES];
-		uint8_t publicKey[SIGN_PUBLIC_KEY_BYTES];
-	};
-	
-	class Cert final {
-	public:
-		
-		~Cert();
-		
-		inline uint32_t GetCertBytes() const { return binaryCert.size(); }
-		void CopyCert(void* dst) const;
-		
-	private:
-		
-		Cert(std::string fileName); // load cert from file
-		Cert(void* certBinary, uint32_t certBinaryLength); // copy cert from
-														   // binary
-		Cert(CertReq* certReq, std::shared_ptr<CertKey> parentCertKey, std::shared_ptr<Cert> parentCert);
-				// sign certificate with parent cert
-		Cert(CertReq* selfSignedCert, std::shared_ptr<CertKey> selfKey);
-		
-	private:
-		
-		std::vector<uint8_t> binaryCert;
-		
-		uint8_t *publicKey;
-		uint8_t *parentPublicKey;
-		
-		uint8_t *selfSignature;
-		uint8_t *parentSignature;
-		
-		char *url;
-		char *name;
-	};
+
+	void SaveFile(std::string fileName, const char *password,
+				  uint32_t passwordLength, uint32_t opslimit = 2,
+				  uint32_t memlimit = 64 * 1024 * 1024) const;
+
+	void CopyPublicKey(void *data);
+	const uint8_t *const GetPublicKey() const { return publicKey; }
+
+  private:
+	CertKey();
+
+  private:
+	uint8_t secretKey[SIGN_SECRET_KEY_BYTES];
+	uint8_t publicKey[SIGN_PUBLIC_KEY_BYTES];
+};
+
+class Cert final
+{
+  public:
+	~Cert();
+
+	inline uint32_t GetCertBytes() const { return binaryCert.size(); }
+	void CopyCert(void *dst) const;
+
+  private:
+	Cert(std::string fileName);						   // load cert from file
+	Cert(void *certBinary, uint32_t certBinaryLength); // copy cert from
+													   // binary
+	Cert(CertReq *certReq, std::shared_ptr<CertKey> parentCertKey,
+		 std::shared_ptr<Cert> parentCert);
+	// sign certificate with parent cert
+	Cert(CertReq *selfSignedCert, std::shared_ptr<CertKey> selfKey);
+
+  private:
+	std::vector<uint8_t> binaryCert;
+
+	uint8_t *publicKey;
+	uint8_t *parentPublicKey;
+
+	uint8_t *selfSignature;
+	uint8_t *parentSignature;
+
+	char *url;
+	char *name;
+};
 } // namespace crypto
 } // namespace icon6
 
 #endif
-

@@ -30,55 +30,59 @@
 #include "Host.hpp"
 #include "Peer.hpp"
 
-namespace icon6 {
-	
-	class CommandExecutionQueue;
-	
-namespace rmi {
-	
-	class Class;
-	
-	class MethodInvocationConverter {
-	public:
-		virtual ~MethodInvocationConverter() = default;
-		
-		virtual void Call(std::shared_ptr<void> objectPtr,
-				Peer* peer, bitscpp::ByteReader<true>& reader,
-				uint32_t flags) = 0;
-		
-		std::shared_ptr<CommandExecutionQueue> executionQueue;
-	};
-	
-	template<typename Tclass, typename Targ>
-	class MessageNetworkAwareMethodInvocationConverterSpec : public MethodInvocationConverter {
-	public:
-		MessageNetworkAwareMethodInvocationConverterSpec(
-				Class* _class,
-				void(Tclass::*memberFunction)(Peer* peer, uint32_t flags, Targ&& message)) :
-				onReceive(memberFunction), _class(_class)
-		{
-		}
-		
-		virtual ~MessageNetworkAwareMethodInvocationConverterSpec() = default;
-		
-		virtual void Call(std::shared_ptr<void> objectPtr,
-				Peer* peer, bitscpp::ByteReader<true>& reader,
-				uint32_t flags) override
-		{
-			std::shared_ptr<Tclass> ptr = std::static_pointer_cast<Tclass>(objectPtr);
-			Targ message;
-			reader.op(message);
-			(ptr.get()->*onReceive)(peer, flags, std::move(message));
-		}
-		
-	private:
-		
-		void(Tclass::*onReceive)(Peer* peer, uint32_t flags, Targ&& message);
-		class Class* _class;
-	};
+namespace icon6
+{
 
-}
-}
+class CommandExecutionQueue;
+
+namespace rmi
+{
+
+class Class;
+
+class MethodInvocationConverter
+{
+  public:
+	virtual ~MethodInvocationConverter() = default;
+
+	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
+					  bitscpp::ByteReader<true> &reader, uint32_t flags) = 0;
+
+	std::shared_ptr<CommandExecutionQueue> executionQueue;
+};
+
+template <typename Tclass, typename Targ>
+class MessageNetworkAwareMethodInvocationConverterSpec
+	: public MethodInvocationConverter
+{
+  public:
+	MessageNetworkAwareMethodInvocationConverterSpec(
+		Class *_class,
+		void (Tclass::*memberFunction)(Peer *peer, uint32_t flags,
+									   Targ &&message))
+		: onReceive(memberFunction), _class(_class)
+	{
+	}
+
+	virtual ~MessageNetworkAwareMethodInvocationConverterSpec() = default;
+
+	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
+					  bitscpp::ByteReader<true> &reader,
+					  uint32_t flags) override
+	{
+		std::shared_ptr<Tclass> ptr =
+			std::static_pointer_cast<Tclass>(objectPtr);
+		Targ message;
+		reader.op(message);
+		(ptr.get()->*onReceive)(peer, flags, std::move(message));
+	}
+
+  private:
+	void (Tclass::*onReceive)(Peer *peer, uint32_t flags, Targ &&message);
+	class Class *_class;
+};
+
+} // namespace rmi
+} // namespace icon6
 
 #endif
-

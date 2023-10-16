@@ -18,87 +18,88 @@
 
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 
-namespace icon6 {
-namespace rmi {
-	Class::Class(std::shared_ptr<Class> parentClass, std::string name,
-			std::shared_ptr<void> (*constructor)()) :
-		constructor(constructor), parentClass(parentClass.get()), name(name)
-	{
-		if(parentClass) {
-			parentClass->inheritedClasses.insert(this);
-			Class* parenting = parentClass.get();
-			while(parenting) {
-				for(auto mtd : parenting->methods) {
-					if(methods.count(mtd.first) == 0) {
-						methods[mtd.first] = mtd.second;
-					}
+namespace icon6
+{
+namespace rmi
+{
+Class::Class(std::shared_ptr<Class> parentClass, std::string name,
+			 std::shared_ptr<void> (*constructor)())
+	: constructor(constructor), parentClass(parentClass.get()), name(name)
+{
+	if (parentClass) {
+		parentClass->inheritedClasses.insert(this);
+		Class *parenting = parentClass.get();
+		while (parenting) {
+			for (auto mtd : parenting->methods) {
+				if (methods.count(mtd.first) == 0) {
+					methods[mtd.first] = mtd.second;
 				}
-				parenting = parenting->parentClass;
 			}
+			parenting = parenting->parentClass;
 		}
 	}
-
-	void Class::RegisterMethod(std::string methodName,
-						  std::shared_ptr<MethodInvocationConverter> converter)
-	{
-		methods[methodName] = converter;
-		for(Class* cls : inheritedClasses) {
-			if(cls->methods.count(methodName) == 0) {
-				cls->RegisterMethod(methodName, converter);
-			}
-		}
-	}
-	
-	
-	
-	std::shared_ptr<Class> MethodInvocationEnvironment::GetClassByName(
-			std::string name)
-	{
-		auto it = classes.find(name);
-		if(it == classes.end())
-			return nullptr;
-		return it->second;
-	}
-
-	void MethodInvocationEnvironment::OnReceive(Peer* peer,
-			std::vector<uint8_t>& data, uint32_t flags) {
-		if(data[0] == 0) {
-			bitscpp::ByteReader reader(data.data()+1, data.size()-1);
-			
-			uint64_t objectId = 0;
-			reader.op(objectId);
-			auto object = objects.find(objectId);
-			if(object != objects.end()) {
-				std::string name;
-				reader.op(name);
-				auto cls = object->second.obejctClass;
-				auto method = cls->methods.find(name);
-				if(method != cls->methods.end()) {
-					auto mtd = method->second;
-					if(mtd->executionQueue) {
-						Command command{commands::ExecuteRMI{}};
-						commands::ExecuteRMI& com = command.executeRMI;
-						com.peer = peer->shared_from_this();
-						com.flags = flags;
-						com.binaryData.swap(data);
-						com.readOffset = reader.get_offset();
-						com.methodInvoker = mtd;
-						com.objectPtr = object->second.objectPtr,
-						mtd->executionQueue->EnqueueCommand(std::move(command));
-					} else {
-						mtd->Call(object->second.objectPtr, peer, reader, flags);
-					}
-				} else { // method name does not exists
-					// TODO: do something, show error or anything
-				}
-			} else { // this object does not exists locally
-				// TODO: do something, show error or anything
-			}
-		} else {
-			MessagePassingEnvironment::OnReceive(peer, data, flags);
-		}
-	}
-	
-}
 }
 
+void Class::RegisterMethod(std::string methodName,
+						   std::shared_ptr<MethodInvocationConverter> converter)
+{
+	methods[methodName] = converter;
+	for (Class *cls : inheritedClasses) {
+		if (cls->methods.count(methodName) == 0) {
+			cls->RegisterMethod(methodName, converter);
+		}
+	}
+}
+
+std::shared_ptr<Class>
+MethodInvocationEnvironment::GetClassByName(std::string name)
+{
+	auto it = classes.find(name);
+	if (it == classes.end())
+		return nullptr;
+	return it->second;
+}
+
+void MethodInvocationEnvironment::OnReceive(Peer *peer,
+											std::vector<uint8_t> &data,
+											uint32_t flags)
+{
+	if (data[0] == 0) {
+		bitscpp::ByteReader reader(data.data() + 1, data.size() - 1);
+
+		uint64_t objectId = 0;
+		reader.op(objectId);
+		auto object = objects.find(objectId);
+		if (object != objects.end()) {
+			std::string name;
+			reader.op(name);
+			auto cls = object->second.obejctClass;
+			auto method = cls->methods.find(name);
+			if (method != cls->methods.end()) {
+				auto mtd = method->second;
+				if (mtd->executionQueue) {
+					Command command{commands::ExecuteRMI{}};
+					commands::ExecuteRMI &com = command.executeRMI;
+					com.peer = peer->shared_from_this();
+					com.flags = flags;
+					com.binaryData.swap(data);
+					com.readOffset = reader.get_offset();
+					com.methodInvoker = mtd;
+					com.objectPtr = object->second.objectPtr,
+					mtd->executionQueue->EnqueueCommand(std::move(command));
+				} else {
+					mtd->Call(object->second.objectPtr, peer, reader, flags);
+				}
+			} else { // method name does not exists
+					 // TODO: do something, show error or anything
+			}
+		} else { // this object does not exists locally
+				 // TODO: do something, show error or anything
+		}
+	} else {
+		MessagePassingEnvironment::OnReceive(peer, data, flags);
+	}
+}
+
+} // namespace rmi
+} // namespace icon6

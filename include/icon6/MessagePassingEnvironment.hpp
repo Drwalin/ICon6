@@ -30,47 +30,48 @@
 #include "Peer.hpp"
 #include "MessageConverter.hpp"
 
-namespace icon6 {
-	
-	class CommandExecutionQueue;
-	
-	class MessagePassingEnvironment :
-		public std::enable_shared_from_this<MessagePassingEnvironment> {
-	public:
-		
-		using ReceiveCallback = void(*)(Peer* peer, void* message, uint32_t flags);
-		
-		virtual void OnReceive(Peer* peer, std::vector<uint8_t>& data,
-				uint32_t flags);
-		
-		template<typename T>
-		void RegisterMessage(
-				const std::string& name,
-				void(*onReceive)(Peer* peer, T&& message, uint32_t flags),
-				std::shared_ptr<CommandExecutionQueue> executionQueue=nullptr) {
-			auto func = std::make_shared<MessageConverterSpec<T>>(onReceive);
-			func->executionQueue = executionQueue;
-			registeredMessages[name] = func;
+namespace icon6
+{
+
+class CommandExecutionQueue;
+
+class MessagePassingEnvironment
+	: public std::enable_shared_from_this<MessagePassingEnvironment>
+{
+  public:
+	using ReceiveCallback = void (*)(Peer *peer, void *message, uint32_t flags);
+
+	virtual void OnReceive(Peer *peer, std::vector<uint8_t> &data,
+						   uint32_t flags);
+
+	template <typename T>
+	void RegisterMessage(
+		const std::string &name,
+		void (*onReceive)(Peer *peer, T &&message, uint32_t flags),
+		std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
+	{
+		auto func = std::make_shared<MessageConverterSpec<T>>(onReceive);
+		func->executionQueue = executionQueue;
+		registeredMessages[name] = func;
+	}
+
+	template <typename T>
+	void Send(Peer *peer, const std::string &name, const T &message,
+			  uint32_t flags)
+	{
+		std::vector<uint8_t> buffer;
+		{
+			bitscpp::ByteWriter writer(buffer);
+			writer.op(name);
+			writer.op(message);
 		}
-		
-		template<typename T>
-		void Send(Peer* peer, const std::string& name, const T& message,
-				uint32_t flags) {
-			std::vector<uint8_t> buffer;
-			{
-				bitscpp::ByteWriter writer(buffer);
-				writer.op(name);
-				writer.op(message);
-			}
-			peer->Send(std::move(buffer), flags);
-		}
-		
-	protected:
-		
-		std::unordered_map<std::string, std::shared_ptr<MessageConverter>>
-			registeredMessages;
-	};
-}
+		peer->Send(std::move(buffer), flags);
+	}
+
+  protected:
+	std::unordered_map<std::string, std::shared_ptr<MessageConverter>>
+		registeredMessages;
+};
+} // namespace icon6
 
 #endif
-
