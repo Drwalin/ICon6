@@ -46,6 +46,7 @@ void ConnectionEncryptionState::EncryptMessage(uint8_t *cipher,
 											   uint32_t flags)
 {
 	constexpr uint32_t nonceSize = sizeof(sendMessagesCounter);
+	constexpr uint32_t macSize = crypto_aead_chacha20poly1305_ietf_ABYTES;
 	uint8_t ad[sizeof(sendMessagesCounter)];
 	*(decltype(sendMessagesCounter) *)ad = htonl(flags);
 	sendMessagesCounter++;
@@ -53,11 +54,17 @@ void ConnectionEncryptionState::EncryptMessage(uint8_t *cipher,
 	uint8_t nonce[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
 	memset(nonce, 0, sizeof(nonce));
 	*(decltype(sendMessagesCounter) *)nonce = htonl(sendMessagesCounter);
-	*(decltype(sendMessagesCounter) *)(cipher) = htonl(sendMessagesCounter);
+
+	uint8_t *ptrCipher = cipher;
+	uint8_t *ptrNonce = ptrCipher + messageLength;
+	uint8_t *ptrMac = ptrNonce + nonceSize;
+	*(decltype(sendMessagesCounter) *)(ptrNonce) = htonl(sendMessagesCounter);
+
+	const uint8_t *ptrMessage = message;
 
 	crypto_aead_chacha20poly1305_ietf_encrypt_detached(
-		cipher + nonceSize, cipher + nonceSize + messageLength, nullptr,
-		message, messageLength, ad, sizeof(ad), nullptr, nonce, sendingKey);
+		ptrCipher, ptrMac, nullptr, ptrMessage, messageLength, ad, sizeof(ad),
+		nullptr, nonce, sendingKey);
 }
 
 void ConnectionEncryptionState::DecryptMessage(
@@ -68,18 +75,23 @@ void ConnectionEncryptionState::DecryptMessage(
 	constexpr uint32_t macSize = crypto_aead_chacha20poly1305_ietf_ABYTES;
 	uint8_t nonce[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
 	memset(nonce, 0, sizeof(nonce));
-	memcpy(nonce, cipher, nonceSize);
 
 	uint8_t ad[sizeof(sendMessagesCounter)];
 	*(decltype(sendMessagesCounter) *)ad = htonl(flags);
 
-	receivedData.resize(size - nonceSize -
-						crypto_aead_chacha20poly1305_ietf_ABYTES);
+	const uint32_t messageLength = size - GetEncryptedMessageOverhead();
+	receivedData.resize(messageLength);
+
+	const uint8_t *ptrCipher = cipher;
+	const uint8_t *ptrNonce = ptrCipher + messageLength;
+	const uint8_t *ptrMac = ptrNonce + nonceSize;
+	memcpy(nonce, ptrNonce, nonceSize);
+
+	uint8_t *ptrMessage = receivedData.data();
 
 	if (crypto_aead_chacha20poly1305_ietf_decrypt_detached(
-			receivedData.data(), nullptr, cipher + nonceSize,
-			receivedData.size(), cipher + size - macSize, ad, sizeof(ad), nonce,
-			receivingKey)) {
+			ptrMessage, nullptr, ptrCipher, messageLength, ptrMac, ad,
+			sizeof(ad), nonce, receivingKey)) {
 		DEBUG("Failed to decrypt `%s`", receivedData.data());
 		state = STATE_FAILED_TO_VERIFY_MESSAGE;
 		enet_peer_disconnect(GetPeer()->peer, 2);
