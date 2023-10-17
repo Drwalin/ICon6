@@ -59,20 +59,6 @@ public:
 
 int main()
 {
-#define STR(S) #S
-#define PRINT_SIZE(ARG)                                                        \
-	printf("sizeof(" STR(ARG) ") = %lu\n", sizeof(icon6::commands::ARG));
-
-	PRINT_SIZE(ExecuteOnPeer)
-	PRINT_SIZE(ExecuteRPC)
-	PRINT_SIZE(ExecuteRMI)
-	PRINT_SIZE(ExecuteReturnRC)
-	PRINT_SIZE(ExecuteConnect)
-	PRINT_SIZE(ExecuteSend)
-	PRINT_SIZE(ExecuteDisconnect)
-	PRINT_SIZE(ExecuteFunctionPointer)
-	PRINT_SIZE(ExecuteFunctionObject)
-
 	std::shared_ptr<icon6::CommandExecutionQueue> exeQueue =
 		std::make_shared<icon6::CommandExecutionQueue>();
 

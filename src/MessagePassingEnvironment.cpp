@@ -28,11 +28,11 @@ void MessagePassingEnvironment::OnReceive(Peer *peer,
 {
 	bitscpp::ByteReader reader(data.data(), data.size());
 	std::string name;
-	reader.op(name);
-	if(data[0] == 2) {
+	if (data[0] == 2) {
 		uint8_t b;
 		reader.op(b);
 	}
+	reader.op(name);
 	auto it = registeredMessages.find(name);
 	if (registeredMessages.end() != it) {
 		auto mtd = it->second;
@@ -49,7 +49,6 @@ void MessagePassingEnvironment::OnReceive(Peer *peer,
 			mtd->Call(peer, reader, flags);
 		}
 	} else if (name == std::string_view("_ret")) {
-		// args (uint32_t id, RET)
 		uint32_t id;
 		reader.op(id);
 		OnReturnCallback callback;

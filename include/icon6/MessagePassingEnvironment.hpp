@@ -126,7 +126,8 @@ OnReturnCallback MakeOnReturnCallback(
 	self->timeoutTimePoint = std::chrono::steady_clock::now() +
 							 (std::chrono::milliseconds(timeoutMilliseconds));
 	self->peer = peer;
-	self->onReturnedValue = [_onReturnedValue](Peer *peer, Flags flags,
+	self->onReturnedValue = [_onReturnedValue](std::shared_ptr<Peer> peer,
+											   Flags flags,
 											   std::vector<uint8_t> &bytes,
 											   uint32_t offset) -> void {
 		typename std::remove_const<
@@ -172,7 +173,7 @@ public:
 
 	template <typename Tret, typename... Targs>
 	void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
-			  uint32_t timeoutMS, const std::string &name, const Targs &...args)
+			  const std::string &name, const Targs &...args)
 	{
 		std::vector<uint8_t> buffer;
 		uint32_t returnCallbackId = 0;
