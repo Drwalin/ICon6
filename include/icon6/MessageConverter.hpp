@@ -44,6 +44,52 @@ public:
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
 };
 
+class _InternalReader {
+public:
+	static void ReadType(Peer *peer, Flags flags,
+								   bitscpp::ByteReader<true> &reader,
+								   Flags &value)
+	{
+		value = flags;
+	}
+
+	static void ReadType(Peer *peer, Flags flags,
+								   bitscpp::ByteReader<true> &reader,
+								   std::shared_ptr<Host> &value)
+	{
+		value = peer->GetHost();
+	}
+
+	static void ReadType(Peer *peer, Flags flags,
+								   bitscpp::ByteReader<true> &reader,
+								   Host *&value)
+	{
+		value = peer->GetHost().get();
+	}
+
+	static void ReadType(Peer *peer, Flags flags,
+								   bitscpp::ByteReader<true> &reader,
+								   std::shared_ptr<Peer> &value)
+	{
+		value = peer->shared_from_this();
+		;
+	}
+
+	static void ReadType(Peer *peer, Flags flags,
+								   bitscpp::ByteReader<true> &reader,
+								   Peer *&value)
+	{
+		value = peer;
+	}
+
+	template <typename T>
+	static void ReadType(Peer *peer, Flags flags,
+								   bitscpp::ByteReader<true> &reader, T &value)
+	{
+		reader.op(value);
+	}
+};
+
 template <typename... Targs>
 class MessageConverterSpec : public MessageConverter
 {
@@ -72,53 +118,10 @@ private:
 					   std::index_sequence<SeqArgs...>)
 	{
 		TupleType args;
-		(_InternalReadArgumentType(peer, flags, reader,
+		(_InternalReader::ReadType(peer, flags, reader,
 								   std::get<SeqArgs>(args)),
 		 ...);
 		onReceive(std::get<SeqArgs>(args)...);
-	}
-
-	void _InternalReadArgumentType(Peer *peer, Flags flags,
-								   bitscpp::ByteReader<true> &reader,
-								   Flags &value)
-	{
-		value = flags;
-	}
-
-	void _InternalReadArgumentType(Peer *peer, Flags flags,
-								   bitscpp::ByteReader<true> &reader,
-								   std::shared_ptr<Host> &value)
-	{
-		value = peer->GetHost();
-	}
-
-	void _InternalReadArgumentType(Peer *peer, Flags flags,
-								   bitscpp::ByteReader<true> &reader,
-								   Host *&value)
-	{
-		value = peer->GetHost().get();
-	}
-
-	void _InternalReadArgumentType(Peer *peer, Flags flags,
-								   bitscpp::ByteReader<true> &reader,
-								   std::shared_ptr<Peer> &value)
-	{
-		value = peer->shared_from_this();
-		;
-	}
-
-	void _InternalReadArgumentType(Peer *peer, Flags flags,
-								   bitscpp::ByteReader<true> &reader,
-								   Peer *&value)
-	{
-		value = peer;
-	}
-
-	template <typename T>
-	void _InternalReadArgumentType(Peer *peer, Flags flags,
-								   bitscpp::ByteReader<true> &reader, T &value)
-	{
-		reader.op(value);
 	}
 
 private:

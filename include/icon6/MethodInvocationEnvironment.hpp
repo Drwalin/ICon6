@@ -73,17 +73,16 @@ public:
 		classes[className] = cls;
 	}
 
-	template <typename Tclass, typename Targ>
+	template <typename Tclass, typename Fun>
 	void RegisterMemberFunction(
-		std::string className, std::string methodName,
-		void (Tclass::*memberFunction)(Peer *, Flags flags, Targ data),
+		std::string className, std::string methodName, Fun &&memberFunction,
 		std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
 	{
 		std::shared_ptr<Class> cls = GetClassByName(className);
 		if (cls) {
-			auto mtd = std::make_shared<
-				MessageNetworkAwareMethodInvocationConverterSpec<Tclass, Targ>>(
-				cls.get(), memberFunction);
+			auto mtd = MakeShared(new 
+				MessageNetworkAwareMethodInvocationConverterSpec(
+				cls.get(), memberFunction));
 			mtd->executionQueue = executionQueue;
 			cls->RegisterMethod(methodName, mtd);
 		} else {

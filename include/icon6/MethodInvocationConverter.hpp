@@ -30,6 +30,7 @@
 
 #include "Host.hpp"
 #include "Peer.hpp"
+#include "MessageConverter.hpp"
 
 namespace icon6
 {
@@ -52,14 +53,17 @@ public:
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
 };
 
-template <typename Tclass, typename Targ>
+template <typename Tclass, typename... Targs>
 class MessageNetworkAwareMethodInvocationConverterSpec
 	: public MethodInvocationConverter
 {
 public:
+	using TupleType = std::tuple<typename std::remove_const<
+		typename std::remove_reference<Targs>::type>::type...>;
+	
 	MessageNetworkAwareMethodInvocationConverterSpec(
 		Class *_class,
-		void (Tclass::*memberFunction)(Peer *peer, Flags flags, Targ message))
+		void (Tclass::*memberFunction)(Targs... args))
 		: onReceive(memberFunction), _class(_class)
 	{
 	}
@@ -71,17 +75,25 @@ public:
 	{
 		std::shared_ptr<Tclass> ptr =
 			std::static_pointer_cast<Tclass>(objectPtr);
-		typename std::remove_const<
-			typename std::remove_reference<Targ>::type>::type message;
-		reader.op(message);
-		if constexpr (std::is_rvalue_reference<Targ>::value)
-			(ptr.get()->*onReceive)(peer, flags, std::move(message));
-		else
-			(ptr.get()->*onReceive)(peer, flags, message);
+		auto seq = std::index_sequence_for<Targs...>{};
+		_InternalCall(ptr, peer, flags, reader, seq);
 	}
 
 private:
-	void (Tclass::*onReceive)(Peer *peer, Flags flags, Targ message);
+	template <size_t... SeqArgs>
+	void _InternalCall(std::shared_ptr<Tclass> ptr, Peer *peer,
+					   Flags flags, bitscpp::ByteReader<true> &reader,
+					   std::index_sequence<SeqArgs...>)
+	{
+		TupleType args;
+		(_InternalReader::ReadType(peer, flags, reader,
+								   std::get<SeqArgs>(args)),
+		 ...);
+		(ptr.get()->*onReceive)(std::get<SeqArgs>(args)...);
+	}
+
+private:
+	void (Tclass::*onReceive)(Targs... args);
 	class Class *_class;
 };
 
