@@ -22,7 +22,7 @@ int main()
 	host2->SetMessagePassingEnvironment(mpe);
 
 	mpe->RegisterMessage("sum",
-						 [](uint32_t flags, std::vector<int> msg) -> void {
+						 [](icon6::Flags flags, std::vector<int> msg) -> void {
 							 int sum = 0;
 							 for (int i = 0; i < msg.size(); ++i)
 								 sum += msg[i];
@@ -31,7 +31,7 @@ int main()
 
 	mpe->RegisterMessage(
 		"mult",
-		[](uint32_t flags, icon6::Peer *p, std::vector<int> msg) -> void {
+		[](icon6::Flags flags, icon6::Peer *p, std::vector<int> msg) -> void {
 			mpe->Send(p, 0, "sum", msg);
 			int sum = 1;
 			for (int i = 0; i < msg.size(); ++i)

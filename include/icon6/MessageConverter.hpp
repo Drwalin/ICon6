@@ -39,7 +39,7 @@ public:
 	virtual ~MessageConverter() = default;
 
 	virtual void Call(Peer *peer, bitscpp::ByteReader<true> &reader,
-					  uint32_t flags) = 0;
+					  Flags flags) = 0;
 
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
 };
@@ -51,7 +51,7 @@ public:
 	using TupleType = std::tuple<typename std::remove_const<
 		typename std::remove_reference<Targs>::type>::type...>;
 
-	MessageConverterSpec(void (*onReceive)(uint32_t flags, Targs... args))
+	MessageConverterSpec(void (*onReceive)(Flags flags, Targs... args))
 		: onReceive(onReceive)
 	{
 	}
@@ -59,7 +59,7 @@ public:
 	virtual ~MessageConverterSpec() = default;
 
 	virtual void Call(Peer *peer, bitscpp::ByteReader<true> &reader,
-					  uint32_t flags) override
+					  Flags flags) override
 	{
 		auto seq = std::index_sequence_for<Targs...>{};
 		_InternalCall(peer, flags, reader, seq);
@@ -67,7 +67,7 @@ public:
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(Peer *peer, uint32_t flags,
+	void _InternalCall(Peer *peer, Flags flags,
 					   bitscpp::ByteReader<true> &reader,
 					   std::index_sequence<SeqArgs...>)
 	{
@@ -77,29 +77,30 @@ private:
 		 ...);
 		onReceive(flags, std::get<SeqArgs>(args)...);
 	}
-	
-	void _InternalReadArgumentType(Peer *peer, uint32_t flags,
+
+	void _InternalReadArgumentType(Peer *peer, Flags flags,
 								   bitscpp::ByteReader<true> &reader,
 								   std::shared_ptr<Host> &value)
 	{
 		value = peer->GetHost();
 	}
 
-	void _InternalReadArgumentType(Peer *peer, uint32_t flags,
+	void _InternalReadArgumentType(Peer *peer, Flags flags,
 								   bitscpp::ByteReader<true> &reader,
 								   Host *&value)
 	{
 		value = peer->GetHost().get();
 	}
 
-	void _InternalReadArgumentType(Peer *peer, uint32_t flags,
+	void _InternalReadArgumentType(Peer *peer, Flags flags,
 								   bitscpp::ByteReader<true> &reader,
 								   std::shared_ptr<Peer> &value)
 	{
-		value = peer->shared_from_this();;
+		value = peer->shared_from_this();
+		;
 	}
 
-	void _InternalReadArgumentType(Peer *peer, uint32_t flags,
+	void _InternalReadArgumentType(Peer *peer, Flags flags,
 								   bitscpp::ByteReader<true> &reader,
 								   Peer *&value)
 	{
@@ -107,14 +108,14 @@ private:
 	}
 
 	template <typename T>
-	void _InternalReadArgumentType(Peer *peer, uint32_t flags,
+	void _InternalReadArgumentType(Peer *peer, Flags flags,
 								   bitscpp::ByteReader<true> &reader, T &value)
 	{
 		reader.op(value);
 	}
 
 private:
-	void (*const onReceive)(uint32_t flags, Targs...);
+	void (*const onReceive)(Flags flags, Targs...);
 };
 
 } // namespace icon6

@@ -29,6 +29,8 @@
 
 #include <enet/enet.h>
 
+#include "Flags.hpp"
+
 namespace icon6
 {
 
@@ -75,7 +77,7 @@ public:
 	std::vector<uint8_t> binaryData;
 	std::shared_ptr<MessageConverter> messageConverter;
 	uint32_t readOffset;
-	uint32_t flags;
+	Flags flags;
 
 	virtual void Execute() override;
 };
@@ -88,7 +90,7 @@ public:
 	std::shared_ptr<void> objectPtr;
 	std::shared_ptr<rmi::MethodInvocationConverter> methodInvoker;
 	uint32_t readOffset;
-	uint32_t flags;
+	Flags flags;
 
 	virtual void Execute() override;
 };
@@ -110,7 +112,7 @@ class ExecuteSend final : public BaseCommandExecute
 public:
 	std::vector<uint8_t> data;
 	std::shared_ptr<Peer> peer;
-	uint32_t flags;
+	Flags flags;
 
 	virtual void Execute() override;
 };

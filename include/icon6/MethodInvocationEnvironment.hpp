@@ -61,7 +61,7 @@ public:
 	std::shared_ptr<Class> GetClassByName(std::string name);
 
 	virtual void OnReceive(Peer *peer, std::vector<uint8_t> &data,
-						   uint32_t flags) override;
+						   Flags flags) override;
 
 	template <typename T>
 	void RegisterClass(std::string className,
@@ -76,7 +76,7 @@ public:
 	template <typename Tclass, typename Targ>
 	void RegisterMemberFunction(
 		std::string className, std::string methodName,
-		void (Tclass::*memberFunction)(Peer *, uint32_t flags, Targ data),
+		void (Tclass::*memberFunction)(Peer *, Flags flags, Targ data),
 		std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
 	{
 		std::shared_ptr<Class> cls = GetClassByName(className);
@@ -114,7 +114,7 @@ public:
 	}
 
 	template <typename T>
-	void SendInvoke(Peer *peer, uint32_t flags, uint64_t objectId,
+	void SendInvoke(Peer *peer, Flags flags, uint64_t objectId,
 					const std::string &name, const T &message)
 	{
 		std::vector<uint8_t> buffer;

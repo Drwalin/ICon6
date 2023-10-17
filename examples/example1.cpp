@@ -15,12 +15,12 @@ int main()
 	auto host2 = icon6::Host::Make(port2, 16);
 
 	host1->SetReceive(
-		[](icon6::Peer *p, std::vector<uint8_t> &data, uint32_t flags) {
+		[](icon6::Peer *p, std::vector<uint8_t> &data, icon6::Flags flags) {
 			printf(" message in host1: %s\n", data.data());
 			fflush(stdout);
 		});
 	host2->SetReceive(
-		[](icon6::Peer *p, std::vector<uint8_t> &data, uint32_t flags) {
+		[](icon6::Peer *p, std::vector<uint8_t> &data, icon6::Flags flags) {
 			printf(" message in host2: %s\n", data.data());
 			fflush(stdout);
 			std::string res = (char *)data.data();

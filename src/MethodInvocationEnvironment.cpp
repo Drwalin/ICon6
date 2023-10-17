@@ -62,7 +62,7 @@ MethodInvocationEnvironment::GetClassByName(std::string name)
 
 void MethodInvocationEnvironment::OnReceive(Peer *peer,
 											std::vector<uint8_t> &data,
-											uint32_t flags)
+											Flags flags)
 {
 	if (data[0] == 0) {
 		bitscpp::ByteReader reader(data.data() + 1, data.size() - 1);

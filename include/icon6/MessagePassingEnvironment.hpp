@@ -55,10 +55,9 @@ class MessagePassingEnvironment
 	: public std::enable_shared_from_this<MessagePassingEnvironment>
 {
 public:
-	using ReceiveCallback = void (*)(Peer *peer, void *message, uint32_t flags);
+	using ReceiveCallback = void (*)(Peer *peer, void *message, Flags flags);
 
-	virtual void OnReceive(Peer *peer, std::vector<uint8_t> &data,
-						   uint32_t flags);
+	virtual void OnReceive(Peer *peer, std::vector<uint8_t> &data, Flags flags);
 
 	template <typename Fun>
 	void RegisterMessage(
@@ -72,7 +71,7 @@ public:
 	}
 
 	template <typename... Targs>
-	void Send(Peer *peer, uint32_t flags, const std::string &name,
+	void Send(Peer *peer, Flags flags, const std::string &name,
 			  const Targs &...args)
 	{
 		std::vector<uint8_t> buffer;

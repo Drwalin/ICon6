@@ -45,7 +45,7 @@ void Peer::Destroy()
 	host = nullptr;
 }
 
-void Peer::Send(std::vector<uint8_t> &&data, uint32_t flags)
+void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 {
 	if (state != STATE_READY_TO_USE) {
 		throw "Peer::Send Handshake is not finished yet. Sending is not "
@@ -59,7 +59,7 @@ void Peer::Send(std::vector<uint8_t> &&data, uint32_t flags)
 	host->EnqueueCommand(std::move(command));
 }
 
-void Peer::_InternalSend(std::vector<uint8_t> &data, uint32_t flags)
+void Peer::_InternalSend(std::vector<uint8_t> &data, Flags flags)
 {
 	const uint32_t packetSize =
 		ConnectionEncryptionState ::GetEncryptedMessageLength(data.size());
@@ -91,12 +91,12 @@ void Peer::_InternalDisconnect(uint32_t disconnectData)
 
 void Peer::SetReceiveCallback(void (*callback)(Peer *,
 											   std::vector<uint8_t> &data,
-											   uint32_t flags))
+											   Flags flags))
 {
 	callbackOnReceive = callback;
 }
 
-void Peer::CallCallbackReceive(uint8_t *data, uint32_t size, uint32_t flags)
+void Peer::CallCallbackReceive(uint8_t *data, uint32_t size, Flags flags)
 {
 	switch (state) {
 	case STATE_SENT_CERT:

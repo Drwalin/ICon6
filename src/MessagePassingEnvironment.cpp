@@ -24,7 +24,7 @@ namespace icon6
 {
 void MessagePassingEnvironment::OnReceive(Peer *peer,
 										  std::vector<uint8_t> &data,
-										  uint32_t flags)
+										  Flags flags)
 {
 	bitscpp::ByteReader reader(data.data(), data.size());
 	std::string name;

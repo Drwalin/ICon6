@@ -179,7 +179,7 @@ void Host::DispatchEvent(ENetEvent &event)
 		((Peer *)event.peer->data)->StartHandshake();
 	} break;
 	case ENET_EVENT_TYPE_RECEIVE: {
-		uint32_t flags = 0;
+		Flags flags = 0;
 		if (event.packet->flags & ENET_PACKET_FLAG_RELIABLE)
 			flags &= FLAG_RELIABLE;
 		if (!(event.packet->flags & ENET_PACKET_FLAG_UNSEQUENCED))
@@ -220,7 +220,7 @@ void Host::SetConnect(void (*callback)(Peer *))
 }
 
 void Host::SetReceive(void (*callback)(Peer *, std::vector<uint8_t> &data,
-									   uint32_t flags))
+									   Flags flags))
 {
 	callbackOnReceive = callback;
 }
@@ -300,7 +300,7 @@ void Host::SetMessagePassingEnvironment(
 	this->mpe = mpe;
 	if (mpe) {
 		this->callbackOnReceive = [](Peer *peer, std::vector<uint8_t> &data,
-									 uint32_t flags) {
+									 Flags flags) {
 			peer->GetHost()->GetMessagePassingEnvironment()->OnReceive(
 				peer, data, flags);
 		};

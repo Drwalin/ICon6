@@ -25,6 +25,7 @@
 #include <memory>
 #include <atomic>
 
+#include "Flags.hpp"
 #include "Cert.hpp"
 
 namespace icon6
@@ -68,14 +69,13 @@ public:
 		return rawMessageLength + GetEncryptedMessageOverhead();
 	}
 	void EncryptMessage(uint8_t *cipher, const uint8_t *message,
-						uint32_t messageLength, uint32_t flags);
+						uint32_t messageLength, Flags flags);
 	void DecryptMessage(std::vector<uint8_t> &receivedData, uint8_t *cipher,
-						uint32_t cipherLength, uint32_t flags);
+						uint32_t cipherLength, Flags flags);
 
 	void StartHandshake();
-	void ReceivedWhenStateSentCert(uint8_t *data, uint32_t size,
-								   uint32_t flags);
-	void ReceivedWhenStateSentKex(uint8_t *data, uint32_t size, uint32_t flags);
+	void ReceivedWhenStateSentCert(uint8_t *data, uint32_t size, Flags flags);
+	void ReceivedWhenStateSentKex(uint8_t *data, uint32_t size, Flags flags);
 
 	inline Peer *GetPeer() { return (Peer *)this; }
 	std::shared_ptr<Host> GetHost();

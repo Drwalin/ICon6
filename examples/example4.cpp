@@ -18,14 +18,14 @@ class TestClass
 public:
 	virtual ~TestClass() = default;
 
-	virtual void Method(icon6::Peer *peer, uint32_t flags, int &arg)
+	virtual void Method(icon6::Peer *peer, icon6::Flags flags, int &arg)
 	{
 		printf("Called TestClass::Method on %p with %i on thread %i\n",
 			   (void *)this, arg, threadId);
 		fflush(stdout);
 	}
 
-	virtual void Method2(icon6::Peer *peer, uint32_t flags, std::string arg)
+	virtual void Method2(icon6::Peer *peer, icon6::Flags flags, std::string arg)
 	{
 		printf("Called TestClass::Method2 on %p with %s on thread %i\n",
 			   (void *)this, arg.c_str(), threadId);
@@ -38,14 +38,15 @@ class InheritedClass : public TestClass
 public:
 	virtual ~InheritedClass() = default;
 
-	virtual void Method(icon6::Peer *peer, uint32_t flags, int &arg) override
+	virtual void Method(icon6::Peer *peer, icon6::Flags flags,
+						int &arg) override
 	{
 		printf("Called InheritedClass::Method on %p with %i on thread %i\n",
 			   (void *)this, arg, threadId);
 		fflush(stdout);
 	}
 
-	virtual void Method2(icon6::Peer *peer, uint32_t flags,
+	virtual void Method2(icon6::Peer *peer, icon6::Flags flags,
 						 std::string arg) override
 	{
 		printf("Called InheritedClass::Method2 on %p with %s on thread %i\n",
@@ -75,22 +76,24 @@ int main()
 	host2->SetMessagePassingEnvironment(mpe);
 
 	mpe->RegisterMessage(
-		"sum", [](uint32_t flags, std::vector<int> &msg, std::string str) {
+		"sum", [](icon6::Flags flags, std::vector<int> &msg, std::string str) {
 			int sum = 0;
 			for (int i = 0; i < msg.size(); ++i)
 				sum += msg[i];
 			printf(" %s = %i\n", str.c_str(), sum);
 		});
 
-	mpe->RegisterMessage(
-		"mult", [](uint32_t flags, std::vector<int> msg, std::shared_ptr<icon6::Peer> p, std::shared_ptr<icon6::Host> h) {
-			mpe->Send(p.get(), 0, "sum", msg, "Sum of values");
-			printf(" peer->host(%p) == Host(%p): %s\n", p->GetHost().get(), h.get(), p->GetHost().get()==h.get()?"true":"false");
-			int sum = 1;
-			for (int i = 0; i < msg.size(); ++i)
-				sum *= msg[i];
-			printf(" mult = %i\n", sum);
-		});
+	mpe->RegisterMessage("mult", [](icon6::Flags flags, std::vector<int> msg,
+									std::shared_ptr<icon6::Peer> p,
+									std::shared_ptr<icon6::Host> h) {
+		mpe->Send(p.get(), 0, "sum", msg, "Sum of values");
+		printf(" peer->host(%p) == Host(%p): %s\n", p->GetHost().get(), h.get(),
+			   p->GetHost().get() == h.get() ? "true" : "false");
+		int sum = 1;
+		for (int i = 0; i < msg.size(); ++i)
+			sum *= msg[i];
+		printf(" mult = %i\n", sum);
+	});
 
 	mpe->RegisterClass<TestClass>("TestClass", nullptr);
 	mpe->RegisterMemberFunction<TestClass>("TestClass", "Method",

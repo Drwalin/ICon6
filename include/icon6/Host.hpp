@@ -28,6 +28,7 @@
 
 #include <enet/enet.h>
 
+#include "Flags.hpp"
 #include "Peer.hpp"
 #include "Command.hpp"
 #include "CommandExecutionQueue.hpp"
@@ -87,7 +88,7 @@ public:
 
 	void SetConnect(void (*callback)(Peer *));
 	void SetReceive(void (*callback)(Peer *, std::vector<uint8_t> &data,
-									 uint32_t flags));
+									 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData));
 
 	void Stop();
@@ -142,8 +143,7 @@ private:
 	std::vector<Command> popedCommands;
 
 	void (*callbackOnConnect)(Peer *);
-	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data,
-							  uint32_t flags);
+	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data, Flags flags);
 	void (*callbackOnDisconnect)(Peer *, uint32_t disconnectData);
 };
 

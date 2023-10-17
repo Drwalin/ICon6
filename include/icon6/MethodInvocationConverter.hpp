@@ -47,7 +47,7 @@ public:
 	virtual ~MethodInvocationConverter() = default;
 
 	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
-					  bitscpp::ByteReader<true> &reader, uint32_t flags) = 0;
+					  bitscpp::ByteReader<true> &reader, Flags flags) = 0;
 
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
 };
@@ -59,8 +59,7 @@ class MessageNetworkAwareMethodInvocationConverterSpec
 public:
 	MessageNetworkAwareMethodInvocationConverterSpec(
 		Class *_class,
-		void (Tclass::*memberFunction)(Peer *peer, uint32_t flags,
-									   Targ message))
+		void (Tclass::*memberFunction)(Peer *peer, Flags flags, Targ message))
 		: onReceive(memberFunction), _class(_class)
 	{
 	}
@@ -68,8 +67,7 @@ public:
 	virtual ~MessageNetworkAwareMethodInvocationConverterSpec() = default;
 
 	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
-					  bitscpp::ByteReader<true> &reader,
-					  uint32_t flags) override
+					  bitscpp::ByteReader<true> &reader, Flags flags) override
 	{
 		std::shared_ptr<Tclass> ptr =
 			std::static_pointer_cast<Tclass>(objectPtr);
@@ -83,7 +81,7 @@ public:
 	}
 
 private:
-	void (Tclass::*onReceive)(Peer *peer, uint32_t flags, Targ message);
+	void (Tclass::*onReceive)(Peer *peer, Flags flags, Targ message);
 	class Class *_class;
 };
 

@@ -43,12 +43,12 @@ ConnectionEncryptionState::~ConnectionEncryptionState()
 void ConnectionEncryptionState::EncryptMessage(uint8_t *cipher,
 											   const uint8_t *message,
 											   uint32_t messageLength,
-											   uint32_t flags)
+											   Flags flags)
 {
 	constexpr uint32_t nonceSize = sizeof(sendMessagesCounter);
 	constexpr uint32_t macSize = crypto_aead_chacha20poly1305_ietf_ABYTES;
-	uint8_t ad[sizeof(sendMessagesCounter)];
-	*(decltype(sendMessagesCounter) *)ad = htonl(flags);
+	uint8_t ad[sizeof(flags.field)];
+	flags.GetNetworkOrder(ad);
 	sendMessagesCounter++;
 
 	uint8_t nonce[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
@@ -69,15 +69,15 @@ void ConnectionEncryptionState::EncryptMessage(uint8_t *cipher,
 
 void ConnectionEncryptionState::DecryptMessage(
 	std::vector<uint8_t> &receivedData, uint8_t *cipher, uint32_t size,
-	uint32_t flags)
+	Flags flags)
 {
 	constexpr uint32_t nonceSize = sizeof(sendMessagesCounter);
 	constexpr uint32_t macSize = crypto_aead_chacha20poly1305_ietf_ABYTES;
 	uint8_t nonce[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
 	memset(nonce, 0, sizeof(nonce));
 
-	uint8_t ad[sizeof(sendMessagesCounter)];
-	*(decltype(sendMessagesCounter) *)ad = htonl(flags);
+	uint8_t ad[sizeof(flags.field)];
+	flags.GetNetworkOrder(ad);
 
 	const uint32_t messageLength = size - GetEncryptedMessageOverhead();
 	receivedData.resize(messageLength);
@@ -112,7 +112,7 @@ void ConnectionEncryptionState::StartHandshake()
 
 void ConnectionEncryptionState::ReceivedWhenStateSentCert(uint8_t *_data,
 														  uint32_t size,
-														  uint32_t flags)
+														  Flags flags)
 {
 	if (size != crypto::SIGN_PUBLIC_KEY_BYTES) {
 		DEBUG("Received size of certificate (public key) is invalid");
@@ -137,7 +137,7 @@ void ConnectionEncryptionState::ReceivedWhenStateSentCert(uint8_t *_data,
 
 void ConnectionEncryptionState::ReceivedWhenStateSentKex(uint8_t *data,
 														 uint32_t size,
-														 uint32_t flags)
+														 Flags flags)
 {
 	if (size != crypto::KEX_PUBLIC_KEY_BYTES + crypto::SIGNATURE_BYTES) {
 		DEBUG("Received kex size is invalid");

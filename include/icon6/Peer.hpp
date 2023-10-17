@@ -27,15 +27,12 @@
 #include <memory>
 #include <atomic>
 
+#include "Flags.hpp"
+
 #include "ConnectionEncryptionState.hpp"
 
 namespace icon6
 {
-
-enum MessageFlags : uint32_t {
-	FLAG_SEQUENCED = 1 << 0,
-	FLAG_RELIABLE = 1 << 1,
-};
 
 class Host;
 
@@ -44,12 +41,12 @@ class Peer final : public ConnectionEncryptionState
 public:
 	~Peer();
 
-	void Send(std::vector<uint8_t> &&data, uint32_t flags);
+	void Send(std::vector<uint8_t> &&data, Flags flags);
 	inline void SendReliableSequenced(std::vector<uint8_t> &&data);
 	inline void SendReliableUnsequenced(std::vector<uint8_t> &&data);
 	inline void SendUnreliableSequenced(std::vector<uint8_t> &&data);
 	inline void SendUnreliableUnsequenced(std::vector<uint8_t> &&data);
-	inline void Send(const void *data, uint32_t bytes, uint32_t flags);
+	inline void Send(const void *data, uint32_t bytes, Flags flags);
 	inline void SendReliableSequenced(const void *data, uint32_t bytes);
 	inline void SendReliableUnsequenced(const void *data, uint32_t bytes);
 	inline void SendUnreliableSequenced(const void *data, uint32_t bytes);
@@ -80,7 +77,7 @@ public:
 	inline std::shared_ptr<Host> GetHost() { return host; }
 
 	void SetReceiveCallback(void (*callback)(Peer *, std::vector<uint8_t> &data,
-											 uint32_t flags));
+											 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData));
 
 public:
@@ -88,11 +85,11 @@ public:
 	std::shared_ptr<void> userSharedPointer;
 
 public:
-	void _InternalSend(std::vector<uint8_t> &data, uint32_t flags);
+	void _InternalSend(std::vector<uint8_t> &data, Flags flags);
 	void _InternalDisconnect(uint32_t disconnectData);
 
 private:
-	void CallCallbackReceive(uint8_t *data, uint32_t size, uint32_t flags);
+	void CallCallbackReceive(uint8_t *data, uint32_t size, Flags flags);
 	void CallCallbackDisconnect(uint32_t data);
 
 	void Destroy();
@@ -113,8 +110,7 @@ private:
 	std::shared_ptr<Host> host;
 	ENetPeer *peer;
 
-	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data,
-							  uint32_t flags);
+	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data, Flags flags);
 	void (*callbackOnDisconnect)(Peer *, uint32_t disconnectData);
 };
 
@@ -138,7 +134,7 @@ inline void Peer::SendUnreliableUnsequenced(std::vector<uint8_t> &&data)
 	Send(std::move(data), 0);
 }
 
-inline void Peer::Send(const void *data, uint32_t bytes, uint32_t flags)
+inline void Peer::Send(const void *data, uint32_t bytes, Flags flags)
 {
 	Send(std::vector<uint8_t>((uint8_t *)data, (uint8_t *)data + bytes), flags);
 }
