@@ -18,17 +18,18 @@ class TestClass
 public:
 	virtual ~TestClass() = default;
 
-	virtual void Method(icon6::Peer *peer, icon6::Flags flags, int &arg)
+	virtual void Method(int &arg)
 	{
 		printf("Called TestClass::Method on %p with %i on thread %i\n",
 			   (void *)this, arg, threadId);
 		fflush(stdout);
 	}
 
-	virtual void Method2(icon6::Peer *peer, icon6::Flags flags, std::string arg)
+	virtual void Method2(std::string arg, icon6::Peer *peer, icon6::Flags flags,
+						 int a2)
 	{
-		printf("Called TestClass::Method2 on %p with %s on thread %i\n",
-			   (void *)this, arg.c_str(), threadId);
+		printf("Called TestClass::Method2 on %p with (%s, %i) on thread %i\n",
+			   (void *)this, arg.c_str(), a2, threadId);
 		fflush(stdout);
 	}
 };
@@ -38,19 +39,19 @@ class InheritedClass : public TestClass
 public:
 	virtual ~InheritedClass() = default;
 
-	virtual void Method(icon6::Peer *peer, icon6::Flags flags,
-						int &arg) override
+	virtual void Method(int &arg) override
 	{
 		printf("Called InheritedClass::Method on %p with %i on thread %i\n",
 			   (void *)this, arg, threadId);
 		fflush(stdout);
 	}
 
-	virtual void Method2(icon6::Peer *peer, icon6::Flags flags,
-						 std::string arg) override
+	virtual void Method2(std::string arg, icon6::Peer *peer, icon6::Flags flags,
+						 int a2) override
 	{
-		printf("Called InheritedClass::Method2 on %p with %s on thread %i\n",
-			   (void *)this, arg.c_str(), threadId);
+		printf(
+			"Called InheritedClass::Method2 on %p with (%s, %i) on thread %i\n",
+			(void *)this, arg.c_str(), a2, threadId);
 		fflush(stdout);
 	}
 };
@@ -123,8 +124,8 @@ int main()
 	}
 
 	if (p1 != nullptr) {
-		mpe->SendInvoke(p1.get(), 0, obj[0], "Method2", "asdf");
-		mpe->SendInvoke(p1.get(), 0, obj[1], "Method2", "qwerty");
+		mpe->SendInvoke(p1.get(), 0, obj[0], "Method2", "asdf", 666);
+		mpe->SendInvoke(p1.get(), 0, obj[1], "Method2", "qwerty", 999);
 
 		mpe->Send<std::vector<int>>(p1.get(), 0, "mult", {1, 2, 3, 4, 5});
 

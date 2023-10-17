@@ -60,10 +60,9 @@ class MessageNetworkAwareMethodInvocationConverterSpec
 public:
 	using TupleType = std::tuple<typename std::remove_const<
 		typename std::remove_reference<Targs>::type>::type...>;
-	
+
 	MessageNetworkAwareMethodInvocationConverterSpec(
-		Class *_class,
-		void (Tclass::*memberFunction)(Targs... args))
+		Class *_class, void (Tclass::*memberFunction)(Targs... args))
 		: onReceive(memberFunction), _class(_class)
 	{
 	}
@@ -81,8 +80,8 @@ public:
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(std::shared_ptr<Tclass> ptr, Peer *peer,
-					   Flags flags, bitscpp::ByteReader<true> &reader,
+	void _InternalCall(std::shared_ptr<Tclass> ptr, Peer *peer, Flags flags,
+					   bitscpp::ByteReader<true> &reader,
 					   std::index_sequence<SeqArgs...>)
 	{
 		TupleType args;

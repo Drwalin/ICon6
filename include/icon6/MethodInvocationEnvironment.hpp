@@ -80,9 +80,9 @@ public:
 	{
 		std::shared_ptr<Class> cls = GetClassByName(className);
 		if (cls) {
-			auto mtd = MakeShared(new 
-				MessageNetworkAwareMethodInvocationConverterSpec(
-				cls.get(), memberFunction));
+			auto mtd =
+				MakeShared(new MessageNetworkAwareMethodInvocationConverterSpec(
+					cls.get(), memberFunction));
 			mtd->executionQueue = executionQueue;
 			cls->RegisterMethod(methodName, mtd);
 		} else {
@@ -112,9 +112,9 @@ public:
 		return nullptr;
 	}
 
-	template <typename T>
+	template <typename... Targs>
 	void SendInvoke(Peer *peer, Flags flags, uint64_t objectId,
-					const std::string &name, const T &message)
+					const std::string &name, const Targs &...args)
 	{
 		std::vector<uint8_t> buffer;
 		{
@@ -122,7 +122,7 @@ public:
 			writer.op((uint8_t)0);
 			writer.op(objectId);
 			writer.op(name);
-			writer.op(message);
+			(writer.op(args), ...);
 		}
 		peer->Send(std::move(buffer), flags);
 	}
