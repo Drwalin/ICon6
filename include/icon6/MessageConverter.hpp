@@ -77,6 +77,27 @@ private:
 		 ...);
 		onReceive(flags, std::get<SeqArgs>(args)...);
 	}
+	
+	void _InternalReadArgumentType(Peer *peer, uint32_t flags,
+								   bitscpp::ByteReader<true> &reader,
+								   std::shared_ptr<Host> &value)
+	{
+		value = peer->GetHost();
+	}
+
+	void _InternalReadArgumentType(Peer *peer, uint32_t flags,
+								   bitscpp::ByteReader<true> &reader,
+								   Host *&value)
+	{
+		value = peer->GetHost().get();
+	}
+
+	void _InternalReadArgumentType(Peer *peer, uint32_t flags,
+								   bitscpp::ByteReader<true> &reader,
+								   std::shared_ptr<Peer> &value)
+	{
+		value = peer->shared_from_this();;
+	}
 
 	void _InternalReadArgumentType(Peer *peer, uint32_t flags,
 								   bitscpp::ByteReader<true> &reader,

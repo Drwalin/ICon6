@@ -83,8 +83,9 @@ int main()
 		});
 
 	mpe->RegisterMessage(
-		"mult", [](uint32_t flags, std::vector<int> msg, icon6::Peer *p) {
-			mpe->Send(p, 0, "sum", msg, "Sum of values");
+		"mult", [](uint32_t flags, std::vector<int> msg, std::shared_ptr<icon6::Peer> p, std::shared_ptr<icon6::Host> h) {
+			mpe->Send(p.get(), 0, "sum", msg, "Sum of values");
+			printf(" peer->host(%p) == Host(%p): %s\n", p->GetHost().get(), h.get(), p->GetHost().get()==h.get()?"true":"false");
 			int sum = 1;
 			for (int i = 0; i < msg.size(); ++i)
 				sum *= msg[i];
