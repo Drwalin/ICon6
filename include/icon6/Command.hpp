@@ -26,6 +26,7 @@
 #include <vector>
 #include <variant>
 #include <future>
+#include <functional>
 
 #include <enet/enet.h>
 

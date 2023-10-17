@@ -81,9 +81,28 @@ public:
 		peer->Send(std::move(buffer), flags);
 	}
 
+	template <typename Tret, typename... Targs>
+	void Call(Peer *peer, Flags flags,
+			  std::function<void(Peer *, Tret)> onReturnedValue,
+			  std::shared_ptr<CommandExecutionQueue> executionQueue,
+			  const std::string &name, const Targs &...args)
+	{
+		std::vector<uint8_t> buffer;
+		{
+			bitscpp::ByteWriter writer(buffer);
+			writer.op(name);
+			(writer.op(args), ...);
+		}
+		peer->Send(std::move(buffer), flags);
+	}
+
 protected:
 	std::unordered_map<std::string, std::shared_ptr<MessageConverter>>
 		registeredMessages;
+	
+	std::mutex mutexReturningCallbacks;
+	uint32_t returnCallCallbackIdGenerator;
+	std::map<uint32_t, std::shared_ptr<MessageConverter>> returningCallbacks;
 };
 } // namespace icon6
 
