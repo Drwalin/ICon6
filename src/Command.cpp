@@ -18,8 +18,6 @@
 
 #include "../bitscpp/include/bitscpp/ByteReader.hpp"
 
-// #include "../include/icon6/Host.hpp"
-// #include "../include/icon6/Peer.hpp"
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 #include "../include/icon6/CommandExecutionQueue.hpp"
@@ -31,6 +29,10 @@ namespace icon6
 namespace commands
 {
 void ExecuteOnPeer::Execute() { function(peer, data, customSharedData); }
+void ExecuteFunctionObjectOnPeer::Execute()
+{
+	function(peer, data, customSharedData);
+}
 
 void ExecuteRPC::Execute()
 {
@@ -44,6 +46,13 @@ void ExecuteRMI::Execute()
 	bitscpp::ByteReader<true> reader(binaryData.data() + readOffset,
 									 binaryData.size() - readOffset);
 	methodInvoker->Call(objectPtr, peer.get(), reader, flags);
+}
+
+void ExecuteReturnRC::Execute()
+{
+	bitscpp::ByteReader<true> reader(binaryData.data() + readOffset,
+									 binaryData.size() - readOffset);
+	function(peer, flags, binaryData, readOffset);
 }
 
 void ExecuteConnect::Execute()
@@ -60,6 +69,8 @@ void ExecuteSend::Execute() { peer->_InternalSend(data, flags); }
 void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(disconnectData); }
 
 void ExecuteFunctionPointer::Execute() { function(); }
+
+void ExecuteFunctionObject::Execute() { function(); }
 } // namespace commands
 
 using namespace commands;

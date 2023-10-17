@@ -23,6 +23,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <chrono>
 
 #include <bitscpp/ByteWriterExtensions.hpp>
 
@@ -49,6 +50,94 @@ template <typename Fun> auto ConvertLambdaToFunctionPtr(Fun &&fun)
 template <typename T> auto MakeShared(T *ptr)
 {
 	return std::shared_ptr<T>(ptr);
+}
+
+class OnReturnCallback
+{
+public:
+	~OnReturnCallback() = default;
+
+	bool IsExpired() const
+	{
+		return std::chrono::steady_clock::now() < timeoutTimePoint;
+	}
+
+	void Execute(Peer *peer, Flags flags, std::vector<uint8_t> &bytes,
+				 uint32_t offset)
+	{
+		if (peer != this->peer.get()) {
+			// TODO: implement check
+			throw "Received return value from different peer than request was "
+				  "sent to.";
+		}
+
+		if (executionQueue) {
+			Command command{commands::ExecuteReturnRC{}};
+			commands::ExecuteReturnRC &com = command.executeReturnRC;
+			com.peer = this->peer;
+			com.function = onReturnedValue;
+			com.flags = flags;
+			com.readOffset = offset;
+			std::swap(com.binaryData, bytes);
+			executionQueue->EnqueueCommand(std::move(command));
+		} else {
+			onReturnedValue(this->peer, flags, bytes, offset);
+		}
+	}
+
+	void ExecuteTimeout()
+	{
+		if (onTimeout) {
+			if (executionQueue) {
+				Command command{commands::ExecuteFunctionObjectNoArgsOnPeer{}};
+				commands::ExecuteFunctionObjectNoArgsOnPeer &com =
+					command.executeFunctionObjectNoArgsOnPeer;
+				com.peer = peer;
+				com.function = onTimeout;
+				executionQueue->EnqueueCommand(std::move(command));
+			} else {
+				onTimeout(peer);
+			}
+		}
+	}
+
+public:
+	std::function<void(std::shared_ptr<Peer>, Flags, std::vector<uint8_t> &,
+					   uint32_t)>
+		onReturnedValue;
+	std::function<void(std::shared_ptr<Peer>)> onTimeout;
+	std::shared_ptr<CommandExecutionQueue> executionQueue;
+	std::chrono::time_point<std::chrono::steady_clock> timeoutTimePoint;
+	std::shared_ptr<Peer> peer;
+};
+
+template <typename Tret>
+OnReturnCallback MakeOnReturnCallback(
+	std::function<void(std::shared_ptr<Peer>, Flags, Tret)> _onReturnedValue,
+	std::function<void(std::shared_ptr<Peer>)> onTimeout,
+	uint32_t timeoutMilliseconds, std::shared_ptr<Peer> peer,
+	std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
+{
+	OnReturnCallback ret;
+	OnReturnCallback *self = &ret;
+
+	self->onTimeout = onTimeout;
+	self->executionQueue = executionQueue;
+	self->timeoutTimePoint = std::chrono::steady_clock::now() +
+							 (std::chrono::milliseconds(timeoutMilliseconds));
+	self->peer = peer;
+	self->onReturnedValue = [_onReturnedValue](Peer *peer, Flags flags,
+											   std::vector<uint8_t> &bytes,
+											   uint32_t offset) -> void {
+		typename std::remove_const<
+			typename std::remove_reference<Tret>::type>::type ret;
+		bitscpp::ByteReader<false> reader(bytes.data() + offset,
+										  bytes.size() - offset);
+		reader.op(ret);
+		_onReturnedValue(peer, flags, ret);
+	};
+
+	return ret;
 }
 
 class MessagePassingEnvironment
@@ -82,16 +171,25 @@ public:
 	}
 
 	template <typename Tret, typename... Targs>
-	void Call(Peer *peer, Flags flags,
-			  std::function<void(Peer *, Tret)> onReturnedValue,
-			  std::shared_ptr<CommandExecutionQueue> executionQueue,
-			  const std::string &name, const Targs &...args)
+	void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
+			  uint32_t timeoutMS, const std::string &name, const Targs &...args)
 	{
 		std::vector<uint8_t> buffer;
+		uint32_t returnCallbackId = 0;
+		{
+			std::lock_guard guard{mutexReturningCallbacks};
+			do {
+				returnCallbackId = ++returnCallCallbackIdGenerator;
+			} while (returnCallbackId == 0 &&
+					 returningCallbacks.count(returnCallbackId) != 0);
+			returningCallbacks[returnCallbackId] = std::move(callback);
+		}
 		{
 			bitscpp::ByteWriter writer(buffer);
+			writer.op((uint8_t)2);
 			writer.op(name);
 			(writer.op(args), ...);
+			writer.op(returnCallbackId);
 		}
 		peer->Send(std::move(buffer), flags);
 	}
@@ -99,10 +197,10 @@ public:
 protected:
 	std::unordered_map<std::string, std::shared_ptr<MessageConverter>>
 		registeredMessages;
-	
+
 	std::mutex mutexReturningCallbacks;
 	uint32_t returnCallCallbackIdGenerator;
-	std::map<uint32_t, std::shared_ptr<MessageConverter>> returningCallbacks;
+	std::unordered_map<uint32_t, OnReturnCallback> returningCallbacks;
 };
 } // namespace icon6
 

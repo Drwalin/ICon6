@@ -71,6 +71,28 @@ public:
 	virtual void Execute() override;
 };
 
+class ExecuteFunctionObjectOnPeer final : public BaseCommandExecute
+{
+public:
+	std::shared_ptr<Peer> peer;
+	std::vector<uint8_t> data;
+	std::shared_ptr<void> customSharedData;
+	std::function<void(std::shared_ptr<Peer>, std::vector<uint8_t> &,
+					   std::shared_ptr<void> customSharedData)>
+		function;
+
+	virtual void Execute() override;
+};
+
+class ExecuteFunctionObjectNoArgsOnPeer final : public BaseCommandExecute
+{
+public:
+	std::shared_ptr<Peer> peer;
+	std::function<void(std::shared_ptr<Peer>)> function;
+
+	virtual void Execute() override;
+};
+
 class ExecuteRPC final : public BaseCommandExecute
 {
 public:
@@ -92,6 +114,20 @@ public:
 	std::shared_ptr<rmi::MethodInvocationConverter> methodInvoker;
 	uint32_t readOffset;
 	Flags flags;
+
+	virtual void Execute() override;
+};
+
+class ExecuteReturnRC final : public BaseCommandExecute
+{
+public:
+	std::shared_ptr<Peer> peer;
+	std::vector<uint8_t> binaryData;
+	std::function<void(std::shared_ptr<Peer>, Flags, std::vector<uint8_t> &,
+					   uint32_t)>
+		function;
+	Flags flags;
+	uint32_t readOffset;
 
 	virtual void Execute() override;
 };
@@ -134,6 +170,14 @@ public:
 
 	virtual void Execute() override;
 };
+
+class ExecuteFunctionObject final : public BaseCommandExecute
+{
+public:
+	std::function<void()> function;
+
+	virtual void Execute() override;
+};
 } // namespace commands
 
 class Command final
@@ -142,9 +186,11 @@ public:
 	Command();
 	~Command();
 	Command(Command &&other);
+	Command(Command &other) = delete;
 	Command(const Command &other) = delete;
 
 	Command &operator=(Command &&other);
+	Command &operator=(Command &other) = delete;
 	Command &operator=(const Command &other) = delete;
 
 	template <typename T> T *Ptr() { return (T *)&executeOnPeer; }
@@ -152,12 +198,17 @@ public:
 
 	union {
 		commands::ExecuteOnPeer executeOnPeer;
+		commands::ExecuteFunctionObjectOnPeer executeFunctionObjectOnPeer;
+		commands::ExecuteFunctionObjectNoArgsOnPeer
+			executeFunctionObjectNoArgsOnPeer;
 		commands::ExecuteRPC executeRPC;
 		commands::ExecuteRMI executeRMI;
+		commands::ExecuteReturnRC executeReturnRC;
 		commands::ExecuteConnect executeConnect;
 		commands::ExecuteSend executeSend;
 		commands::ExecuteDisconnect executeDisconnect;
 		commands::ExecuteFunctionPointer executeFunctionPointer;
+		commands::ExecuteFunctionObject executeFunctionObject;
 	};
 
 	bool hasValue;
@@ -170,6 +221,19 @@ public:
 	{
 		this->executeOnPeer = std::move(executeOnPeer);
 	}
+	Command(commands::ExecuteFunctionObjectOnPeer &&executeFunctionObjectOnPeer)
+		: executeFunctionObjectOnPeer(), hasValue(true)
+	{
+		this->executeFunctionObjectOnPeer =
+			std::move(executeFunctionObjectOnPeer);
+	}
+	Command(commands::ExecuteFunctionObjectNoArgsOnPeer
+				&&executeFunctionObjectNoArgsOnPeer)
+		: executeFunctionObjectNoArgsOnPeer(), hasValue(true)
+	{
+		this->executeFunctionObjectNoArgsOnPeer =
+			std::move(executeFunctionObjectNoArgsOnPeer);
+	}
 	Command(commands::ExecuteRPC &&executeRPC) : executeRPC(), hasValue(true)
 	{
 		this->executeRPC = std::move(executeRPC);
@@ -177,6 +241,11 @@ public:
 	Command(commands::ExecuteRMI &&executeRMI) : executeRMI(), hasValue(true)
 	{
 		this->executeRMI = std::move(executeRMI);
+	}
+	Command(commands::ExecuteReturnRC &&executeReturnRC)
+		: executeReturnRC(), hasValue(true)
+	{
+		this->executeReturnRC = std::move(executeReturnRC);
 	}
 	Command(commands::ExecuteConnect &&executeConnect)
 		: executeConnect(), hasValue(true)
@@ -196,6 +265,11 @@ public:
 		: executeFunctionPointer(), hasValue(true)
 	{
 		this->executeFunctionPointer = std::move(executeFunctionPointer);
+	}
+	Command(commands::ExecuteFunctionObject &&executeFunctionObject)
+		: executeFunctionObject(), hasValue(true)
+	{
+		this->executeFunctionObject = std::move(executeFunctionObject);
 	}
 };
 } // namespace icon6

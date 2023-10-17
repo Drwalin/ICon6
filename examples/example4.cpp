@@ -1,11 +1,12 @@
 
-#include "../include/icon6/CommandExecutionQueue.hpp"
-#include "../include/icon6/Host.hpp"
-#include "../include/icon6/MethodInvocationEnvironment.hpp"
 #include <chrono>
 #include <memory>
 #include <thread>
 #include <atomic>
+
+#include "../include/icon6/CommandExecutionQueue.hpp"
+#include "../include/icon6/Host.hpp"
+#include "../include/icon6/MethodInvocationEnvironment.hpp"
 
 std::shared_ptr<icon6::rmi::MethodInvocationEnvironment> mpe =
 	std::make_shared<icon6::rmi::MethodInvocationEnvironment>();
@@ -58,6 +59,19 @@ public:
 
 int main()
 {
+#define STR(S) #S
+#define PRINT_SIZE(ARG)                                                        \
+	printf("sizeof(" STR(ARG) ") = %lu\n", sizeof(icon6::commands::ARG));
+
+	PRINT_SIZE(ExecuteOnPeer)
+	PRINT_SIZE(ExecuteRPC)
+	PRINT_SIZE(ExecuteRMI)
+	PRINT_SIZE(ExecuteReturnRC)
+	PRINT_SIZE(ExecuteConnect)
+	PRINT_SIZE(ExecuteSend)
+	PRINT_SIZE(ExecuteDisconnect)
+	PRINT_SIZE(ExecuteFunctionPointer)
+	PRINT_SIZE(ExecuteFunctionObject)
 
 	std::shared_ptr<icon6::CommandExecutionQueue> exeQueue =
 		std::make_shared<icon6::CommandExecutionQueue>();
@@ -88,7 +102,8 @@ int main()
 									std::shared_ptr<icon6::Peer> p,
 									std::shared_ptr<icon6::Host> h) {
 		mpe->Send(p.get(), 0, "sum", msg, "Sum of values");
-		printf(" peer->host(%p) == Host(%p): %s\n", p->GetHost().get(), h.get(),
+		printf(" peer->host(%p) == Host(%p): %s\n", (void *)p->GetHost().get(),
+			   (void *)h.get(),
 			   p->GetHost().get() == h.get() ? "true" : "false");
 		int sum = 1;
 		for (int i = 0; i < msg.size(); ++i)

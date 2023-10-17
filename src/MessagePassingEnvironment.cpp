@@ -44,6 +44,20 @@ void MessagePassingEnvironment::OnReceive(Peer *peer,
 		} else {
 			mtd->Call(peer, reader, flags);
 		}
+	} else if (name == std::string_view("_ret")) {
+		// args (uint32_t id, RET)
+		uint32_t id;
+		reader.op(id);
+		OnReturnCallback callback;
+		{
+			std::lock_guard guard{mutexReturningCallbacks};
+			auto it2 = returningCallbacks.find(id);
+			if (it2 != returningCallbacks.end()) {
+				callback = std::move(it2->second);
+				returningCallbacks.erase(it2);
+			}
+		}
+		callback.Execute(peer, flags, data, reader.get_offset());
 	}
 }
 } // namespace icon6

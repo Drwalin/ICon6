@@ -107,6 +107,9 @@ public:
 	{
 		auto seq = std::index_sequence_for<Targs...>{};
 		_InternalCall(peer, flags, reader, seq);
+		// 		if (reader.get_buffer()[0] == 2) {
+		// 			kkkkkj
+		// 		}
 	}
 
 private:
@@ -124,6 +127,44 @@ private:
 
 private:
 	void (*const onReceive)(Targs...);
+};
+
+template <typename... Targs>
+class MessageConverterFuntionObjectSpec : public MessageConverter
+{
+public:
+	using TupleType = std::tuple<typename std::remove_const<
+		typename std::remove_reference<Targs>::type>::type...>;
+
+	MessageConverterFuntionObjectSpec(std::function<void(Targs...)> onReceive)
+		: onReceive(onReceive)
+	{
+	}
+
+	virtual ~MessageConverterFuntionObjectSpec() = default;
+
+	virtual void Call(Peer *peer, bitscpp::ByteReader<true> &reader,
+					  Flags flags) override
+	{
+		auto seq = std::index_sequence_for<Targs...>{};
+		_InternalCall(peer, flags, reader, seq);
+	}
+
+private:
+	template <size_t... SeqArgs>
+	void _InternalCall(Peer *peer, Flags flags,
+					   bitscpp::ByteReader<true> &reader,
+					   std::index_sequence<SeqArgs...>)
+	{
+		TupleType args;
+		(_InternalReader::ReadType(peer, flags, reader,
+								   std::get<SeqArgs>(args)),
+		 ...);
+		onReceive(std::get<SeqArgs>(args)...);
+	}
+
+private:
+	std::function<void(Targs...)> onReceive;
 };
 
 } // namespace icon6
