@@ -161,6 +161,9 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 		ENetEvent event;
 		while (!(flags & TO_STOP)) {
 			enet_host_service(host, &event, maxWaitTimeMilliseconds);
+			if (mpe != nullptr) {
+				mpe->CheckForTimeoutFunctionCalls(6);
+			}
 			DispatchAllEventsFromQueue();
 			DispatchEvent(event);
 		}

@@ -57,9 +57,21 @@ class OnReturnCallback
 public:
 	~OnReturnCallback() = default;
 
-	bool IsExpired() const
+	OnReturnCallback() = default;
+	OnReturnCallback(OnReturnCallback &&) = default;
+
+	OnReturnCallback(OnReturnCallback &) = delete;
+	OnReturnCallback(const OnReturnCallback &) = delete;
+
+	OnReturnCallback &operator=(OnReturnCallback &&) = default;
+
+	OnReturnCallback &operator=(OnReturnCallback &) = delete;
+	OnReturnCallback &operator=(const OnReturnCallback &) = delete;
+
+	bool IsExpired(std::chrono::time_point<std::chrono::steady_clock> t =
+					   std::chrono::steady_clock::now()) const
 	{
-		return std::chrono::steady_clock::now() < timeoutTimePoint;
+		return t > timeoutTimePoint;
 	}
 
 	void Execute(Peer *peer, Flags flags, std::vector<uint8_t> &bytes,
@@ -111,9 +123,9 @@ public:
 	std::shared_ptr<Peer> peer;
 };
 
-template <typename Tret>
+template <typename Tret, typename Tfunc>
 OnReturnCallback MakeOnReturnCallback(
-	std::function<void(std::shared_ptr<Peer>, Flags, Tret)> _onReturnedValue,
+	Tfunc &&_onReturnedValue,
 	std::function<void(std::shared_ptr<Peer>)> onTimeout,
 	uint32_t timeoutMilliseconds, std::shared_ptr<Peer> peer,
 	std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
@@ -195,6 +207,8 @@ public:
 		peer->Send(std::move(buffer), flags);
 	}
 
+	void CheckForTimeoutFunctionCalls(uint32_t maxChecks = 10);
+
 protected:
 	std::unordered_map<std::string, std::shared_ptr<MessageConverter>>
 		registeredMessages;
@@ -202,6 +216,7 @@ protected:
 	std::mutex mutexReturningCallbacks;
 	uint32_t returnCallCallbackIdGenerator;
 	std::unordered_map<uint32_t, OnReturnCallback> returningCallbacks;
+	uint32_t lastCheckedId;
 };
 } // namespace icon6
 

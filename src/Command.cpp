@@ -29,10 +29,13 @@ namespace icon6
 namespace commands
 {
 void ExecuteOnPeer::Execute() { function(peer, data, customSharedData); }
+
 void ExecuteFunctionObjectOnPeer::Execute()
 {
 	function(peer, data, customSharedData);
 }
+
+void ExecuteFunctionObjectNoArgsOnPeer::Execute() { function(peer); }
 
 void ExecuteRPC::Execute()
 {

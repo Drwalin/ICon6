@@ -11,15 +11,11 @@
 std::shared_ptr<icon6::rmi::MethodInvocationEnvironment> mpe =
 	std::make_shared<icon6::rmi::MethodInvocationEnvironment>();
 
+std::shared_ptr<icon6::rmi::MethodInvocationEnvironment> mpe2 =
+	std::make_shared<icon6::rmi::MethodInvocationEnvironment>();
+
 int main()
 {
-	std::shared_ptr<icon6::CommandExecutionQueue> exeQueue =
-		std::make_shared<icon6::CommandExecutionQueue>();
-
-	exeQueue->RunAsyncExecution(exeQueue, 1000);
-	while (!exeQueue->IsRunningAsync()) {
-	}
-
 	uint16_t port1 = 4000, port2 = 4001;
 
 	icon6::Initialize();
@@ -28,7 +24,7 @@ int main()
 	auto host2 = icon6::Host::Make(port2, 16);
 
 	host1->SetMessagePassingEnvironment(mpe);
-	host2->SetMessagePassingEnvironment(mpe);
+	host2->SetMessagePassingEnvironment(mpe2);
 
 	mpe->RegisterMessage(
 		"sum", [](icon6::Flags flags, std::vector<int> &msg, std::string str) {
@@ -38,25 +34,30 @@ int main()
 			printf(" %s = %i\n", str.c_str(), sum);
 		});
 
-	mpe->RegisterMessage("mult",
-						 [](icon6::Flags flags, std::vector<int> msg,
-							std::shared_ptr<icon6::Peer> p,
-							std::shared_ptr<icon6::Host> h) -> std::string {
-							 mpe->Send(p.get(), 0, "sum", msg, "Sum of values");
-							 std::string ret;
-							 int sum = 1;
-							 for (int i = 0; i < msg.size(); ++i) {
-								 if (i) {
-									 ret += "*";
-								 }
-								 ret += std::to_string(msg[i]);
-								 sum *= msg[i];
-							 }
-							 ret += "=";
-							 ret += std::to_string(sum);
-							 printf(" mult = %i\n", sum);
-							 return ret;
-						 });
+	mpe2->RegisterMessage(
+		"mult",
+		[](icon6::Flags flags, std::vector<int> msg,
+		   std::shared_ptr<icon6::Peer> p,
+		   std::shared_ptr<icon6::Host> h) -> std::string {
+			mpe->Send(p.get(), 0, "sum", msg, "Sum of values");
+			if (msg.size() == 0) {
+				printf("Sleeping\n");
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			}
+			std::string ret;
+			int sum = 1;
+			for (int i = 0; i < msg.size(); ++i) {
+				if (i) {
+					ret += "*";
+				}
+				ret += std::to_string(msg[i]);
+				sum *= msg[i];
+			}
+			ret += "=";
+			ret += std::to_string(sum);
+			printf(" mult = %i\n", sum);
+			return ret;
+		});
 
 	host1->RunAsync();
 	host2->RunAsync();
@@ -80,15 +81,29 @@ int main()
 			icon6::MakeOnReturnCallback<std::string>(
 				[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags,
 				   std::string str) -> void {
+					fprintf(stderr, "Returned string: %s\n", str.c_str());
+					fflush(stderr);
+				},
+				nullptr, 10000, p1),
+			"mult", {1, 2, 3, 4, 5});
+
+		mpe->Call<std::string, std::vector<int>>(
+			p1.get(), 0,
+			icon6::MakeOnReturnCallback<std::string>(
+				[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags,
+				   std::string str) -> void {
 					printf("Returned string: %s\n", str.c_str());
 				},
-				nullptr, 10000, p1, exeQueue),
-			"mult", {1, 2, 3, 4, 5});
+				[](std::shared_ptr<icon6::Peer> peer) -> void {
+					printf("Timeout\n");
+				},
+				100, p1),
+			"mult", {});
 
 		std::vector<int> s = {1, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2};
 		mpe->Send(p1.get(), 0, "mult", s);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 		p1->Disconnect(0);
 	} else {
@@ -100,9 +115,6 @@ int main()
 	host2->WaitStop();
 
 	icon6::Deinitialize();
-
-	exeQueue->WaitStopAsyncExecution();
-	exeQueue = nullptr;
 
 	return 0;
 }
