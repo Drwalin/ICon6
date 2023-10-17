@@ -47,7 +47,7 @@ class MessagePassingEnvironment
 	template <typename T>
 	void RegisterMessage(
 		const std::string &name,
-		void (*onReceive)(Peer *peer, T message, uint32_t flags),
+		void (*onReceive)(Peer *peer, uint32_t flags, T message),
 		std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
 	{
 		auto func = std::make_shared<MessageConverterSpec<T>>(onReceive);
@@ -56,8 +56,7 @@ class MessagePassingEnvironment
 	}
 
 	template <typename T>
-	void Send(Peer *peer, const std::string &name, const T &message,
-			  uint32_t flags)
+	void Send(Peer *peer, uint32_t flags, const std::string &name, const T &message)
 	{
 		std::vector<uint8_t> buffer;
 		{

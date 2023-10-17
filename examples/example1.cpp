@@ -11,12 +11,6 @@ int main()
 
 	icon6::Initialize();
 
-	std::thread([]() {
-		std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-		icon6::Deinitialize();
-		exit(311);
-	}).detach();
-
 	auto host1 = icon6::Host::Make(port1, 16);
 	auto host2 = icon6::Host::Make(port2, 16);
 
@@ -37,7 +31,7 @@ int main()
 	host1->RunAsync();
 	host2->RunAsync();
 
-	auto P1 = host1->ConnectPromise("192.168.0.150", 4001);
+	auto P1 = host1->ConnectPromise("localhost", port2);
 	P1.wait();
 	auto p1 = P1.get();
 
@@ -57,6 +51,8 @@ int main()
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
 		p1->Disconnect(0);
+	} else {
+		throw "Didn't connect to peer.";
 	}
 
 	host2->Stop();

@@ -75,7 +75,7 @@ int main()
 	host2->SetMessagePassingEnvironment(mpe);
 
 	mpe->RegisterMessage<std::vector<int> &&>(
-		"sum", [](icon6::Peer *p, auto msg, uint32_t flags) {
+		"sum", [](icon6::Peer *p, uint32_t flags, auto msg) {
 			int sum = 0;
 			for (int i = 0; i < msg.size(); ++i)
 				sum += msg[i];
@@ -83,8 +83,8 @@ int main()
 		});
 
 	mpe->RegisterMessage<std::vector<int>>(
-		"mult", [](icon6::Peer *p, auto msg, uint32_t flags) {
-			mpe->Send(p, "sum", msg, 0);
+		"mult", [](icon6::Peer *p, uint32_t flags, auto msg) {
+			mpe->Send(p, 0, "sum", msg);
 			int sum = 1;
 			for (int i = 0; i < msg.size(); ++i)
 				sum *= msg[i];
@@ -119,20 +119,22 @@ int main()
 	}
 
 	if (p1 != nullptr) {
-		mpe->SendInvoke(p1.get(), obj[0], "Method2", "asdf", 0);
-		mpe->SendInvoke(p1.get(), obj[1], "Method2", "qwerty", 0);
+		mpe->SendInvoke(p1.get(), 0, obj[0], "Method2", "asdf");
+		mpe->SendInvoke(p1.get(), 0, obj[1], "Method2", "qwerty");
 
-		mpe->Send<std::vector<int>>(p1.get(), "mult", {1, 2, 3, 4, 5}, 0);
+		mpe->Send<std::vector<int>>(p1.get(), 0, "mult", {1, 2, 3, 4, 5});
 
 		std::vector<int> s = {1, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2};
-		mpe->Send(p1.get(), "mult", s, 0);
+		mpe->Send(p1.get(), 0, "mult", s);
 
-		mpe->SendInvoke(p1.get(), obj[0], "Method", 123, 0);
-		mpe->SendInvoke(p1.get(), obj[1], "Method", 4567, 0);
+		mpe->SendInvoke(p1.get(), 0, obj[0], "Method", 123);
+		mpe->SendInvoke(p1.get(), 0, obj[1], "Method", 4567);
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
 		p1->Disconnect(0);
+	} else {
+		throw "Didn't connect to peer.";
 	}
 
 	host2->Stop();

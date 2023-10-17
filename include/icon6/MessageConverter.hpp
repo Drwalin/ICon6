@@ -46,8 +46,7 @@ class MessageConverter
 template <typename T> class MessageConverterSpec : public MessageConverter
 {
   public:
-	MessageConverterSpec(void (*onReceive)(Peer *peer, T message,
-										   uint32_t flags))
+	MessageConverterSpec(void (*onReceive)(Peer *peer, uint32_t flags, T message))
 		: onReceive(onReceive)
 	{
 	}
@@ -61,13 +60,13 @@ template <typename T> class MessageConverterSpec : public MessageConverter
 			typename std::remove_reference<T>::type>::type message;
 		reader.op(message);
 		if constexpr (std::is_rvalue_reference<T>::value)
-			onReceive(peer, std::move(message), flags);
+			onReceive(peer, flags, std::move(message));
 		else
-			onReceive(peer, message, flags);
+			onReceive(peer, flags, message);
 	}
 
   private:
-	void (*const onReceive)(Peer *peer, T message, uint32_t flags);
+	void (*const onReceive)(Peer *peer, uint32_t flags, T message);
 };
 
 } // namespace icon6

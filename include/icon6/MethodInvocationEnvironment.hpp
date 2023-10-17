@@ -114,8 +114,8 @@ class MethodInvocationEnvironment : public MessagePassingEnvironment
 	}
 
 	template <typename T>
-	void SendInvoke(Peer *peer, uint64_t objectId, const std::string &name,
-					const T &message, uint32_t flags)
+	void SendInvoke(Peer *peer, uint32_t flags, uint64_t objectId, const std::string &name,
+					const T &message)
 	{
 		std::vector<uint8_t> buffer;
 		{
