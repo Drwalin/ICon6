@@ -29,6 +29,10 @@ void MessagePassingEnvironment::OnReceive(Peer *peer,
 	bitscpp::ByteReader reader(data.data(), data.size());
 	std::string name;
 	reader.op(name);
+	if(data[0] == 2) {
+		uint8_t b;
+		reader.op(b);
+	}
 	auto it = registeredMessages.find(name);
 	if (registeredMessages.end() != it) {
 		auto mtd = it->second;
