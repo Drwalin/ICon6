@@ -74,17 +74,17 @@ int main()
 	host1->SetMessagePassingEnvironment(mpe);
 	host2->SetMessagePassingEnvironment(mpe);
 
-	mpe->RegisterMessage(
-		"sum", [](icon6::Peer *p, uint32_t flags, std::vector<int> &msg) {
-			int sum = 0;
-			for (int i = 0; i < msg.size(); ++i)
-				sum += msg[i];
-			printf(" sum = %i\n", sum);
-		});
+	mpe->RegisterMessage("sum", [](icon6::Peer *p, uint32_t flags,
+								   std::vector<int> &msg, std::string str) {
+		int sum = 0;
+		for (int i = 0; i < msg.size(); ++i)
+			sum += msg[i];
+		printf(" %s = %i\n", str.c_str(), sum);
+	});
 
 	mpe->RegisterMessage(
 		"mult", [](icon6::Peer *p, uint32_t flags, std::vector<int> msg) {
-			mpe->Send(p, 0, "sum", msg);
+			mpe->Send(p, 0, "sum", msg, "Sum of values");
 			int sum = 1;
 			for (int i = 0; i < msg.size(); ++i)
 				sum *= msg[i];

@@ -73,9 +73,7 @@ private:
 					   std::index_sequence<SeqArgs...>)
 	{
 		TupleType args;
-		{
-			auto ar{reader.op(std::get<SeqArgs>(args))...};
-		}
+		(reader.op(std::get<SeqArgs>(args)), ...);
 		onReceive(peer, flags, std::get<SeqArgs>(args)...);
 	}
 

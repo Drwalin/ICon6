@@ -79,7 +79,7 @@ public:
 		{
 			bitscpp::ByteWriter writer(buffer);
 			writer.op(name);
-			auto ar{writer.op(args)...};
+			(writer.op(args), ...);
 		}
 		peer->Send(std::move(buffer), flags);
 	}
