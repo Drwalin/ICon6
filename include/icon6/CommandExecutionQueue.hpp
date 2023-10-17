@@ -30,7 +30,7 @@ namespace icon6
 class CommandExecutionQueue
 	: std::enable_shared_from_this<CommandExecutionQueue>
 {
-  public:
+public:
 	CommandExecutionQueue();
 	~CommandExecutionQueue();
 
@@ -43,7 +43,7 @@ class CommandExecutionQueue
 	void WaitStopAsyncExecution();
 	bool IsRunningAsync() const;
 
-  private:
+private:
 	enum AsyncExecutionFlags {
 		STARTING_RUNNING = 1,
 		IS_RUNNING = 2,
@@ -56,7 +56,7 @@ class CommandExecutionQueue
 						 uint32_t sleepMicrosecondsOnNoActions);
 	std::atomic<uint32_t> asyncExecutionFlags;
 
-  private:
+private:
 	void *concurrentQueueCommands;
 };
 } // namespace icon6

@@ -41,7 +41,7 @@ class Host;
 
 class Peer final : public ConnectionEncryptionState
 {
-  public:
+public:
 	~Peer();
 
 	void Send(std::vector<uint8_t> &&data, uint32_t flags);
@@ -83,15 +83,15 @@ class Peer final : public ConnectionEncryptionState
 											 uint32_t flags));
 	void SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData));
 
-  public:
+public:
 	void *userData;
 	std::shared_ptr<void> userSharedPointer;
 
-  public:
+public:
 	void _InternalSend(std::vector<uint8_t> &data, uint32_t flags);
 	void _InternalDisconnect(uint32_t disconnectData);
 
-  private:
+private:
 	void CallCallbackReceive(uint8_t *data, uint32_t size, uint32_t flags);
 	void CallCallbackDisconnect(uint32_t data);
 
@@ -104,10 +104,10 @@ class Peer final : public ConnectionEncryptionState
 		INTERNAL_UNRELIABLE = 0,
 	};
 
-  protected:
+protected:
 	Peer(std::shared_ptr<Host> host, ENetPeer *peer);
 
-  private:
+private:
 	std::vector<uint8_t> receivedData;
 
 	std::shared_ptr<Host> host;

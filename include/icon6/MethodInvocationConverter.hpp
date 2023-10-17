@@ -43,7 +43,7 @@ class Class;
 
 class MethodInvocationConverter
 {
-  public:
+public:
 	virtual ~MethodInvocationConverter() = default;
 
 	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
@@ -56,7 +56,7 @@ template <typename Tclass, typename Targ>
 class MessageNetworkAwareMethodInvocationConverterSpec
 	: public MethodInvocationConverter
 {
-  public:
+public:
 	MessageNetworkAwareMethodInvocationConverterSpec(
 		Class *_class,
 		void (Tclass::*memberFunction)(Peer *peer, uint32_t flags,
@@ -82,7 +82,7 @@ class MessageNetworkAwareMethodInvocationConverterSpec
 			(ptr.get()->*onReceive)(peer, flags, message);
 	}
 
-  private:
+private:
 	void (Tclass::*onReceive)(Peer *peer, uint32_t flags, Targ message);
 	class Class *_class;
 };

@@ -10,7 +10,7 @@ std::shared_ptr<icon6::rmi::MethodInvocationEnvironment> mpe =
 
 class TestClass
 {
-  public:
+public:
 	~TestClass() = default;
 	virtual void Method(icon6::Peer *peer, uint32_t flags, int &arg)
 	{
@@ -18,7 +18,7 @@ class TestClass
 		fflush(stdout);
 	}
 	virtual void Method2(icon6::Peer *peer, uint32_t flags,
-						 const std::string &&arg)
+						 const std::string &arg)
 	{
 		printf("Called TestClass::Method2 on %p with %s\n", (void *)this,
 			   arg.c_str());
@@ -28,7 +28,7 @@ class TestClass
 
 class InheritedClass : public TestClass
 {
-  public:
+public:
 	~InheritedClass() = default;
 	virtual void Method(icon6::Peer *peer, uint32_t flags, int &arg) override
 	{
@@ -37,7 +37,7 @@ class InheritedClass : public TestClass
 		fflush(stdout);
 	}
 	virtual void Method2(icon6::Peer *peer, uint32_t flags,
-						 const std::string &&arg) override
+						 const std::string &arg) override
 	{
 		printf("Called InheritedClass::Method2 on %p with %s\n", (void *)this,
 			   arg.c_str());
@@ -58,7 +58,7 @@ int main()
 	host1->SetMessagePassingEnvironment(mpe);
 	host2->SetMessagePassingEnvironment(mpe);
 
-	mpe->RegisterMessage<const std::vector<int>>(
+	mpe->RegisterMessage(
 		"sum", [](icon6::Peer *p, uint32_t flags, const std::vector<int> msg) {
 			int sum = 0;
 			for (int i = 0; i < msg.size(); ++i)
@@ -66,15 +66,14 @@ int main()
 			printf(" sum = %i\n", sum);
 		});
 
-	mpe->RegisterMessage<const std::vector<int> &>(
-		"mult",
-		[](icon6::Peer *p, uint32_t flags, const std::vector<int> &msg) {
-			mpe->Send(p, 0, "sum", msg);
-			int sum = 1;
-			for (int i = 0; i < msg.size(); ++i)
-				sum *= msg[i];
-			printf(" mult = %i\n", sum);
-		});
+	mpe->RegisterMessage("mult", [](icon6::Peer *p, uint32_t flags,
+									const std::vector<int> &msg) {
+		mpe->Send(p, 0, "sum", msg);
+		int sum = 1;
+		for (int i = 0; i < msg.size(); ++i)
+			sum *= msg[i];
+		printf(" mult = %i\n", sum);
+	});
 
 	mpe->RegisterClass<TestClass>("TestClass", nullptr);
 	mpe->RegisterMemberFunction<TestClass>("TestClass", "Method",

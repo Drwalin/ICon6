@@ -52,7 +52,7 @@ enum class PeerAcceptancePolicy {
 
 class Host final : public std::enable_shared_from_this<Host>
 {
-  public:
+public:
 	static std::shared_ptr<Host> Make(uint16_t port,
 									  uint32_t maximumHostsNumber);
 
@@ -93,7 +93,7 @@ class Host final : public std::enable_shared_from_this<Host>
 	void Stop();
 	void WaitStop();
 
-  public:
+public:
 	// thread safe function to connect to a remote host
 	std::future<std::shared_ptr<Peer>> ConnectPromise(std::string address,
 													  uint16_t port);
@@ -104,21 +104,21 @@ class Host final : public std::enable_shared_from_this<Host>
 
 	std::shared_ptr<Peer> _InternalConnect(ENetAddress address);
 
-  public:
+public:
 	void *userData;
 	std::shared_ptr<void> userSharedPointer;
 
 	friend class Peer;
 	friend class ConnectionEncryptionState;
 
-  private:
+private:
 	void Init(ENetAddress *address, uint32_t maximumHostsNumber);
 	void DispatchEvent(ENetEvent &event);
 	void DispatchAllEventsFromQueue();
 	void DispatchPopedEventsFromQueue();
 	void EnqueueCommand(Command &&command);
 
-  private:
+private:
 	// 		std::shared_ptr<crypto::Cert> cert;
 	std::shared_ptr<crypto::CertKey> certKey;
 	// 		std::vector<std::shared_ptr<crypto::Cert>> trustedRootCertificates;

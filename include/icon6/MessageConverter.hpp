@@ -20,6 +20,7 @@
 #define ICON6_MESSAGE_CONVERTER_HPP
 
 #include <memory>
+#include <tuple>
 
 #include <bitscpp/ByteReaderExtensions.hpp>
 
@@ -34,7 +35,7 @@ class CommandExecutionQueue;
 
 class MessageConverter
 {
-  public:
+public:
 	virtual ~MessageConverter() = default;
 
 	virtual void Call(Peer *peer, bitscpp::ByteReader<true> &reader,
@@ -43,10 +44,15 @@ class MessageConverter
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
 };
 
-template <typename T> class MessageConverterSpec : public MessageConverter
+template <typename... Targs>
+class MessageConverterSpec : public MessageConverter
 {
-  public:
-	MessageConverterSpec(void (*onReceive)(Peer *peer, uint32_t flags, T message))
+public:
+	using TupleType = std::tuple<typename std::remove_const<
+		typename std::remove_reference<Targs>::type>::type...>;
+
+	MessageConverterSpec(void (*onReceive)(Peer *peer, uint32_t flags,
+										   Targs... args))
 		: onReceive(onReceive)
 	{
 	}
@@ -56,17 +62,25 @@ template <typename T> class MessageConverterSpec : public MessageConverter
 	virtual void Call(Peer *peer, bitscpp::ByteReader<true> &reader,
 					  uint32_t flags) override
 	{
-		typename std::remove_const<
-			typename std::remove_reference<T>::type>::type message;
-		reader.op(message);
-		if constexpr (std::is_rvalue_reference<T>::value)
-			onReceive(peer, flags, std::move(message));
-		else
-			onReceive(peer, flags, message);
+		auto seq = std::index_sequence_for<Targs...>{};
+		_InternalCall(peer, flags, reader, seq);
 	}
 
-  private:
-	void (*const onReceive)(Peer *peer, uint32_t flags, T message);
+private:
+	template <size_t... SeqArgs>
+	void _InternalCall(Peer *peer, uint32_t flags,
+					   bitscpp::ByteReader<true> &reader,
+					   std::index_sequence<SeqArgs...>)
+	{
+		TupleType args;
+		{
+			auto ar{reader.op(std::get<SeqArgs>(args))...};
+		}
+		onReceive(peer, flags, std::get<SeqArgs>(args)...);
+	}
+
+private:
+	void (*const onReceive)(Peer *, uint32_t flags, Targs...);
 };
 
 } // namespace icon6

@@ -54,7 +54,7 @@ class Host;
 
 class ConnectionEncryptionState : public std::enable_shared_from_this<Peer>
 {
-  public:
+public:
 	ConnectionEncryptionState();
 	~ConnectionEncryptionState();
 
@@ -82,7 +82,7 @@ class ConnectionEncryptionState : public std::enable_shared_from_this<Peer>
 
 	inline PeerConnectionState GetState() const { return state; }
 
-  protected:
+protected:
 	uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
 	uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
 	uint8_t sendingKey[32];

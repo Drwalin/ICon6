@@ -32,7 +32,7 @@ namespace rmi
 
 class Class : public std::enable_shared_from_this<Class>
 {
-  public:
+public:
 	Class(std::shared_ptr<Class> parentClass, std::string name,
 		  std::shared_ptr<void> (*constructor)());
 
@@ -50,14 +50,14 @@ class Class : public std::enable_shared_from_this<Class>
 
 class Object
 {
-  public:
+public:
 	std::shared_ptr<void> objectPtr;
 	Class *obejctClass;
 };
 
 class MethodInvocationEnvironment : public MessagePassingEnvironment
 {
-  public:
+public:
 	std::shared_ptr<Class> GetClassByName(std::string name);
 
 	virtual void OnReceive(Peer *peer, std::vector<uint8_t> &data,
@@ -114,8 +114,8 @@ class MethodInvocationEnvironment : public MessagePassingEnvironment
 	}
 
 	template <typename T>
-	void SendInvoke(Peer *peer, uint32_t flags, uint64_t objectId, const std::string &name,
-					const T &message)
+	void SendInvoke(Peer *peer, uint32_t flags, uint64_t objectId,
+					const std::string &name, const T &message)
 	{
 		std::vector<uint8_t> buffer;
 		{
@@ -128,7 +128,7 @@ class MethodInvocationEnvironment : public MessagePassingEnvironment
 		peer->Send(std::move(buffer), flags);
 	}
 
-  protected:
+protected:
 	std::unordered_map<size_t, Object> objects;
 	std::unordered_map<std::string, std::shared_ptr<Class>> classes;
 };

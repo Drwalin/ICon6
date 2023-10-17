@@ -50,7 +50,7 @@ namespace commands
 
 class BaseCommandExecute
 {
-  public:
+public:
 	virtual ~BaseCommandExecute() = default;
 
 	virtual void Execute() = 0;
@@ -58,7 +58,7 @@ class BaseCommandExecute
 
 class ExecuteOnPeer final : public BaseCommandExecute
 {
-  public:
+public:
 	std::shared_ptr<Peer> peer;
 	std::vector<uint8_t> data;
 	std::shared_ptr<void> customSharedData;
@@ -70,7 +70,7 @@ class ExecuteOnPeer final : public BaseCommandExecute
 
 class ExecuteRPC final : public BaseCommandExecute
 {
-  public:
+public:
 	std::shared_ptr<Peer> peer;
 	std::vector<uint8_t> binaryData;
 	std::shared_ptr<MessageConverter> messageConverter;
@@ -82,7 +82,7 @@ class ExecuteRPC final : public BaseCommandExecute
 
 class ExecuteRMI final : public BaseCommandExecute
 {
-  public:
+public:
 	std::shared_ptr<Peer> peer;
 	std::vector<uint8_t> binaryData;
 	std::shared_ptr<void> objectPtr;
@@ -95,7 +95,7 @@ class ExecuteRMI final : public BaseCommandExecute
 
 class ExecuteConnect final : public BaseCommandExecute
 {
-  public:
+public:
 	std::shared_ptr<Host> host;
 	ENetAddress address;
 
@@ -107,7 +107,7 @@ class ExecuteConnect final : public BaseCommandExecute
 
 class ExecuteSend final : public BaseCommandExecute
 {
-  public:
+public:
 	std::vector<uint8_t> data;
 	std::shared_ptr<Peer> peer;
 	uint32_t flags;
@@ -117,7 +117,7 @@ class ExecuteSend final : public BaseCommandExecute
 
 class ExecuteDisconnect final : public BaseCommandExecute
 {
-  public:
+public:
 	std::shared_ptr<Peer> peer;
 	uint32_t disconnectData;
 
@@ -126,7 +126,7 @@ class ExecuteDisconnect final : public BaseCommandExecute
 
 class ExecuteFunctionPointer final : public BaseCommandExecute
 {
-  public:
+public:
 	void (*function)();
 
 	virtual void Execute() override;
@@ -135,7 +135,7 @@ class ExecuteFunctionPointer final : public BaseCommandExecute
 
 class Command final
 {
-  public:
+public:
 	Command();
 	~Command();
 	Command(Command &&other);
@@ -161,7 +161,7 @@ class Command final
 
 	void Execute();
 
-  public:
+public:
 	Command(commands::ExecuteOnPeer &&executeOnPeer)
 		: executeOnPeer(), hasValue(true)
 	{

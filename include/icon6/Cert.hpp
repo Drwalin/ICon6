@@ -41,13 +41,13 @@ constexpr size_t SIGNATURE_BYTES = crypto_sign_BYTES;
 
 class CertReq final
 {
-  public:
+public:
 	CertReq(std::shared_ptr<class Cert> parentCert,
 			std::shared_ptr<class CertKey> certKey);
 
 	friend class Cert;
 
-  private:
+private:
 	std::vector<uint8_t> binaryCertReq;
 
 	uint8_t *publicKey;
@@ -61,7 +61,7 @@ class CertReq final
 
 class CertKey final
 {
-  public:
+public:
 	static std::shared_ptr<CertKey> GenerateKey();
 	static std::shared_ptr<CertKey> LoadKey(std::string fileName,
 											const char *password,
@@ -81,23 +81,23 @@ class CertKey final
 	void CopyPublicKey(void *data);
 	const uint8_t *const GetPublicKey() const { return publicKey; }
 
-  private:
+private:
 	CertKey();
 
-  private:
+private:
 	uint8_t secretKey[SIGN_SECRET_KEY_BYTES];
 	uint8_t publicKey[SIGN_PUBLIC_KEY_BYTES];
 };
 
 class Cert final
 {
-  public:
+public:
 	~Cert();
 
 	inline uint32_t GetCertBytes() const { return binaryCert.size(); }
 	void CopyCert(void *dst) const;
 
-  private:
+private:
 	Cert(std::string fileName);						   // load cert from file
 	Cert(void *certBinary, uint32_t certBinaryLength); // copy cert from
 													   // binary
@@ -106,7 +106,7 @@ class Cert final
 	// sign certificate with parent cert
 	Cert(CertReq *selfSignedCert, std::shared_ptr<CertKey> selfKey);
 
-  private:
+private:
 	std::vector<uint8_t> binaryCert;
 
 	uint8_t *publicKey;
