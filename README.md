@@ -48,9 +48,9 @@ value
 
 ### Flags description
 
-1 - SEQUENCED messages
-2 - RELIABLE message
-3 - RELIABLE and SEQUENCED messages
+- 1 - SEQUENCED messages
+- 2 - RELIABLE message
+- 3 - RELIABLE and SEQUENCED messages
 
 ### Channels
 
