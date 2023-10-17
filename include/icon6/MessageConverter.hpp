@@ -51,7 +51,7 @@ public:
 	using TupleType = std::tuple<typename std::remove_const<
 		typename std::remove_reference<Targs>::type>::type...>;
 
-	MessageConverterSpec(void (*onReceive)(Flags flags, Targs... args))
+	MessageConverterSpec(void (*onReceive)(Targs... args))
 		: onReceive(onReceive)
 	{
 	}
@@ -75,7 +75,14 @@ private:
 		(_InternalReadArgumentType(peer, flags, reader,
 								   std::get<SeqArgs>(args)),
 		 ...);
-		onReceive(flags, std::get<SeqArgs>(args)...);
+		onReceive(std::get<SeqArgs>(args)...);
+	}
+
+	void _InternalReadArgumentType(Peer *peer, Flags flags,
+								   bitscpp::ByteReader<true> &reader,
+								   Flags &value)
+	{
+		value = flags;
 	}
 
 	void _InternalReadArgumentType(Peer *peer, Flags flags,
@@ -115,7 +122,7 @@ private:
 	}
 
 private:
-	void (*const onReceive)(Flags flags, Targs...);
+	void (*const onReceive)(Targs...);
 };
 
 } // namespace icon6
