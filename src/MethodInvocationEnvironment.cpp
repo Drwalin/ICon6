@@ -60,12 +60,12 @@ MethodInvocationEnvironment::GetClassByName(std::string name)
 	return it->second;
 }
 
-void MethodInvocationEnvironment::OnReceive(Peer *peer,
-											std::vector<uint8_t> &data,
+void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 											Flags flags)
 {
-	if (data[0] == 0) {
-		ByteReader reader(std::move(data), 1);
+	if (reader.bytes[0] == 0) {
+		uint8_t b;
+		reader.op(b);
 
 		uint64_t objectId = 0;
 		reader.op(objectId);
@@ -78,12 +78,10 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer,
 			if (method != cls->methods.end()) {
 				auto mtd = method->second;
 				if (mtd->executionQueue) {
-					Command command{commands::ExecuteRMI{}};
+					Command command{commands::ExecuteRMI(std::move(reader))};
 					commands::ExecuteRMI &com = command.executeRMI;
 					com.peer = peer->shared_from_this();
 					com.flags = flags;
-					com.binaryData.swap(reader.bytes);
-					com.readOffset = reader.get_offset();
 					com.methodInvoker = mtd;
 					com.objectPtr = object->second.objectPtr,
 					mtd->executionQueue->EnqueueCommand(std::move(command));
@@ -97,7 +95,7 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer,
 				 // TODO: do something, show error or anything
 		}
 	} else {
-		MessagePassingEnvironment::OnReceive(peer, data, flags);
+		MessagePassingEnvironment::OnReceive(peer, reader, flags);
 	}
 }
 

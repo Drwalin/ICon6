@@ -60,7 +60,7 @@ class MethodInvocationEnvironment : public MessagePassingEnvironment
 public:
 	std::shared_ptr<Class> GetClassByName(std::string name);
 
-	virtual void OnReceive(Peer *peer, std::vector<uint8_t> &data,
+	virtual void OnReceive(Peer *peer, ByteReader &reader,
 						   Flags flags) override;
 
 	template <typename T>

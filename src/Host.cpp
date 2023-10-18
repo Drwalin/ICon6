@@ -304,8 +304,9 @@ void Host::SetMessagePassingEnvironment(
 	if (mpe) {
 		this->callbackOnReceive = [](Peer *peer, std::vector<uint8_t> &data,
 									 Flags flags) {
+			ByteReader reader(std::move(data), 0);
 			peer->GetHost()->GetMessagePassingEnvironment()->OnReceive(
-				peer, data, flags);
+				peer, reader, flags);
 		};
 	}
 }

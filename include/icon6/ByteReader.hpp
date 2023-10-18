@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "../../bitscpp/include/bitscpp/ByteReaderExtensions.hpp"
-#include "bitscpp/ByteReader.hpp"
 
 namespace icon6
 {
@@ -31,21 +30,32 @@ class ByteReader : public bitscpp::ByteReader<true>
 public:
 	std::vector<uint8_t> bytes;
 
+public:
 	ByteReader(std::vector<uint8_t> &&bytes, uint32_t offset)
 		: bitscpp::ByteReader<true>(bytes.data() + offset,
 									bytes.size() - offset),
 		  bytes(std::move(bytes))
 	{
 	}
-	ByteReader(ByteReader &&other) = delete;
+	~ByteReader() {}
+
+	ByteReader(ByteReader &&o)
+		: bitscpp::ByteReader<true>(o.get_buffer() + o.get_offset(),
+									o.get_remaining_bytes()),
+		  bytes(o.bytes)
+	{
+	}
+	ByteReader &operator=(ByteReader &&o)
+	{
+		this->~ByteReader();
+		new (this) ByteReader(std::move(o));
+		return *this;
+	}
+
 	ByteReader(ByteReader &) = delete;
 	ByteReader(const ByteReader &) = delete;
-
-	ByteReader &operator=(ByteReader &&other) = delete;
 	ByteReader &operator=(ByteReader &) = delete;
 	ByteReader &operator=(const ByteReader &) = delete;
-
-	~ByteReader() {}
 };
 } // namespace icon6
 

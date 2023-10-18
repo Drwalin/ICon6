@@ -31,6 +31,7 @@
 #include <enet/enet.h>
 
 #include "Flags.hpp"
+#include "ByteReader.hpp"
 
 namespace icon6
 {
@@ -96,10 +97,16 @@ public:
 class ExecuteRPC final : public BaseCommandExecute
 {
 public:
+	ExecuteRPC(ByteReader &&reader) : reader(std::move(reader)) {}
+	ExecuteRPC(ExecuteRPC &&o)
+		: peer(std::move(o.peer)), reader(std::move(o.reader)),
+		  messageConverter(std::move(o.messageConverter)), flags(o.flags)
+	{
+	}
+
 	std::shared_ptr<Peer> peer;
-	std::vector<uint8_t> binaryData;
+	ByteReader reader;
 	std::shared_ptr<MessageConverter> messageConverter;
-	uint32_t readOffset;
 	Flags flags;
 
 	virtual void Execute() override;
@@ -108,11 +115,17 @@ public:
 class ExecuteRMI final : public BaseCommandExecute
 {
 public:
+	ExecuteRMI(ByteReader &&reader) : reader(std::move(reader)) {}
+	ExecuteRMI(ExecuteRMI &&o)
+		: peer(std::move(o.peer)), reader(std::move(o.reader)),
+		  methodInvoker(std::move(o.methodInvoker)), flags(o.flags)
+	{
+	}
+
 	std::shared_ptr<Peer> peer;
-	std::vector<uint8_t> binaryData;
+	ByteReader reader;
 	std::shared_ptr<void> objectPtr;
 	std::shared_ptr<rmi::MethodInvocationConverter> methodInvoker;
-	uint32_t readOffset;
 	Flags flags;
 
 	virtual void Execute() override;
@@ -121,13 +134,17 @@ public:
 class ExecuteReturnRC final : public BaseCommandExecute
 {
 public:
+	ExecuteReturnRC(ByteReader &&reader) : reader(std::move(reader)) {}
+	ExecuteReturnRC(ExecuteReturnRC &&o)
+		: peer(std::move(o.peer)), reader(std::move(o.reader)),
+		  function(std::move(o.function)), flags(o.flags)
+	{
+	}
+
 	std::shared_ptr<Peer> peer;
-	std::vector<uint8_t> binaryData;
-	std::function<void(std::shared_ptr<Peer>, Flags, std::vector<uint8_t> &,
-					   uint32_t)>
-		function;
+	ByteReader reader;
+	std::function<void(std::shared_ptr<Peer>, Flags, ByteReader &)> function;
 	Flags flags;
-	uint32_t readOffset;
 
 	virtual void Execute() override;
 };
@@ -234,18 +251,17 @@ public:
 		this->executeFunctionObjectNoArgsOnPeer =
 			std::move(executeFunctionObjectNoArgsOnPeer);
 	}
-	Command(commands::ExecuteRPC &&executeRPC) : executeRPC(), hasValue(true)
+	Command(commands::ExecuteRPC &&executeRPC)
+		: executeRPC(std::move(executeRPC)), hasValue(true)
 	{
-		this->executeRPC = std::move(executeRPC);
 	}
-	Command(commands::ExecuteRMI &&executeRMI) : executeRMI(), hasValue(true)
+	Command(commands::ExecuteRMI &&executeRMI)
+		: executeRMI(std::move(executeRMI)), hasValue(true)
 	{
-		this->executeRMI = std::move(executeRMI);
 	}
 	Command(commands::ExecuteReturnRC &&executeReturnRC)
-		: executeReturnRC(), hasValue(true)
+		: executeReturnRC(std::move(executeReturnRC)), hasValue(true)
 	{
-		this->executeReturnRC = std::move(executeReturnRC);
 	}
 	Command(commands::ExecuteConnect &&executeConnect)
 		: executeConnect(), hasValue(true)

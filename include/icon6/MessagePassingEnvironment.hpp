@@ -74,8 +74,7 @@ public:
 		return t > timeoutTimePoint;
 	}
 
-	void Execute(Peer *peer, Flags flags, std::vector<uint8_t> &bytes,
-				 uint32_t offset)
+	void Execute(Peer *peer, Flags flags, ByteReader &reader)
 	{
 		if (peer != this->peer.get()) {
 			// TODO: implement check
@@ -84,16 +83,14 @@ public:
 		}
 
 		if (executionQueue) {
-			Command command{commands::ExecuteReturnRC{}};
+			Command command{commands::ExecuteReturnRC{std::move(reader)}};
 			commands::ExecuteReturnRC &com = command.executeReturnRC;
 			com.peer = this->peer;
 			com.function = onReturnedValue;
 			com.flags = flags;
-			com.readOffset = offset;
-			std::swap(com.binaryData, bytes);
 			executionQueue->EnqueueCommand(std::move(command));
 		} else {
-			onReturnedValue(this->peer, flags, bytes, offset);
+			onReturnedValue(this->peer, flags, reader);
 		}
 	}
 
@@ -114,8 +111,7 @@ public:
 	}
 
 public:
-	std::function<void(std::shared_ptr<Peer>, Flags, std::vector<uint8_t> &,
-					   uint32_t)>
+	std::function<void(std::shared_ptr<Peer>, Flags, ByteReader &)>
 		onReturnedValue;
 	std::function<void(std::shared_ptr<Peer>)> onTimeout;
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
@@ -140,11 +136,9 @@ OnReturnCallback MakeOnReturnCallback(
 	self->peer = peer;
 	self->onReturnedValue = [_onReturnedValue](std::shared_ptr<Peer> peer,
 											   Flags flags,
-											   std::vector<uint8_t> &bytes,
-											   uint32_t offset) -> void {
+											   ByteReader &reader) -> void {
 		typename std::remove_const<
 			typename std::remove_reference<Tret>::type>::type ret;
-		ByteReader reader(std::move(bytes), offset);
 		reader.op(ret);
 		_onReturnedValue(peer, flags, ret);
 	};
@@ -156,7 +150,7 @@ class MessagePassingEnvironment
 	: public std::enable_shared_from_this<MessagePassingEnvironment>
 {
 public:
-	virtual void OnReceive(Peer *peer, std::vector<uint8_t> &data, Flags flags);
+	virtual void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
 
 	template <typename Fun>
 	void RegisterMessage(

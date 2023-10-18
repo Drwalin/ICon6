@@ -24,11 +24,9 @@
 
 namespace icon6
 {
-void MessagePassingEnvironment::OnReceive(Peer *peer,
-										  std::vector<uint8_t> &data,
+void MessagePassingEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 										  Flags flags)
 {
-	ByteReader reader(std::move(data), 0);
 	std::string name;
 	if (reader.bytes[0] == 2) {
 		uint8_t b;
@@ -39,12 +37,10 @@ void MessagePassingEnvironment::OnReceive(Peer *peer,
 	if (registeredMessages.end() != it) {
 		auto mtd = it->second;
 		if (mtd->executionQueue) {
-			Command command{commands::ExecuteRPC{}};
+			Command command{commands::ExecuteRPC(std::move(reader))};
 			commands::ExecuteRPC &com = command.executeRPC;
 			com.peer = peer->shared_from_this();
 			com.flags = flags;
-			com.binaryData.swap(reader.bytes);
-			com.readOffset = reader.get_offset();
 			com.messageConverter = mtd;
 			mtd->executionQueue->EnqueueCommand(std::move(command));
 		} else {
@@ -65,7 +61,7 @@ void MessagePassingEnvironment::OnReceive(Peer *peer,
 			}
 		}
 		if (found) {
-			callback.Execute(peer, flags, reader.bytes, reader.get_offset());
+			callback.Execute(peer, flags, reader);
 		} else {
 			// TODO: returned valued didn't found callback
 		}

@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../bitscpp/include/bitscpp/ByteReader.hpp"
-
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 #include "../include/icon6/CommandExecutionQueue.hpp"
@@ -39,21 +37,15 @@ void ExecuteFunctionObjectNoArgsOnPeer::Execute() { function(peer); }
 
 void ExecuteRPC::Execute()
 {
-	ByteReader reader(std::move(binaryData), readOffset);
 	messageConverter->Call(peer.get(), reader, flags);
 }
 
 void ExecuteRMI::Execute()
 {
-	ByteReader reader(std::move(binaryData), readOffset);
 	methodInvoker->Call(objectPtr, peer.get(), reader, flags);
 }
 
-void ExecuteReturnRC::Execute()
-{
-	ByteReader reader(std::move(binaryData), readOffset);
-	function(peer, flags, binaryData, readOffset);
-}
+void ExecuteReturnRC::Execute() { function(peer, flags, reader); }
 
 void ExecuteConnect::Execute()
 {
