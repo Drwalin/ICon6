@@ -29,6 +29,7 @@
 
 #include "Host.hpp"
 #include "Peer.hpp"
+#include "OnReturnCallback.hpp"
 #include "MessageConverter.hpp"
 
 namespace icon6
@@ -50,100 +51,6 @@ template <typename Fun> auto ConvertLambdaToFunctionPtr(Fun &&fun)
 template <typename T> auto MakeShared(T *ptr)
 {
 	return std::shared_ptr<T>(ptr);
-}
-
-class OnReturnCallback
-{
-public:
-	~OnReturnCallback() = default;
-
-	OnReturnCallback() = default;
-	OnReturnCallback(OnReturnCallback &&) = default;
-
-	OnReturnCallback(OnReturnCallback &) = delete;
-	OnReturnCallback(const OnReturnCallback &) = delete;
-
-	OnReturnCallback &operator=(OnReturnCallback &&) = default;
-
-	OnReturnCallback &operator=(OnReturnCallback &) = delete;
-	OnReturnCallback &operator=(const OnReturnCallback &) = delete;
-
-	bool IsExpired(std::chrono::time_point<std::chrono::steady_clock> t =
-					   std::chrono::steady_clock::now()) const
-	{
-		return t > timeoutTimePoint;
-	}
-
-	void Execute(Peer *peer, Flags flags, ByteReader &reader)
-	{
-		if (peer != this->peer.get()) {
-			// TODO: implement check
-			throw "Received return value from different peer than request was "
-				  "sent to.";
-		}
-
-		if (executionQueue) {
-			Command command{commands::ExecuteReturnRC{std::move(reader)}};
-			commands::ExecuteReturnRC &com = command.executeReturnRC;
-			com.peer = this->peer;
-			com.function = onReturnedValue;
-			com.flags = flags;
-			executionQueue->EnqueueCommand(std::move(command));
-		} else {
-			onReturnedValue(this->peer, flags, reader);
-		}
-	}
-
-	void ExecuteTimeout()
-	{
-		if (onTimeout) {
-			if (executionQueue) {
-				Command command{commands::ExecuteFunctionObjectNoArgsOnPeer{}};
-				commands::ExecuteFunctionObjectNoArgsOnPeer &com =
-					command.executeFunctionObjectNoArgsOnPeer;
-				com.peer = peer;
-				com.function = onTimeout;
-				executionQueue->EnqueueCommand(std::move(command));
-			} else {
-				onTimeout(peer);
-			}
-		}
-	}
-
-public:
-	std::function<void(std::shared_ptr<Peer>, Flags, ByteReader &)>
-		onReturnedValue;
-	std::function<void(std::shared_ptr<Peer>)> onTimeout;
-	std::shared_ptr<CommandExecutionQueue> executionQueue;
-	std::chrono::time_point<std::chrono::steady_clock> timeoutTimePoint;
-	std::shared_ptr<Peer> peer;
-};
-
-template <typename Tret, typename Tfunc>
-OnReturnCallback MakeOnReturnCallback(
-	Tfunc &&_onReturnedValue,
-	std::function<void(std::shared_ptr<Peer>)> onTimeout,
-	uint32_t timeoutMilliseconds, std::shared_ptr<Peer> peer,
-	std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
-{
-	OnReturnCallback ret;
-	OnReturnCallback *self = &ret;
-
-	self->onTimeout = onTimeout;
-	self->executionQueue = executionQueue;
-	self->timeoutTimePoint = std::chrono::steady_clock::now() +
-							 (std::chrono::milliseconds(timeoutMilliseconds));
-	self->peer = peer;
-	self->onReturnedValue = [_onReturnedValue](std::shared_ptr<Peer> peer,
-											   Flags flags,
-											   ByteReader &reader) -> void {
-		typename std::remove_const<
-			typename std::remove_reference<Tret>::type>::type ret;
-		reader.op(ret);
-		_onReturnedValue(peer, flags, ret);
-	};
-
-	return ret;
 }
 
 class MessagePassingEnvironment

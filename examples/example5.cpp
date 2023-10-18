@@ -78,7 +78,7 @@ int main()
 
 		mpe->Call<std::string, std::vector<int>>(
 			p1.get(), 0,
-			icon6::MakeOnReturnCallback<std::string>(
+			icon6::OnReturnCallback::Make<std::string>(
 				[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags,
 				   std::string str) -> void {
 					fprintf(stderr, "Returned string: %s\n", str.c_str());
@@ -89,7 +89,7 @@ int main()
 
 		mpe->Call<std::string, std::vector<int>>(
 			p1.get(), 0,
-			icon6::MakeOnReturnCallback<std::string>(
+			icon6::OnReturnCallback::Make<std::string>(
 				[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags,
 				   std::string str) -> void {
 					printf("Returned string: %s\n", str.c_str());
