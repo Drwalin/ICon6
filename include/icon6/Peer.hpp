@@ -42,15 +42,6 @@ public:
 	~Peer();
 
 	void Send(std::vector<uint8_t> &&data, Flags flags);
-	inline void SendReliableSequenced(std::vector<uint8_t> &&data);
-	inline void SendReliableUnsequenced(std::vector<uint8_t> &&data);
-	inline void SendUnreliableSequenced(std::vector<uint8_t> &&data);
-	inline void SendUnreliableUnsequenced(std::vector<uint8_t> &&data);
-	inline void Send(const void *data, uint32_t bytes, Flags flags);
-	inline void SendReliableSequenced(const void *data, uint32_t bytes);
-	inline void SendReliableUnsequenced(const void *data, uint32_t bytes);
-	inline void SendUnreliableSequenced(const void *data, uint32_t bytes);
-	inline void SendUnreliableUnsequenced(const void *data, uint32_t bytes);
 
 	void Disconnect(uint32_t disconnectData);
 
@@ -114,50 +105,6 @@ private:
 	void (*callbackOnDisconnect)(Peer *, uint32_t disconnectData);
 };
 
-inline void Peer::SendReliableSequenced(std::vector<uint8_t> &&data)
-{
-	Send(std::move(data), FLAG_RELIABLE | FLAG_SEQUENCED);
-}
-
-inline void Peer::SendReliableUnsequenced(std::vector<uint8_t> &&data)
-{
-	Send(std::move(data), FLAG_RELIABLE);
-}
-
-inline void Peer::SendUnreliableSequenced(std::vector<uint8_t> &&data)
-{
-	Send(std::move(data), FLAG_SEQUENCED);
-}
-
-inline void Peer::SendUnreliableUnsequenced(std::vector<uint8_t> &&data)
-{
-	Send(std::move(data), 0);
-}
-
-inline void Peer::Send(const void *data, uint32_t bytes, Flags flags)
-{
-	Send(std::vector<uint8_t>((uint8_t *)data, (uint8_t *)data + bytes), flags);
-}
-
-inline void Peer::SendReliableSequenced(const void *data, uint32_t bytes)
-{
-	Send(data, bytes, FLAG_RELIABLE | FLAG_SEQUENCED);
-}
-
-inline void Peer::SendReliableUnsequenced(const void *data, uint32_t bytes)
-{
-	Send(data, bytes, FLAG_RELIABLE);
-}
-
-inline void Peer::SendUnreliableSequenced(const void *data, uint32_t bytes)
-{
-	Send(data, bytes, FLAG_SEQUENCED);
-}
-
-inline void Peer::SendUnreliableUnsequenced(const void *data, uint32_t bytes)
-{
-	Send(data, bytes, 0);
-}
 } // namespace icon6
 
 #endif

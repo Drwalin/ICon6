@@ -4,9 +4,13 @@
 #include <chrono>
 #include <thread>
 
+std::vector<uint8_t> MakeVector(const char *str)
+{
+	return std::vector<uint8_t>(str, str + (size_t)strlen(str));
+}
+
 int main()
 {
-
 	uint16_t port1 = 4000, port2 = 4001;
 
 	icon6::Initialize();
@@ -25,7 +29,7 @@ int main()
 			fflush(stdout);
 			std::string res = (char *)data.data();
 			res = "Response " + res;
-			p->Send(res.c_str(), res.size(), flags);
+			p->Send(MakeVector(res.c_str()), flags);
 		});
 
 	host1->RunAsync();
@@ -44,9 +48,9 @@ int main()
 	}
 
 	if (p1 != nullptr) {
-		p1->Send("Message 1", 10, 0);
-		p1->Send("Message 2", 10, 0);
-		p1->Send("Message 3", 10, 0);
+		p1->Send(MakeVector("Message 1"), 0);
+		p1->Send(MakeVector("Message 2"), 0);
+		p1->Send(MakeVector("Message 3"), 0);
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
