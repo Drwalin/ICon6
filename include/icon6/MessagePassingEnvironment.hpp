@@ -27,6 +27,7 @@
 
 #include <bitscpp/ByteWriterExtensions.hpp>
 
+#include "Util.hpp"
 #include "Host.hpp"
 #include "Peer.hpp"
 #include "OnReturnCallback.hpp"
@@ -36,22 +37,6 @@ namespace icon6
 {
 
 class CommandExecutionQueue;
-
-template <typename... Args>
-auto ConvertLambdaToFunctionPtr(void (*fun)(Args...))
-{
-	return fun;
-}
-
-template <typename Fun> auto ConvertLambdaToFunctionPtr(Fun &&fun)
-{
-	return +fun;
-}
-
-template <typename T> auto MakeShared(T *ptr)
-{
-	return std::shared_ptr<T>(ptr);
-}
 
 class MessagePassingEnvironment
 	: public std::enable_shared_from_this<MessagePassingEnvironment>
