@@ -38,13 +38,6 @@ Peer::Peer(std::shared_ptr<Host> host, ENetPeer *peer) : host(host), peer(peer)
 }
 Peer::~Peer() {}
 
-void Peer::Destroy()
-{
-	peer->data = nullptr;
-	peer = nullptr;
-	host = nullptr;
-}
-
 void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 {
 	if (state != STATE_READY_TO_USE) {
@@ -59,7 +52,7 @@ void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 	host->EnqueueCommand(std::move(command));
 }
 
-void Peer::_InternalSend(std::vector<uint8_t> &data, Flags flags)
+void Peer::_InternalSend(std::vector<uint8_t> &&data, Flags flags)
 {
 	const uint32_t packetSize =
 		ConnectionEncryptionState ::GetEncryptedMessageLength(data.size());

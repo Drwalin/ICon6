@@ -51,19 +51,23 @@ public:
 		return peer->mtu -
 			   ConnectionEncryptionState::GetEncryptedMessageOverhead();
 	}
+	inline uint32_t GetMaxSinglePackedMessageSize() const
+	{
+		return GetEncryptedMTU() -
+			   sizeof(ENetProtocolHeader)		  // ENet protocol overhead
+			   - sizeof(ENetProtocolSendFragment) // ENet protocol overhead
+			   - sizeof(uint32_t) // ENet protocol checksum overhead
+			;
+	}
 	inline uint32_t GetRoundtripTime() const
 	{
 		return peer->roundTripTime >= 2 ? peer->roundTripTime : 2;
 	}
 	inline uint32_t GetLatency() const { return GetRoundtripTime() >> 1; }
 
-	inline bool IsValid() const { return peer && IsHandshakeDone(); }
-	inline operator bool() const { return peer && IsHandshakeDone(); }
+	inline bool IsValid() const { return peer != nullptr && IsHandshakeDone(); }
 
 	inline bool IsHandshakeDone() const { return state == STATE_READY_TO_USE; }
-
-	friend class Host;
-	friend class ConnectionEncryptionState;
 
 	inline std::shared_ptr<Host> GetHost() { return host; }
 
@@ -71,19 +75,20 @@ public:
 											 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData));
 
+	friend class Host;
+	friend class ConnectionEncryptionState;
+
 public:
 	void *userData;
 	std::shared_ptr<void> userSharedPointer;
 
 public:
-	void _InternalSend(std::vector<uint8_t> &data, Flags flags);
+	void _InternalSend(std::vector<uint8_t> &&data, Flags flags);
 	void _InternalDisconnect(uint32_t disconnectData);
 
 private:
 	void CallCallbackReceive(uint8_t *data, uint32_t size, Flags flags);
 	void CallCallbackDisconnect(uint32_t data);
-
-	void Destroy();
 
 	enum ENetPacketFlags {
 		INTERNAL_SEQUENCED = ENET_PACKET_FLAG_RELIABLE,
