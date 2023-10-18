@@ -144,8 +144,7 @@ OnReturnCallback MakeOnReturnCallback(
 											   uint32_t offset) -> void {
 		typename std::remove_const<
 			typename std::remove_reference<Tret>::type>::type ret;
-		bitscpp::ByteReader<false> reader(bytes.data() + offset,
-										  bytes.size() - offset);
+		ByteReader reader(std::move(bytes), offset);
 		reader.op(ret);
 		_onReturnedValue(peer, flags, ret);
 	};

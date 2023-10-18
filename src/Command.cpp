@@ -39,22 +39,19 @@ void ExecuteFunctionObjectNoArgsOnPeer::Execute() { function(peer); }
 
 void ExecuteRPC::Execute()
 {
-	bitscpp::ByteReader<true> reader(binaryData.data() + readOffset,
-									 binaryData.size() - readOffset);
+	ByteReader reader(std::move(binaryData), readOffset);
 	messageConverter->Call(peer.get(), reader, flags);
 }
 
 void ExecuteRMI::Execute()
 {
-	bitscpp::ByteReader<true> reader(binaryData.data() + readOffset,
-									 binaryData.size() - readOffset);
+	ByteReader reader(std::move(binaryData), readOffset);
 	methodInvoker->Call(objectPtr, peer.get(), reader, flags);
 }
 
 void ExecuteReturnRC::Execute()
 {
-	bitscpp::ByteReader<true> reader(binaryData.data() + readOffset,
-									 binaryData.size() - readOffset);
+	ByteReader reader(std::move(binaryData), readOffset);
 	function(peer, flags, binaryData, readOffset);
 }
 

@@ -65,7 +65,7 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer,
 											Flags flags)
 {
 	if (data[0] == 0) {
-		bitscpp::ByteReader reader(data.data() + 1, data.size() - 1);
+		ByteReader reader(std::move(data), 1);
 
 		uint64_t objectId = 0;
 		reader.op(objectId);
@@ -82,7 +82,7 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer,
 					commands::ExecuteRMI &com = command.executeRMI;
 					com.peer = peer->shared_from_this();
 					com.flags = flags;
-					com.binaryData.swap(data);
+					com.binaryData.swap(reader.bytes);
 					com.readOffset = reader.get_offset();
 					com.methodInvoker = mtd;
 					com.objectPtr = object->second.objectPtr,

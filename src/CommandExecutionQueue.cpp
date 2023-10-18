@@ -20,8 +20,6 @@
 
 #include "../concurrentqueue/concurrentqueue.h"
 
-#include "../../bitscpp/include/bitscpp/ByteReader.hpp"
-
 #include "../include/icon6/Peer.hpp"
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 #include "../include/icon6/MethodInvocationEnvironment.hpp"

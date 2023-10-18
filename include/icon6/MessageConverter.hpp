@@ -22,9 +22,9 @@
 #include <memory>
 #include <tuple>
 
-#include <bitscpp/ByteReaderExtensions.hpp>
 #include <bitscpp/ByteWriterExtensions.hpp>
 
+#include "ByteReader.hpp"
 #include "Host.hpp"
 #include "Peer.hpp"
 
@@ -39,8 +39,7 @@ class MessageConverter
 public:
 	virtual ~MessageConverter() = default;
 
-	virtual void Call(Peer *peer, bitscpp::ByteReader<true> &reader,
-					  Flags flags) = 0;
+	virtual void Call(Peer *peer, ByteReader &reader, Flags flags) = 0;
 
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
 };
@@ -48,42 +47,39 @@ public:
 class _InternalReader
 {
 public:
-	static void ReadType(Peer *peer, Flags flags,
-						 bitscpp::ByteReader<true> &reader, Flags &value)
+	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
+						 Flags &value)
 	{
 		value = flags;
 	}
 
-	static void ReadType(Peer *peer, Flags flags,
-						 bitscpp::ByteReader<true> &reader,
+	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
 						 std::shared_ptr<Host> &value)
 	{
 		value = peer->GetHost();
 	}
 
-	static void ReadType(Peer *peer, Flags flags,
-						 bitscpp::ByteReader<true> &reader, Host *&value)
+	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
+						 Host *&value)
 	{
 		value = peer->GetHost().get();
 	}
 
-	static void ReadType(Peer *peer, Flags flags,
-						 bitscpp::ByteReader<true> &reader,
+	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
 						 std::shared_ptr<Peer> &value)
 	{
 		value = peer->shared_from_this();
 		;
 	}
 
-	static void ReadType(Peer *peer, Flags flags,
-						 bitscpp::ByteReader<true> &reader, Peer *&value)
+	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
+						 Peer *&value)
 	{
 		value = peer;
 	}
 
 	template <typename T>
-	static void ReadType(Peer *peer, Flags flags,
-						 bitscpp::ByteReader<true> &reader, T &value)
+	static void ReadType(Peer *peer, Flags flags, ByteReader &reader, T &value)
 	{
 		reader.op(value);
 	}
@@ -94,8 +90,7 @@ template <typename Tret> class MessageReturnExecutor
 public:
 	template <typename TF, typename Tuple, size_t... SeqArgs>
 	static void Execute(TF &&onReceive, Tuple &args, Peer *peer, Flags flags,
-						bitscpp::ByteReader<true> &reader,
-						std::index_sequence<SeqArgs...>)
+						ByteReader &reader, std::index_sequence<SeqArgs...>)
 	{
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
 		if constexpr (!std::is_same<void, Tret>::value) {
@@ -119,8 +114,7 @@ template <> class MessageReturnExecutor<void>
 public:
 	template <typename TF, typename Tuple, size_t... SeqArgs>
 	static void Execute(TF &&onReceive, Tuple &args, Peer *peer, Flags flags,
-						bitscpp::ByteReader<true> &reader,
-						std::index_sequence<SeqArgs...>)
+						ByteReader &reader, std::index_sequence<SeqArgs...>)
 	{
 		onReceive(std::get<SeqArgs>(args)...);
 	}
@@ -140,8 +134,7 @@ public:
 
 	virtual ~MessageConverterSpec() = default;
 
-	virtual void Call(Peer *peer, bitscpp::ByteReader<true> &reader,
-					  Flags flags) override
+	virtual void Call(Peer *peer, ByteReader &reader, Flags flags) override
 	{
 		auto seq = std::index_sequence_for<Targs...>{};
 		_InternalCall(peer, flags, reader, seq);
@@ -149,8 +142,7 @@ public:
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(Peer *peer, Flags flags,
-					   bitscpp::ByteReader<true> &reader,
+	void _InternalCall(Peer *peer, Flags flags, ByteReader &reader,
 					   std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;

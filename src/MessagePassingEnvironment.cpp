@@ -16,10 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../include/icon6/CommandExecutionQueue.hpp"
-
-#include "../include/icon6/MessagePassingEnvironment.hpp"
 #include <chrono>
+
+#include "../include/icon6/ByteReader.hpp"
+#include "../include/icon6/CommandExecutionQueue.hpp"
+#include "../include/icon6/MessagePassingEnvironment.hpp"
 
 namespace icon6
 {
@@ -27,9 +28,9 @@ void MessagePassingEnvironment::OnReceive(Peer *peer,
 										  std::vector<uint8_t> &data,
 										  Flags flags)
 {
-	bitscpp::ByteReader reader(data.data(), data.size());
+	ByteReader reader(std::move(data), 0);
 	std::string name;
-	if (data[0] == 2) {
+	if (reader.bytes[0] == 2) {
 		uint8_t b;
 		reader.op(b);
 	}
@@ -42,7 +43,7 @@ void MessagePassingEnvironment::OnReceive(Peer *peer,
 			commands::ExecuteRPC &com = command.executeRPC;
 			com.peer = peer->shared_from_this();
 			com.flags = flags;
-			com.binaryData.swap(data);
+			com.binaryData.swap(reader.bytes);
 			com.readOffset = reader.get_offset();
 			com.messageConverter = mtd;
 			mtd->executionQueue->EnqueueCommand(std::move(command));
@@ -64,7 +65,7 @@ void MessagePassingEnvironment::OnReceive(Peer *peer,
 			}
 		}
 		if (found) {
-			callback.Execute(peer, flags, data, reader.get_offset());
+			callback.Execute(peer, flags, reader.bytes, reader.get_offset());
 		} else {
 			// TODO: returned valued didn't found callback
 		}

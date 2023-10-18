@@ -48,7 +48,7 @@ public:
 	virtual ~MethodInvocationConverter() = default;
 
 	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
-					  bitscpp::ByteReader<true> &reader, Flags flags) = 0;
+					  ByteReader &reader, Flags flags) = 0;
 
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
 };
@@ -70,7 +70,7 @@ public:
 	virtual ~MessageNetworkAwareMethodInvocationConverterSpec() = default;
 
 	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
-					  bitscpp::ByteReader<true> &reader, Flags flags) override
+					  ByteReader &reader, Flags flags) override
 	{
 		std::shared_ptr<Tclass> ptr =
 			std::static_pointer_cast<Tclass>(objectPtr);
@@ -81,8 +81,7 @@ public:
 private:
 	template <size_t... SeqArgs>
 	void _InternalCall(std::shared_ptr<Tclass> ptr, Peer *peer, Flags flags,
-					   bitscpp::ByteReader<true> &reader,
-					   std::index_sequence<SeqArgs...>)
+					   ByteReader &reader, std::index_sequence<SeqArgs...>)
 	{
 		TupleType args;
 		(_InternalReader::ReadType(peer, flags, reader,
