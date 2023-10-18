@@ -28,6 +28,7 @@
 #include <bitscpp/ByteWriterExtensions.hpp>
 #include <bitscpp/ByteReaderExtensions.hpp>
 
+#include "PeerFlagsArgumentsReader.hpp"
 #include "Host.hpp"
 #include "Peer.hpp"
 #include "MessageConverter.hpp"
@@ -84,8 +85,8 @@ private:
 					   ByteReader &reader, std::index_sequence<SeqArgs...>)
 	{
 		TupleType args;
-		(_InternalReader::ReadType(peer, flags, reader,
-								   std::get<SeqArgs>(args)),
+		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
+											std::get<SeqArgs>(args)),
 		 ...);
 		(ptr.get()->*onReceive)(std::get<SeqArgs>(args)...);
 	}

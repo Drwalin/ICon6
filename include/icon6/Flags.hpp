@@ -19,6 +19,8 @@
 #ifndef ICON6_FLAGS_HPP
 #define ICON6_FLAGS_HPP
 
+#include <cinttypes>
+
 namespace icon6
 {
 struct Flags {

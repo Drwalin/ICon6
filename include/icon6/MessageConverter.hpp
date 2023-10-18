@@ -25,6 +25,7 @@
 #include <bitscpp/ByteWriterExtensions.hpp>
 
 #include "ByteReader.hpp"
+#include "PeerFlagsArgumentsReader.hpp"
 #include "Host.hpp"
 #include "Peer.hpp"
 
@@ -42,47 +43,6 @@ public:
 	virtual void Call(Peer *peer, ByteReader &reader, Flags flags) = 0;
 
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
-};
-
-class _InternalReader
-{
-public:
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
-						 Flags &value)
-	{
-		value = flags;
-	}
-
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
-						 std::shared_ptr<Host> &value)
-	{
-		value = peer->GetHost();
-	}
-
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
-						 Host *&value)
-	{
-		value = peer->GetHost().get();
-	}
-
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
-						 std::shared_ptr<Peer> &value)
-	{
-		value = peer->shared_from_this();
-		;
-	}
-
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
-						 Peer *&value)
-	{
-		value = peer;
-	}
-
-	template <typename T>
-	static void ReadType(Peer *peer, Flags flags, ByteReader &reader, T &value)
-	{
-		reader.op(value);
-	}
 };
 
 template <typename Tret> class MessageReturnExecutor
@@ -146,8 +106,8 @@ private:
 					   std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;
-		(_InternalReader::ReadType(peer, flags, reader,
-								   std::get<SeqArgs>(args)),
+		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
+											std::get<SeqArgs>(args)),
 		 ...);
 		MessageReturnExecutor<Tret>::Execute(onReceive, args, peer, flags,
 											 reader, seq);

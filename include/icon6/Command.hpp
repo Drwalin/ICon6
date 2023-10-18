@@ -38,15 +38,12 @@ namespace icon6
 
 class Host;
 class Peer;
-
 class MessageConverter;
 namespace rmi
 {
 class MethodInvocationConverter;
 }
-
 class Command;
-
 class CommandExecutionQueue;
 
 namespace commands
