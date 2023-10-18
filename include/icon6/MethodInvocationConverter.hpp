@@ -54,7 +54,52 @@ public:
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
 };
 
-template <typename Tclass, typename... Targs>
+template <typename Tret> class InvocationReturnExecutor
+{
+public:
+	template <typename TClass, typename TF, typename Tuple, size_t... SeqArgs>
+	static void Execute(TClass *objectPtr, TF &&onReceive, Tuple &args,
+						Peer *peer, Flags flags, ByteReader &reader,
+						std::index_sequence<SeqArgs...>)
+	{
+		Tret ret = (objectPtr->*onReceive)(std::get<SeqArgs>(args)...);
+		if (reader.bytes[0] == MethodProtocolSendFlags::FUNCTION_CALL_PREFIX &&
+			reader.get_remaining_bytes() == 4) {
+			uint32_t id;
+			reader.op(id);
+			std::vector<uint8_t> buffer;
+			bitscpp::ByteWriter writer(buffer);
+			writer.op(MethodProtocolSendFlags::RETURN_CALLBACK);
+			writer.op(id);
+			writer.op(ret);
+			peer->Send(std::move(buffer), flags);
+		}
+	}
+};
+
+template <> class InvocationReturnExecutor<void>
+{
+public:
+	template <typename TClass, typename TF, typename Tuple, size_t... SeqArgs>
+	static void Execute(TClass *objectPtr, TF &&onReceive, Tuple &args,
+						Peer *peer, Flags flags, ByteReader &reader,
+						std::index_sequence<SeqArgs...>)
+	{
+		(objectPtr->*onReceive)(std::get<SeqArgs>(args)...);
+		if (reader.bytes[0] == MethodProtocolSendFlags::FUNCTION_CALL_PREFIX &&
+			reader.get_remaining_bytes() == 4) {
+			uint32_t id;
+			reader.op(id);
+			std::vector<uint8_t> buffer;
+			bitscpp::ByteWriter writer(buffer);
+			writer.op(MethodProtocolSendFlags::RETURN_CALLBACK);
+			writer.op(id);
+			peer->Send(std::move(buffer), flags);
+		}
+	}
+};
+
+template <typename Tclass, typename Tret, typename... Targs>
 class MessageNetworkAwareMethodInvocationConverterSpec
 	: public MethodInvocationConverter
 {
@@ -63,7 +108,7 @@ public:
 		typename std::remove_reference<Targs>::type>::type...>;
 
 	MessageNetworkAwareMethodInvocationConverterSpec(
-		Class *_class, void (Tclass::*memberFunction)(Targs... args))
+		Class *_class, Tret (Tclass::*memberFunction)(Targs... args))
 		: onReceive(memberFunction), _class(_class)
 	{
 	}
@@ -82,17 +127,19 @@ public:
 private:
 	template <size_t... SeqArgs>
 	void _InternalCall(std::shared_ptr<Tclass> ptr, Peer *peer, Flags flags,
-					   ByteReader &reader, std::index_sequence<SeqArgs...>)
+					   ByteReader &reader, std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;
 		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
 											std::get<SeqArgs>(args)),
 		 ...);
-		(ptr.get()->*onReceive)(std::get<SeqArgs>(args)...);
+		InvocationReturnExecutor<Tret>::Execute(ptr.get(), onReceive, args,
+												peer, flags, reader, seq);
+		// 		(ptr.get()->*onReceive)(std::get<SeqArgs>(args)...);
 	}
 
 private:
-	void (Tclass::*onReceive)(Targs... args);
+	Tret (Tclass::*onReceive)(Targs... args);
 	class Class *_class;
 };
 

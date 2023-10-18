@@ -53,6 +53,15 @@ struct Flags {
 
 inline const static Flags FLAG_SEQUENCED = 1 << 0;
 inline const static Flags FLAG_RELIABLE = 1 << 1;
+
+namespace MethodProtocolSendFlags
+{
+inline const uint8_t FUNCTION_SEND_PREFIX = 0;
+inline const uint8_t FUNCTION_CALL_PREFIX = 1;
+inline const uint8_t METHOD_SEND_PREFIX = 2;
+inline const uint8_t METHOD_CALL_PREFIX = 3;
+inline const uint8_t RETURN_CALLBACK = 4;
+} // namespace MethodProtocolSendFlags
 } // namespace icon6
 
 #endif

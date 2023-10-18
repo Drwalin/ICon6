@@ -63,7 +63,8 @@ MethodInvocationEnvironment::GetClassByName(std::string name)
 void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 											Flags flags)
 {
-	if (reader.bytes[0] == 0) {
+	if (reader.bytes[0] == MethodProtocolSendFlags::METHOD_SEND_PREFIX ||
+		reader.bytes[0] == MethodProtocolSendFlags::METHOD_CALL_PREFIX) {
 		uint8_t b;
 		reader.op(b);
 

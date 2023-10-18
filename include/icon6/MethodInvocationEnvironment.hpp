@@ -24,6 +24,7 @@
 #include "MethodInvocationConverter.hpp"
 
 #include "MessagePassingEnvironment.hpp"
+#include "icon6/Flags.hpp"
 
 namespace icon6
 {
@@ -119,7 +120,32 @@ public:
 		std::vector<uint8_t> buffer;
 		{
 			bitscpp::ByteWriter writer(buffer);
-			writer.op((uint8_t)0);
+			writer.op(MethodProtocolSendFlags::METHOD_SEND_PREFIX);
+			writer.op(objectId);
+			writer.op(name);
+			(writer.op(args), ...);
+		}
+		peer->Send(std::move(buffer), flags);
+	}
+
+	template <typename... Targs>
+	void CallInvoke(Peer *peer, Flags flags, OnReturnCallback &&callback,
+					uint64_t objectId, const std::string &name,
+					const Targs &...args)
+	{
+		std::vector<uint8_t> buffer;
+		uint32_t returnCallbackId = 0;
+		{
+			std::lock_guard guard{mutexReturningCallbacks};
+			do {
+				returnCallbackId = ++returnCallCallbackIdGenerator;
+			} while (returnCallbackId == 0 &&
+					 returningCallbacks.count(returnCallbackId) != 0);
+			returningCallbacks[returnCallbackId] = std::move(callback);
+		}
+		{
+			bitscpp::ByteWriter writer(buffer);
+			writer.op(MethodProtocolSendFlags::METHOD_CALL_PREFIX);
 			writer.op(objectId);
 			writer.op(name);
 			(writer.op(args), ...);

@@ -53,12 +53,13 @@ public:
 						ByteReader &reader, std::index_sequence<SeqArgs...>)
 	{
 		Tret ret = onReceive(std::get<SeqArgs>(args)...);
-		if (reader.bytes[0] == 2 && reader.get_remaining_bytes() == 4) {
+		if (reader.bytes[0] == MethodProtocolSendFlags::FUNCTION_CALL_PREFIX &&
+			reader.get_remaining_bytes() == 4) {
 			uint32_t id;
 			reader.op(id);
 			std::vector<uint8_t> buffer;
 			bitscpp::ByteWriter writer(buffer);
-			writer.op("_ret");
+			writer.op(MethodProtocolSendFlags::RETURN_CALLBACK);
 			writer.op(id);
 			writer.op(ret);
 			peer->Send(std::move(buffer), flags);
@@ -74,12 +75,13 @@ public:
 						ByteReader &reader, std::index_sequence<SeqArgs...>)
 	{
 		onReceive(std::get<SeqArgs>(args)...);
-		if (reader.bytes[0] == 2 && reader.get_remaining_bytes() == 4) {
+		if (reader.bytes[0] == MethodProtocolSendFlags::FUNCTION_CALL_PREFIX &&
+			reader.get_remaining_bytes() == 4) {
 			uint32_t id;
 			reader.op(id);
 			std::vector<uint8_t> buffer;
 			bitscpp::ByteWriter writer(buffer);
-			writer.op("_ret");
+			writer.op(MethodProtocolSendFlags::RETURN_CALLBACK);
 			writer.op(id);
 			peer->Send(std::move(buffer), flags);
 		}

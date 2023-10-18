@@ -28,6 +28,7 @@
 #include <bitscpp/ByteWriterExtensions.hpp>
 
 #include "Util.hpp"
+#include "Flags.hpp"
 #include "Host.hpp"
 #include "Peer.hpp"
 #include "OnReturnCallback.hpp"
@@ -62,6 +63,7 @@ public:
 		std::vector<uint8_t> buffer;
 		{
 			bitscpp::ByteWriter writer(buffer);
+			writer.op(MethodProtocolSendFlags::FUNCTION_SEND_PREFIX);
 			writer.op(name);
 			(writer.op(args), ...);
 		}
@@ -84,7 +86,7 @@ public:
 		}
 		{
 			bitscpp::ByteWriter writer(buffer);
-			writer.op((uint8_t)2);
+			writer.op(MethodProtocolSendFlags::FUNCTION_CALL_PREFIX);
 			writer.op(name);
 			(writer.op(args), ...);
 			writer.op(returnCallbackId);

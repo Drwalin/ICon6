@@ -27,26 +27,9 @@ namespace icon6
 void MessagePassingEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 										  Flags flags)
 {
-	std::string name;
-	if (reader.bytes[0] == 2) {
-		uint8_t b;
-		reader.op(b);
-	}
-	reader.op(name);
-	auto it = registeredMessages.find(name);
-	if (registeredMessages.end() != it) {
-		auto mtd = it->second;
-		if (mtd->executionQueue) {
-			Command command{commands::ExecuteRPC(std::move(reader))};
-			commands::ExecuteRPC &com = command.executeRPC;
-			com.peer = peer->shared_from_this();
-			com.flags = flags;
-			com.messageConverter = mtd;
-			mtd->executionQueue->EnqueueCommand(std::move(command));
-		} else {
-			mtd->Call(peer, reader, flags);
-		}
-	} else if (name == std::string_view("_ret")) {
+	uint8_t methodInvokeType;
+	reader.op(methodInvokeType);
+	if (methodInvokeType == MethodProtocolSendFlags::RETURN_CALLBACK) {
 		uint32_t id;
 		reader.op(id);
 		OnReturnCallback callback;
@@ -64,6 +47,23 @@ void MessagePassingEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 			callback.Execute(peer, flags, reader);
 		} else {
 			// TODO: returned valued didn't found callback
+		}
+	} else {
+		std::string name;
+		reader.op(name);
+		auto it = registeredMessages.find(name);
+		if (registeredMessages.end() != it) {
+			auto mtd = it->second;
+			if (mtd->executionQueue) {
+				Command command{commands::ExecuteRPC(std::move(reader))};
+				commands::ExecuteRPC &com = command.executeRPC;
+				com.peer = peer->shared_from_this();
+				com.flags = flags;
+				com.messageConverter = mtd;
+				mtd->executionQueue->EnqueueCommand(std::move(command));
+			} else {
+				mtd->Call(peer, reader, flags);
+			}
 		}
 	}
 }
