@@ -70,7 +70,7 @@ void MessagePassingEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 
 void MessagePassingEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 {
-	std::vector<OnReturnCallback> destroys;
+	std::vector<OnReturnCallback> timeouts;
 	auto now = std::chrono::steady_clock::now();
 	if (mutexReturningCallbacks.try_lock()) {
 		auto it = returningCallbacks.find(lastCheckedId);
@@ -85,8 +85,7 @@ void MessagePassingEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 				if (next != returningCallbacks.end()) {
 					nextId = next->first;
 				}
-				destroys.push_back(std::move(it->second));
-				destroys.back().ExecuteTimeout();
+				timeouts.push_back(std::move(it->second));
 				returningCallbacks.erase(lastCheckedId);
 				it = returningCallbacks.find(nextId);
 			} else {
@@ -94,6 +93,9 @@ void MessagePassingEnvironment::CheckForTimeoutFunctionCalls(uint32_t maxChecks)
 			}
 		}
 		mutexReturningCallbacks.unlock();
+	}
+	for (auto &t : timeouts) {
+		t.ExecuteTimeout();
 	}
 }
 } // namespace icon6
