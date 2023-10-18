@@ -76,6 +76,31 @@ public:
 		return ret;
 	}
 
+	template <typename Tfunc>
+	static OnReturnCallback
+	Make(Tfunc &&_onReturnedValue,
+		 std::function<void(std::shared_ptr<Peer>)> onTimeout,
+		 uint32_t timeoutMilliseconds, std::shared_ptr<Peer> peer,
+		 std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
+	{
+		OnReturnCallback ret;
+		OnReturnCallback *self = &ret;
+
+		self->onTimeout = onTimeout;
+		self->executionQueue = executionQueue;
+		self->timeoutTimePoint =
+			std::chrono::steady_clock::now() +
+			(std::chrono::milliseconds(timeoutMilliseconds));
+		self->peer = peer;
+		self->onReturnedValue = [_onReturnedValue](std::shared_ptr<Peer> peer,
+												   Flags flags,
+												   ByteReader &reader) -> void {
+			_onReturnedValue(peer, flags);
+		};
+
+		return ret;
+	}
+
 public:
 	std::function<void(std::shared_ptr<Peer>, Flags, ByteReader &)>
 		onReturnedValue;

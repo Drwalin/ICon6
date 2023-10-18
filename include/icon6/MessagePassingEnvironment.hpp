@@ -68,7 +68,7 @@ public:
 		peer->Send(std::move(buffer), flags);
 	}
 
-	template <typename Tret, typename... Targs>
+	template <typename... Targs>
 	void Call(Peer *peer, Flags flags, OnReturnCallback &&callback,
 			  const std::string &name, const Targs &...args)
 	{

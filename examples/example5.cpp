@@ -34,6 +34,9 @@ int main()
 			printf(" %s = %i\n", str.c_str(), sum);
 		});
 
+	mpe2->RegisterMessage("void(void)",
+						  []() { printf(" void(void) called\n"); });
+
 	mpe2->RegisterMessage(
 		"mult",
 		[](icon6::Flags flags, std::vector<int> msg,
@@ -41,7 +44,7 @@ int main()
 		   std::shared_ptr<icon6::Host> h) -> std::string {
 			mpe->Send(p.get(), 0, "sum", msg, "Sum of values");
 			if (msg.size() == 0) {
-				printf("Sleeping\n");
+				printf(" mult Sleeping\n");
 				std::this_thread::sleep_for(std::chrono::milliseconds(200));
 			}
 			std::string ret;
@@ -76,32 +79,43 @@ int main()
 
 	if (p1 != nullptr) {
 
-		mpe->Call<std::string, std::vector<int>>(
+		mpe->Call<std::vector<int>>(
 			p1.get(), 0,
 			icon6::OnReturnCallback::Make<std::string>(
 				[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags,
 				   std::string str) -> void {
-					fprintf(stderr, "Returned string: %s\n", str.c_str());
-					fflush(stderr);
+					printf(" mult Returned string: %s\n", str.c_str());
 				},
 				nullptr, 10000, p1),
 			"mult", {1, 2, 3, 4, 5});
 
-		mpe->Call<std::string, std::vector<int>>(
+		mpe->Call<std::vector<int>>(
 			p1.get(), 0,
 			icon6::OnReturnCallback::Make<std::string>(
 				[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags,
 				   std::string str) -> void {
-					printf("Returned string: %s\n", str.c_str());
+					printf(" Returned string: %s\n", str.c_str());
 				},
 				[](std::shared_ptr<icon6::Peer> peer) -> void {
-					printf("Timeout\n");
+					printf(" mult Timeout\n");
 				},
 				100, p1),
 			"mult", {});
 
 		std::vector<int> s = {1, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2};
 		mpe->Send(p1.get(), 0, "mult", s);
+
+		mpe->Send(p1.get(), 0, "void(void)");
+
+		auto callback = icon6::OnReturnCallback::Make(
+			[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags) -> void {
+				printf(" void(void) returned callback\n");
+			},
+			[](std::shared_ptr<icon6::Peer> peer) -> void {
+				printf(" void(void) timeout\n");
+			},
+			10000, p1);
+		mpe->Call(p1.get(), 0, std::move(callback), "void(void)");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
