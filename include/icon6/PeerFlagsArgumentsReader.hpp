@@ -21,6 +21,7 @@
 
 #include <memory>
 #include <tuple>
+#include <iostream>
 
 #include "ByteReader.hpp"
 #include "Host.hpp"

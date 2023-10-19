@@ -32,17 +32,16 @@ public:
 
 public:
 	ByteReader(std::vector<uint8_t> &&bytes, uint32_t offset)
-		: bitscpp::ByteReader<true>(bytes.data() + offset,
-									bytes.size() - offset),
+		: bitscpp::ByteReader<true>(bytes.data(), offset, bytes.size()),
 		  bytes(std::move(bytes))
 	{
 	}
 	~ByteReader() {}
 
 	ByteReader(ByteReader &&o)
-		: bitscpp::ByteReader<true>(o.get_buffer() + o.get_offset(),
-									o.get_remaining_bytes()),
-		  bytes(o.bytes)
+		: bitscpp::ByteReader<true>(o.bytes.data(), o.get_offset(),
+									o.bytes.size()),
+		  bytes(std::move(o.bytes))
 	{
 	}
 	ByteReader &operator=(ByteReader &&o)

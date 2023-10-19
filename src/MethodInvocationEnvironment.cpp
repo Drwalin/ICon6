@@ -90,10 +90,14 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 					mtd->Call(object->second.objectPtr, peer, reader, flags);
 				}
 			} else { // method name does not exists
-					 // TODO: do something, show error or anything
+				printf(" Method %s not found for object %lu of type %s\n",
+					   name.c_str(), objectId,
+					   object->second.obejctClass->name.c_str());
+				// TODO: do something, show error or anything
 			}
 		} else { // this object does not exists locally
 				 // TODO: do something, show error or anything
+			printf(" Object %lu not found\n", objectId);
 		}
 	} else {
 		MessagePassingEnvironment::OnReceive(peer, reader, flags);
