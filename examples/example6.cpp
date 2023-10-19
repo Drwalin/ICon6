@@ -38,6 +38,13 @@ public:
 		fflush(stdout);
 		return arg + std::to_string(a2);
 	}
+
+	void Method3()
+	{
+		printf("Called TestClass::Method3(void) on %p on thread %i\n",
+			   (void *)this, threadId);
+		fflush(stdout);
+	}
 };
 
 class InheritedClass : public TestClass
@@ -79,6 +86,8 @@ int main()
 	mpe2->RegisterClass<TestClass>("TestClass", nullptr);
 	mpe2->RegisterMemberFunction<TestClass>("TestClass", "Method",
 											&TestClass::Method);
+	mpe2->RegisterMemberFunction<TestClass>("TestClass", "Method3",
+											&TestClass::Method3);
 	mpe2->RegisterClass<InheritedClass>("InheritedClass",
 										mpe2->GetClassByName("TestClass"));
 	mpe2->RegisterMemberFunction<TestClass>("TestClass", "Method2",
@@ -166,6 +175,18 @@ int main()
 				},
 				10000, p1),
 			obj[1], "Method2", "qwerty", 999);
+
+		mpe->CallInvoke(p1.get(), 0,
+						icon6::OnReturnCallback::Make(
+							[](std::shared_ptr<icon6::Peer> peer,
+							   icon6::Flags flags) -> void {
+								printf(" TestClass::Method3 return callback\n");
+							},
+							[](std::shared_ptr<icon6::Peer> peer) -> void {
+								printf(" TestClass::Method3 timeout\n");
+							},
+							10000, p1),
+						obj[1], "Method3");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 

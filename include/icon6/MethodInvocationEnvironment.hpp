@@ -22,9 +22,9 @@
 #include <memory>
 
 #include "MethodInvocationConverter.hpp"
+#include "Flags.hpp"
 
 #include "MessagePassingEnvironment.hpp"
-#include "icon6/Flags.hpp"
 
 namespace icon6
 {
@@ -149,6 +149,7 @@ public:
 			writer.op(objectId);
 			writer.op(name);
 			(writer.op(args), ...);
+			writer.op(returnCallbackId);
 		}
 		peer->Send(std::move(buffer), flags);
 	}
