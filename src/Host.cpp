@@ -176,7 +176,7 @@ void Host::DispatchEvent(ENetEvent &event)
 			std::shared_ptr<Peer> peer(new Peer(this, event.peer));
 			peers.insert(peer);
 		}
-		((Peer *)event.peer->data)->StartHandshake();
+		((Peer *)event.peer->data)->_InternalStartHandshake();
 	} break;
 	case ENET_EVENT_TYPE_RECEIVE: {
 		Flags flags = 0;

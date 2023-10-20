@@ -40,7 +40,7 @@ Peer::~Peer() {}
 
 void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 {
-	if (state != STATE_READY_TO_USE) {
+	if (GetState() != STATE_READY_TO_USE) {
 		throw "Peer::Send Handshake is not finished yet. Sending is not "
 			  "posible.";
 	}
@@ -62,7 +62,8 @@ void Peer::_InternalSend(std::vector<uint8_t> &&data, Flags flags)
 		0 | (flags & FLAG_SEQUENCED ? 0 : ENET_PACKET_FLAG_UNSEQUENCED) |
 			(flags & FLAG_RELIABLE ? ENET_PACKET_FLAG_RELIABLE : 0));
 
-	EncryptMessage(packet->data, data.data(), data.size(), flags);
+	encryptionState.EncryptMessage(packet->data, data.data(), data.size(),
+								   flags);
 
 	uint8_t channel = flags & (FLAG_RELIABLE | FLAG_SEQUENCED) ? 0 : 1;
 	enet_peer_send(peer, channel, packet);
@@ -82,6 +83,8 @@ void Peer::_InternalDisconnect(uint32_t disconnectData)
 	enet_peer_disconnect(peer, disconnectData);
 }
 
+void Peer::_InternalStartHandshake() { encryptionState.StartHandshake(this); }
+
 void Peer::SetReceiveCallback(void (*callback)(Peer *,
 											   std::vector<uint8_t> &data,
 											   Flags flags))
@@ -91,25 +94,25 @@ void Peer::SetReceiveCallback(void (*callback)(Peer *,
 
 void Peer::CallCallbackReceive(uint8_t *data, uint32_t size, Flags flags)
 {
-	switch (state) {
+	switch (GetState()) {
 	case STATE_SENT_CERT:
-		ReceivedWhenStateSentCert(data, size, flags);
+		encryptionState.ReceivedWhenStateSentCert(this, data, size, flags);
 		break;
 
 	case STATE_SENT_KEX:
-		ReceivedWhenStateSentKex(data, size, flags);
+		encryptionState.ReceivedWhenStateSentKex(this, data, size, flags);
 
-		if (state == STATE_BEFORE_ON_CONNECT_CALLBACK) {
+		if (GetState() == STATE_BEFORE_ON_CONNECT_CALLBACK) {
 			if (host->callbackOnConnect)
 				host->callbackOnConnect(this);
-			if (state == STATE_BEFORE_ON_CONNECT_CALLBACK)
-				state = STATE_READY_TO_USE;
+			if (GetState() == STATE_BEFORE_ON_CONNECT_CALLBACK)
+				encryptionState.state = STATE_READY_TO_USE;
 		}
 		break;
 
 	case STATE_READY_TO_USE: {
-		DecryptMessage(receivedData, data, size, flags);
-		if (state == STATE_READY_TO_USE) {
+		encryptionState.DecryptMessage(receivedData, data, size, flags);
+		if (GetState() == STATE_READY_TO_USE) {
 			if (callbackOnReceive) {
 				callbackOnReceive(this, receivedData, flags);
 			}
@@ -137,7 +140,7 @@ void Peer::SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData))
 
 void Peer::CallCallbackDisconnect(uint32_t data)
 {
-	if (state == STATE_READY_TO_USE) {
+	if (GetState() == STATE_READY_TO_USE) {
 		if (callbackOnDisconnect) {
 			callbackOnDisconnect(this, data);
 		} else if (host->callbackOnDisconnect) {

@@ -28,7 +28,6 @@
 #include <atomic>
 
 #include "Flags.hpp"
-
 #include "ConnectionEncryptionState.hpp"
 
 namespace icon6
@@ -36,7 +35,7 @@ namespace icon6
 
 class Host;
 
-class Peer final : public ConnectionEncryptionState
+class Peer final : public std::enable_shared_from_this<Peer>
 {
 public:
 	~Peer();
@@ -67,7 +66,14 @@ public:
 
 	inline bool IsValid() const { return peer != nullptr && IsHandshakeDone(); }
 
-	inline bool IsHandshakeDone() const { return state == STATE_READY_TO_USE; }
+	inline PeerConnectionState GetState() const
+	{
+		return encryptionState.state;
+	}
+	inline bool IsHandshakeDone() const
+	{
+		return GetState() == STATE_READY_TO_USE;
+	}
 
 	inline Host *GetHost() { return host; }
 
@@ -85,6 +91,7 @@ public:
 public:
 	void _InternalSend(std::vector<uint8_t> &&data, Flags flags);
 	void _InternalDisconnect(uint32_t disconnectData);
+	void _InternalStartHandshake();
 
 private:
 	void CallCallbackReceive(uint8_t *data, uint32_t size, Flags flags);
@@ -101,6 +108,8 @@ protected:
 	Peer(Host *host, ENetPeer *peer);
 
 private:
+	ConnectionEncryptionState encryptionState;
+
 	std::vector<uint8_t> receivedData;
 
 	Host *host;

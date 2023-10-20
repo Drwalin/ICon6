@@ -67,7 +67,7 @@ void ConnectionEncryptionState::EncryptMessage(uint8_t *cipher,
 		nullptr, nonce, sendingKey);
 }
 
-void ConnectionEncryptionState::DecryptMessage(
+bool ConnectionEncryptionState::DecryptMessage(
 	std::vector<uint8_t> &receivedData, uint8_t *cipher, uint32_t size,
 	Flags flags)
 {
@@ -94,30 +94,31 @@ void ConnectionEncryptionState::DecryptMessage(
 			sizeof(ad), nonce, receivingKey)) {
 		DEBUG("Failed to decrypt `%s`", receivedData.data());
 		state = STATE_FAILED_TO_VERIFY_MESSAGE;
-		enet_peer_disconnect(GetPeer()->peer, 2);
+		return false;
 	}
+	return true;
 }
 
-void ConnectionEncryptionState::StartHandshake()
+void ConnectionEncryptionState::StartHandshake(Peer *peer)
 {
 	// TODO: send certificate instead of only public key
-
 	sendMessagesCounter = 0;
-	ENetPacket *packet = enet_packet_create(GetHost()->certKey->GetPublicKey(),
+	ENetPacket *packet = enet_packet_create(peer->host->certKey->GetPublicKey(),
 											crypto::SIGN_PUBLIC_KEY_BYTES,
 											ENET_PACKET_FLAG_RELIABLE);
-	enet_peer_send(GetPeer()->peer, 0, packet);
+	enet_peer_send(peer->peer, 0, packet);
 	state = STATE_SENT_CERT;
 }
 
-void ConnectionEncryptionState::ReceivedWhenStateSentCert(uint8_t *_data,
+void ConnectionEncryptionState::ReceivedWhenStateSentCert(Peer *peer,
+														  uint8_t *_data,
 														  uint32_t size,
 														  Flags flags)
 {
 	if (size != crypto::SIGN_PUBLIC_KEY_BYTES) {
 		DEBUG("Received size of certificate (public key) is invalid");
 		state = STATE_FAILED_TO_AUTHENTICATE;
-		enet_peer_disconnect(GetPeer()->peer, 1);
+		enet_peer_disconnect(peer->peer, 1);
 		return;
 	}
 	memcpy(peerPublicKey, _data, size);
@@ -129,20 +130,21 @@ void ConnectionEncryptionState::ReceivedWhenStateSentCert(uint8_t *_data,
 
 	crypto_kx_keypair(publicKey, secretKey);
 	memcpy(packet->data, publicKey, crypto::KEX_PUBLIC_KEY_BYTES);
-	GetHost()->certKey->Sign(packet->data + crypto::KEX_PUBLIC_KEY_BYTES,
-							 packet->data, crypto::KEX_PUBLIC_KEY_BYTES);
-	enet_peer_send(GetPeer()->peer, 0, packet);
+	peer->host->certKey->Sign(packet->data + crypto::KEX_PUBLIC_KEY_BYTES,
+							  packet->data, crypto::KEX_PUBLIC_KEY_BYTES);
+	enet_peer_send(peer->peer, 0, packet);
 	state = STATE_SENT_KEX;
 }
 
-void ConnectionEncryptionState::ReceivedWhenStateSentKex(uint8_t *data,
+void ConnectionEncryptionState::ReceivedWhenStateSentKex(Peer *peer,
+														 uint8_t *data,
 														 uint32_t size,
 														 Flags flags)
 {
 	if (size != crypto::KEX_PUBLIC_KEY_BYTES + crypto::SIGNATURE_BYTES) {
 		DEBUG("Received kex size is invalid");
 		state = STATE_FAILED_TO_AUTHENTICATE;
-		enet_peer_disconnect(GetPeer()->peer, 1);
+		enet_peer_disconnect(peer->peer, 1);
 		return;
 	}
 	if (crypto_sign_ed25519_verify_detached(
@@ -150,7 +152,7 @@ void ConnectionEncryptionState::ReceivedWhenStateSentKex(uint8_t *data,
 			crypto::KEX_PUBLIC_KEY_BYTES, peerPublicKey)) {
 		DEBUG("Failed to verify kex message");
 		state = STATE_FAILED_TO_AUTHENTICATE;
-		enet_peer_disconnect(GetPeer()->peer, 2);
+		enet_peer_disconnect(peer->peer, 2);
 		return;
 	}
 	state = STATE_SENT_AND_RECEIVED_KEX;
@@ -163,7 +165,7 @@ void ConnectionEncryptionState::ReceivedWhenStateSentKex(uint8_t *data,
 										  clientPublicKey)) {
 			DEBUG("Failed to generate client session key");
 			state = STATE_FAILED_TO_AUTHENTICATE;
-			enet_peer_disconnect(GetPeer()->peer, 2);
+			enet_peer_disconnect(peer->peer, 2);
 			return;
 		}
 	} else {
@@ -171,13 +173,11 @@ void ConnectionEncryptionState::ReceivedWhenStateSentKex(uint8_t *data,
 										  clientPublicKey)) {
 			DEBUG("Failed to generate server session key");
 			state = STATE_FAILED_TO_AUTHENTICATE;
-			enet_peer_disconnect(GetPeer()->peer, 2);
+			enet_peer_disconnect(peer->peer, 2);
 			return;
 		}
 	}
 
 	state = STATE_BEFORE_ON_CONNECT_CALLBACK;
 }
-
-Host *ConnectionEncryptionState::GetHost() { return GetPeer()->host; }
 } // namespace icon6

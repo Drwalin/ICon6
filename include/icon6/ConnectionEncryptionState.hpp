@@ -53,7 +53,7 @@ class Peer;
 class Command;
 class Host;
 
-class ConnectionEncryptionState : public std::enable_shared_from_this<Peer>
+class ConnectionEncryptionState
 {
 public:
 	ConnectionEncryptionState();
@@ -70,17 +70,18 @@ public:
 	}
 	void EncryptMessage(uint8_t *cipher, const uint8_t *message,
 						uint32_t messageLength, Flags flags);
-	void DecryptMessage(std::vector<uint8_t> &receivedData, uint8_t *cipher,
+	bool DecryptMessage(std::vector<uint8_t> &receivedData, uint8_t *cipher,
 						uint32_t cipherLength, Flags flags);
 
-	void StartHandshake();
-	void ReceivedWhenStateSentCert(uint8_t *data, uint32_t size, Flags flags);
-	void ReceivedWhenStateSentKex(uint8_t *data, uint32_t size, Flags flags);
-
-	inline Peer *GetPeer() { return (Peer *)this; }
-	Host *GetHost();
+	void StartHandshake(Peer *peer);
+	void ReceivedWhenStateSentCert(Peer *peer, uint8_t *data, uint32_t size,
+								   Flags flags);
+	void ReceivedWhenStateSentKex(Peer *peer, uint8_t *data, uint32_t size,
+								  Flags flags);
 
 	inline PeerConnectionState GetState() const { return state; }
+
+	friend class Peer;
 
 protected:
 	uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
