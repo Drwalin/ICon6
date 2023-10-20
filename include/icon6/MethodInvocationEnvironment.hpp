@@ -31,10 +31,10 @@ namespace icon6
 namespace rmi
 {
 
-class Class : public std::enable_shared_from_this<Class>
+class Class
 {
 public:
-	Class(std::shared_ptr<Class> parentClass, std::string name,
+	Class(Class *parentClass, std::string name,
 		  std::shared_ptr<void> (*constructor)());
 
 	void RegisterMethod(std::string methodName,
@@ -59,18 +59,18 @@ public:
 class MethodInvocationEnvironment : public MessagePassingEnvironment
 {
 public:
-	std::shared_ptr<Class> GetClassByName(std::string name);
+	Class *GetClassByName(std::string name);
 
 	virtual void OnReceive(Peer *peer, ByteReader &reader,
 						   Flags flags) override;
 
 	template <typename T>
-	void RegisterClass(std::string className,
-					   std::shared_ptr<Class> parentClass)
+	void RegisterClass(std::string className, Class *parentClass)
 	{
-		auto cls = std::make_shared<Class>(
-			parentClass, className,
-			[]() -> std::shared_ptr<void> { return std::make_shared<T>(); });
+		Class *cls =
+			new Class(parentClass, className, []() -> std::shared_ptr<void> {
+				return std::make_shared<T>();
+			});
 		classes[className] = cls;
 	}
 
@@ -79,11 +79,11 @@ public:
 		std::string className, std::string methodName, Fun &&memberFunction,
 		std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
 	{
-		std::shared_ptr<Class> cls = GetClassByName(className);
+		Class *cls = GetClassByName(className);
 		if (cls) {
 			auto mtd =
 				MakeShared(new MessageNetworkAwareMethodInvocationConverterSpec(
-					cls.get(), memberFunction));
+					cls, memberFunction));
 			mtd->executionQueue = executionQueue;
 			cls->RegisterMethod(methodName, mtd);
 		} else {
@@ -107,7 +107,7 @@ public:
 		auto cls = GetClassByName(className);
 		if (cls) {
 			auto obj = cls->constructor();
-			objects[id] = Object{obj, cls.get()};
+			objects[id] = Object{obj, cls};
 			return std::static_pointer_cast<T>(obj);
 		}
 		return nullptr;
@@ -156,7 +156,7 @@ public:
 
 protected:
 	std::unordered_map<size_t, Object> objects;
-	std::unordered_map<std::string, std::shared_ptr<Class>> classes;
+	std::unordered_map<std::string, Class *> classes;
 };
 } // namespace rmi
 } // namespace icon6
