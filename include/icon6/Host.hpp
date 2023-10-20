@@ -56,10 +56,8 @@ class Host final
 public:
 	static Host *Make(uint16_t port, uint32_t maximumHostsNumber);
 
-	void SetMessagePassingEnvironment(
-		std::shared_ptr<MessagePassingEnvironment> mpe);
-	inline std::shared_ptr<MessagePassingEnvironment>
-	GetMessagePassingEnvironment()
+	void SetMessagePassingEnvironment(MessagePassingEnvironment *mpe);
+	inline MessagePassingEnvironment *GetMessagePassingEnvironment()
 	{
 		return mpe;
 	}
@@ -126,7 +124,7 @@ private:
 		PeerAcceptancePolicy::ACCEPT_ALL;
 	// 		uint32_t maxCertificateDepthAcceptable = 16;
 
-	std::shared_ptr<MessagePassingEnvironment> mpe;
+	MessagePassingEnvironment *mpe;
 
 	enum HostFlags : uint32_t {
 		RUNNING = 1 << 0,

@@ -5,8 +5,8 @@
 #include <memory>
 #include <thread>
 
-std::shared_ptr<icon6::rmi::MethodInvocationEnvironment> mpe =
-	std::make_shared<icon6::rmi::MethodInvocationEnvironment>();
+icon6::rmi::MethodInvocationEnvironment *mpe =
+	new icon6::rmi::MethodInvocationEnvironment();
 
 class TestClass
 {

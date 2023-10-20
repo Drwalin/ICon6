@@ -40,7 +40,6 @@ namespace icon6
 class CommandExecutionQueue;
 
 class MessagePassingEnvironment
-	: public std::enable_shared_from_this<MessagePassingEnvironment>
 {
 public:
 	virtual void OnReceive(Peer *peer, ByteReader &reader, Flags flags);

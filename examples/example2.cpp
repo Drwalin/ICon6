@@ -5,8 +5,7 @@
 #include <memory>
 #include <thread>
 
-std::shared_ptr<icon6::MessagePassingEnvironment> mpe =
-	std::make_shared<icon6::MessagePassingEnvironment>();
+icon6::MessagePassingEnvironment *mpe = new icon6::MessagePassingEnvironment();
 
 int main()
 {

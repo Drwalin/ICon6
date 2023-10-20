@@ -294,8 +294,7 @@ void Host::EnqueueCommand(Command &&command)
 	commandQueue->EnqueueCommand(std::move(command));
 }
 
-void Host::SetMessagePassingEnvironment(
-	std::shared_ptr<MessagePassingEnvironment> mpe)
+void Host::SetMessagePassingEnvironment(MessagePassingEnvironment *mpe)
 {
 	this->mpe = mpe;
 	if (mpe) {
