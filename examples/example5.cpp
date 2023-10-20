@@ -40,8 +40,7 @@ int main()
 	mpe2->RegisterMessage(
 		"mult",
 		[](icon6::Flags flags, std::vector<int> msg,
-		   std::shared_ptr<icon6::Peer> p,
-		   std::shared_ptr<icon6::Host> h) -> std::string {
+		   std::shared_ptr<icon6::Peer> p, icon6::Host *h) -> std::string {
 			mpe->Send(p.get(), 0, "sum", msg, "Sum of values");
 			if (msg.size() == 0) {
 				printf(" mult Sleeping\n");

@@ -48,9 +48,9 @@ void Debug(const char *file, int line, const char *fmt, ...)
 	fflush(stderr);
 }
 
-std::shared_ptr<Host> Host::Make(uint16_t port, uint32_t maximumHostsNumber)
+Host *Host::Make(uint16_t port, uint32_t maximumHostsNumber)
 {
-	return std::make_shared<Host>(port, maximumHostsNumber);
+	return new Host(port, maximumHostsNumber);
 }
 
 Host::Host(uint16_t port, uint32_t maximumHostsNumber)
@@ -116,9 +116,7 @@ void Host::Destroy()
 void Host::RunAsync()
 {
 	flags = 0;
-	std::thread([](std::shared_ptr<Host> host) { host->RunSync(); },
-				shared_from_this())
-		.detach();
+	std::thread([](Host *host) { host->RunSync(); }, this).detach();
 }
 
 void Host::RunSync()
@@ -175,8 +173,7 @@ void Host::DispatchEvent(ENetEvent &event)
 	switch (event.type) {
 	case ENET_EVENT_TYPE_CONNECT: {
 		if (event.peer->data == nullptr) {
-			std::shared_ptr<Peer> peer(
-				new Peer(shared_from_this(), event.peer));
+			std::shared_ptr<Peer> peer(new Peer(this, event.peer));
 			peers.insert(peer);
 		}
 		((Peer *)event.peer->data)->StartHandshake();
@@ -266,7 +263,7 @@ void Host::Connect(std::string address, uint16_t port,
 				   std::shared_ptr<CommandExecutionQueue> queue)
 {
 	std::thread(
-		[](std::string address, uint16_t port, std::shared_ptr<Host> host,
+		[](std::string address, uint16_t port, Host *host,
 		   commands::ExecuteOnPeer &&onConnected,
 		   std::shared_ptr<CommandExecutionQueue> queue) {
 			Command command(commands::ExecuteConnect{});
@@ -278,7 +275,7 @@ void Host::Connect(std::string address, uint16_t port,
 			com.host = host;
 			host->EnqueueCommand(std::move(command));
 		},
-		address, port, shared_from_this(), std::move(onConnected), queue)
+		address, port, this, std::move(onConnected), queue)
 		.detach();
 }
 
@@ -286,7 +283,7 @@ std::shared_ptr<Peer> Host::_InternalConnect(ENetAddress address)
 {
 	ENetPeer *peer = enet_host_connect(host, &address, 2, 0);
 	enet_host_flush(host);
-	std::shared_ptr<Peer> p(new Peer(shared_from_this(), peer));
+	std::shared_ptr<Peer> p(new Peer(this, peer));
 	peer->data = p.get();
 	peers.insert(p);
 	return p;

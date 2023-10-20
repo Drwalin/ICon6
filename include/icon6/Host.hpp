@@ -51,11 +51,10 @@ enum class PeerAcceptancePolicy {
 	ACCEPT_INDIRECTLY_TRUSTED_BY_CA,
 };
 
-class Host final : public std::enable_shared_from_this<Host>
+class Host final
 {
 public:
-	static std::shared_ptr<Host> Make(uint16_t port,
-									  uint32_t maximumHostsNumber);
+	static Host *Make(uint16_t port, uint32_t maximumHostsNumber);
 
 	void SetMessagePassingEnvironment(
 		std::shared_ptr<MessagePassingEnvironment> mpe);

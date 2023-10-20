@@ -40,15 +40,9 @@ public:
 	}
 
 	inline static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
-								std::shared_ptr<Host> &value)
-	{
-		value = peer->GetHost();
-	}
-
-	inline static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
 								Host *&value)
 	{
-		value = peer->GetHost().get();
+		value = peer->GetHost();
 	}
 
 	inline static void ReadType(Peer *peer, Flags flags, ByteReader &reader,

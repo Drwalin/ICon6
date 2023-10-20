@@ -179,8 +179,5 @@ void ConnectionEncryptionState::ReceivedWhenStateSentKex(uint8_t *data,
 	state = STATE_BEFORE_ON_CONNECT_CALLBACK;
 }
 
-std::shared_ptr<Host> ConnectionEncryptionState::GetHost()
-{
-	return GetPeer()->host;
-}
+Host *ConnectionEncryptionState::GetHost() { return GetPeer()->host; }
 } // namespace icon6

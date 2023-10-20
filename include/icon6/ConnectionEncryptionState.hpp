@@ -78,7 +78,7 @@ public:
 	void ReceivedWhenStateSentKex(uint8_t *data, uint32_t size, Flags flags);
 
 	inline Peer *GetPeer() { return (Peer *)this; }
-	std::shared_ptr<Host> GetHost();
+	Host *GetHost();
 
 	inline PeerConnectionState GetState() const { return state; }
 

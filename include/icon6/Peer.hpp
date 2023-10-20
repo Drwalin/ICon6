@@ -69,7 +69,7 @@ public:
 
 	inline bool IsHandshakeDone() const { return state == STATE_READY_TO_USE; }
 
-	inline std::shared_ptr<Host> GetHost() { return host; }
+	inline Host *GetHost() { return host; }
 
 	void SetReceiveCallback(void (*callback)(Peer *, std::vector<uint8_t> &data,
 											 Flags flags));
@@ -98,12 +98,12 @@ private:
 	};
 
 protected:
-	Peer(std::shared_ptr<Host> host, ENetPeer *peer);
+	Peer(Host *host, ENetPeer *peer);
 
 private:
 	std::vector<uint8_t> receivedData;
 
-	std::shared_ptr<Host> host;
+	Host *host;
 	ENetPeer *peer;
 
 	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data, Flags flags);

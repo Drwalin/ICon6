@@ -30,7 +30,7 @@
 
 namespace icon6
 {
-Peer::Peer(std::shared_ptr<Host> host, ENetPeer *peer) : host(host), peer(peer)
+Peer::Peer(Host *host, ENetPeer *peer) : host(host), peer(peer)
 {
 	peer->data = this;
 	callbackOnReceive = host->callbackOnReceive;

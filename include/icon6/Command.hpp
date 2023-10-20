@@ -149,7 +149,7 @@ public:
 class ExecuteConnect final : public BaseCommandExecute
 {
 public:
-	std::shared_ptr<Host> host;
+	Host *host;
 	ENetAddress address;
 
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
