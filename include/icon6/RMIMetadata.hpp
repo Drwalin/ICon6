@@ -25,7 +25,6 @@
 #include <unordered_set>
 
 namespace icon6
-
 {
 namespace rmi
 {
