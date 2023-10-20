@@ -23,6 +23,7 @@
 
 #include "MethodInvocationConverter.hpp"
 #include "Flags.hpp"
+#include "RMIMetadata.hpp"
 
 #include "MessagePassingEnvironment.hpp"
 
@@ -30,31 +31,6 @@ namespace icon6
 {
 namespace rmi
 {
-
-class Class
-{
-public:
-	Class(Class *parentClass, std::string name,
-		  std::shared_ptr<void> (*constructor)());
-
-	void RegisterMethod(std::string methodName,
-						std::shared_ptr<MethodInvocationConverter> converter);
-
-	std::unordered_map<std::string, std::shared_ptr<MethodInvocationConverter>>
-		methods;
-	std::shared_ptr<void> (*const constructor)();
-
-	Class *const parentClass;
-	std::unordered_set<Class *> inheritedClasses;
-	const std::string name;
-};
-
-class Object
-{
-public:
-	std::shared_ptr<void> objectPtr;
-	Class *obejctClass;
-};
 
 class MethodInvocationEnvironment : public MessagePassingEnvironment
 {
