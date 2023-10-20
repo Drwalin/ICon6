@@ -55,7 +55,7 @@ void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 void Peer::_InternalSend(std::vector<uint8_t> &&data, Flags flags)
 {
 	const uint32_t packetSize =
-		ConnectionEncryptionState ::GetEncryptedMessageLength(data.size());
+		PeerEncryptor::GetEncryptedMessageLength(data.size());
 
 	ENetPacket *packet = enet_packet_create(
 		nullptr, packetSize,
@@ -92,15 +92,15 @@ void Peer::SetReceiveCallback(void (*callback)(Peer *,
 	callbackOnReceive = callback;
 }
 
-void Peer::CallCallbackReceive(uint8_t *data, uint32_t size, Flags flags)
+void Peer::CallCallbackReceive(ENetPacket *packet, Flags flags)
 {
 	switch (GetState()) {
 	case STATE_SENT_CERT:
-		encryptionState.ReceivedWhenStateSentCert(this, data, size, flags);
+		encryptionState.ReceivedWhenStateSentCert(this, packet, flags);
 		break;
 
 	case STATE_SENT_KEX:
-		encryptionState.ReceivedWhenStateSentKex(this, data, size, flags);
+		encryptionState.ReceivedWhenStateSentKex(this, packet, flags);
 
 		if (GetState() == STATE_BEFORE_ON_CONNECT_CALLBACK) {
 			if (host->callbackOnConnect)
@@ -111,7 +111,8 @@ void Peer::CallCallbackReceive(uint8_t *data, uint32_t size, Flags flags)
 		break;
 
 	case STATE_READY_TO_USE: {
-		encryptionState.DecryptMessage(receivedData, data, size, flags);
+		encryptionState.DecryptMessage(receivedData, packet->data,
+									   packet->dataLength, flags);
 		if (GetState() == STATE_READY_TO_USE) {
 			if (callbackOnReceive) {
 				callbackOnReceive(this, receivedData, flags);

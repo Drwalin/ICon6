@@ -25,6 +25,8 @@
 #include <memory>
 #include <atomic>
 
+#include <enet/enet.h>
+
 #include "Flags.hpp"
 #include "Cert.hpp"
 
@@ -53,44 +55,67 @@ class Peer;
 class Command;
 class Host;
 
+class PeerEncryptor
+{
+public:
+	PeerEncryptor();
+	~PeerEncryptor();
+
+	ENetPacket *
+	CreateHandshakePacketData(std::shared_ptr<crypto::CertKey> certKey);
+	ENetPacket *CreateKEXPacket(std::shared_ptr<crypto::CertKey> certKey,
+								ENetPacket *receivedHandshake);
+	bool ReceiveKEX(ENetPacket *receivedKEX);
+
+	static constexpr uint32_t GetEncryptedMessageOverhead()
+	{
+		return sizeof(sendMessagesCounter) +
+			   crypto_aead_chacha20poly1305_ietf_ABYTES; // mac bytes
+	}
+	inline static uint32_t GetEncryptedMessageLength(uint32_t rawMessageLength)
+	{
+		return rawMessageLength + GetEncryptedMessageOverhead();
+	}
+
+	void EncryptMessage(uint8_t *cipher, const uint8_t *message,
+						uint32_t messageLength, Flags flags);
+	bool DecryptMessage(std::vector<uint8_t> &receivedData, uint8_t *cipher,
+						uint32_t cipherLength, Flags flags);
+
+	friend class ConnectionEncryptionState;
+
+private:
+	uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
+	uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
+	uint8_t sendingKey[32];
+	uint8_t receivingKey[32];
+	uint8_t peerPublicKey[crypto::SIGN_PUBLIC_KEY_BYTES];
+
+	uint32_t sendMessagesCounter;
+};
+
 class ConnectionEncryptionState
 {
 public:
 	ConnectionEncryptionState();
 	~ConnectionEncryptionState();
 
-	static constexpr uint32_t GetEncryptedMessageOverhead()
-	{
-		return sizeof(sendMessagesCounter) +
-			   crypto_aead_chacha20poly1305_ietf_ABYTES;
-	}
-	inline static uint32_t GetEncryptedMessageLength(uint32_t rawMessageLength)
-	{
-		return rawMessageLength + GetEncryptedMessageOverhead();
-	}
+	void StartHandshake(Peer *peer);
+	void ReceivedWhenStateSentCert(Peer *peer, ENetPacket *packet, Flags flags);
+	void ReceivedWhenStateSentKex(Peer *peer, ENetPacket *packet, Flags flags);
+
 	void EncryptMessage(uint8_t *cipher, const uint8_t *message,
 						uint32_t messageLength, Flags flags);
-	bool DecryptMessage(std::vector<uint8_t> &receivedData, uint8_t *cipher,
-						uint32_t cipherLength, Flags flags);
 
-	void StartHandshake(Peer *peer);
-	void ReceivedWhenStateSentCert(Peer *peer, uint8_t *data, uint32_t size,
-								   Flags flags);
-	void ReceivedWhenStateSentKex(Peer *peer, uint8_t *data, uint32_t size,
-								  Flags flags);
+	bool DecryptMessage(std::vector<uint8_t> &receivedData, uint8_t *cipher,
+						uint32_t size, Flags flags);
 
 	inline PeerConnectionState GetState() const { return state; }
 
 	friend class Peer;
 
 protected:
-	uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
-	uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
-	uint8_t sendingKey[32];
-	uint8_t receivingKey[32];
-	uint8_t peerPublicKey[crypto::SIGN_PUBLIC_KEY_BYTES];
-	uint32_t sendMessagesCounter;
-
+	PeerEncryptor encryptor;
 	PeerConnectionState state;
 };
 } // namespace icon6

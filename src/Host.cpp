@@ -185,8 +185,7 @@ void Host::DispatchEvent(ENetEvent &event)
 		if (!(event.packet->flags & ENET_PACKET_FLAG_UNSEQUENCED))
 			flags &= FLAG_SEQUENCED;
 		Peer *peer = (Peer *)event.peer->data;
-		peer->CallCallbackReceive(event.packet->data, event.packet->dataLength,
-								  flags);
+		peer->CallCallbackReceive(event.packet, flags);
 		enet_packet_destroy(event.packet);
 	} break;
 	case ENET_EVENT_TYPE_DISCONNECT: {

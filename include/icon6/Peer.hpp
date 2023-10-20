@@ -19,13 +19,13 @@
 #ifndef ICON6_PEER_HPP
 #define ICON6_PEER_HPP
 
-#include <enet/enet.h>
-
 #include <cinttypes>
 
 #include <thread>
 #include <memory>
 #include <atomic>
+
+#include <enet/enet.h>
 
 #include "Flags.hpp"
 #include "ConnectionEncryptionState.hpp"
@@ -47,8 +47,7 @@ public:
 	inline uint32_t GetMTU() const { return peer->mtu; }
 	inline uint32_t GetEncryptedMTU() const
 	{
-		return peer->mtu -
-			   ConnectionEncryptionState::GetEncryptedMessageOverhead();
+		return peer->mtu - PeerEncryptor::GetEncryptedMessageOverhead();
 	}
 	inline uint32_t GetMaxSinglePackedMessageSize() const
 	{
@@ -94,7 +93,7 @@ public:
 	void _InternalStartHandshake();
 
 private:
-	void CallCallbackReceive(uint8_t *data, uint32_t size, Flags flags);
+	void CallCallbackReceive(ENetPacket *packet, Flags flags);
 	void CallCallbackDisconnect(uint32_t data);
 
 	enum ENetPacketFlags {
