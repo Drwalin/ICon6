@@ -16,69 +16,57 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ICON6_CONNECTION_ENCRYPTION_STATE_HPP
-#define ICON6_CONNECTION_ENCRYPTION_STATE_HPP
+#ifndef ICON6_PEER_ENCRYPTOR_HPP
+#define ICON6_PEER_ENCRYPTOR_HPP
 
 #include <cinttypes>
 
-#include <thread>
 #include <memory>
-#include <atomic>
 
 #include <enet/enet.h>
 
-#include "Flags.hpp"
 #include "Cert.hpp"
-#include "PeerEncryptor.hpp"
+#include "Flags.hpp"
 
 namespace icon6
 {
-
-enum PeerConnectionState : uint32_t {
-	STATE_NONE,
-
-	STATE_ZOMBIE,
-	STATE_DISCONNECTED,
-	STATE_FAILED_TO_AUTHENTICATE,
-	STATE_FAILED_TO_VERIFY_MESSAGE,
-
-	STATE_SENT_CERT,
-	STATE_SENT_AND_RECEIVED_CERT,
-
-	STATE_SENT_KEX,
-	STATE_SENT_AND_RECEIVED_KEX,
-
-	STATE_BEFORE_ON_CONNECT_CALLBACK,
-	STATE_READY_TO_USE,
-};
-
-class Peer;
-class Command;
-class Host;
-
-class ConnectionEncryptionState
+class PeerEncryptor
 {
 public:
-	ConnectionEncryptionState();
-	~ConnectionEncryptionState();
+	PeerEncryptor();
+	~PeerEncryptor();
 
-	void StartHandshake(Peer *peer);
-	void ReceivedWhenStateSentCert(Peer *peer, ENetPacket *packet, Flags flags);
-	void ReceivedWhenStateSentKex(Peer *peer, ENetPacket *packet, Flags flags);
+	ENetPacket *
+	CreateHandshakePacketData(std::shared_ptr<crypto::CertKey> certKey);
+	ENetPacket *CreateKEXPacket(std::shared_ptr<crypto::CertKey> certKey,
+								ENetPacket *receivedHandshake);
+	bool ReceiveKEX(ENetPacket *receivedKEX);
+
+	static constexpr uint32_t GetEncryptedMessageOverhead()
+	{
+		return sizeof(sendMessagesCounter) +
+			   crypto_aead_chacha20poly1305_ietf_ABYTES; // mac bytes
+	}
+	inline static uint32_t GetEncryptedMessageLength(uint32_t rawMessageLength)
+	{
+		return rawMessageLength + GetEncryptedMessageOverhead();
+	}
 
 	void EncryptMessage(uint8_t *cipher, const uint8_t *message,
 						uint32_t messageLength, Flags flags);
-
 	bool DecryptMessage(std::vector<uint8_t> &receivedData, uint8_t *cipher,
-						uint32_t size, Flags flags);
+						uint32_t cipherLength, Flags flags);
 
-	inline PeerConnectionState GetState() const { return state; }
+	friend class ConnectionEncryptionState;
 
-	friend class Peer;
+private:
+	uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
+	uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
+	uint8_t sendingKey[32];
+	uint8_t receivingKey[32];
+	uint8_t peerPublicKey[crypto::SIGN_PUBLIC_KEY_BYTES];
 
-protected:
-	PeerEncryptor encryptor;
-	PeerConnectionState state;
+	uint32_t sendMessagesCounter;
 };
 } // namespace icon6
 
