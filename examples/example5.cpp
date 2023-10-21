@@ -123,5 +123,10 @@ int main()
 
 	icon6::Deinitialize();
 
+	delete host1;
+	delete host2;
+	delete mpe;
+	delete mpe2;
+
 	return 0;
 }

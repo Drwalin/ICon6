@@ -35,6 +35,8 @@ namespace rmi
 class MethodInvocationEnvironment : public MessagePassingEnvironment
 {
 public:
+	virtual ~MethodInvocationEnvironment() override;
+
 	Class *GetClassByName(std::string name);
 
 	virtual void OnReceive(Peer *peer, ByteReader &reader,

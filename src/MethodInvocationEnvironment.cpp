@@ -22,33 +22,13 @@ namespace icon6
 {
 namespace rmi
 {
-Class::Class(Class *parentClass, std::string name,
-			 std::shared_ptr<void> (*constructor)())
-	: constructor(constructor), parentClass(parentClass), name(name)
+MethodInvocationEnvironment::~MethodInvocationEnvironment()
 {
-	if (parentClass) {
-		parentClass->inheritedClasses.insert(this);
-		Class *parenting = parentClass;
-		while (parenting) {
-			for (auto mtd : parenting->methods) {
-				if (methods.count(mtd.first) == 0) {
-					methods[mtd.first] = mtd.second;
-				}
-			}
-			parenting = parenting->parentClass;
-		}
+	objects.clear();
+	for (auto it : classes) {
+		delete it.second;
 	}
-}
-
-void Class::RegisterMethod(std::string methodName,
-						   std::shared_ptr<MethodInvocationConverter> converter)
-{
-	methods[methodName] = converter;
-	for (Class *cls : inheritedClasses) {
-		if (cls->methods.count(methodName) == 0) {
-			cls->RegisterMethod(methodName, converter);
-		}
-	}
+	classes.clear();
 }
 
 Class *MethodInvocationEnvironment::GetClassByName(std::string name)

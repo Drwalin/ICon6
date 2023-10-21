@@ -109,6 +109,11 @@ void Host::Init(ENetAddress *address, uint32_t maximumHostsNumber)
 void Host::Destroy()
 {
 	WaitStop();
+	for (Peer *peer : peers) {
+		peer->_InternalDisconnect(0);
+		delete peer;
+	}
+	peers.clear();
 	enet_host_destroy(host);
 	host = nullptr;
 }
@@ -130,7 +135,7 @@ void Host::RunSync()
 void Host::DisconnectAllGracefully()
 {
 	for (auto p : peers) {
-		enet_peer_disconnect(p->peer, 0);
+		p->_InternalDisconnect(0);
 	}
 	ENetEvent event;
 	for (int i = 0; i < 1000000 && enet_host_service(host, &event, 10) >= 0;
@@ -140,7 +145,7 @@ void Host::DisconnectAllGracefully()
 			enet_peer_disconnect(event.peer, 0);
 		} else if (event.type == ENET_EVENT_TYPE_NONE && i % 10 == 0) {
 			for (auto p : peers) {
-				enet_peer_disconnect(p->peer, 0);
+				p->_InternalDisconnect(0);
 			}
 		}
 		if (peers.empty()) {

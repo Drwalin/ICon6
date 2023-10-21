@@ -42,6 +42,8 @@ class CommandExecutionQueue;
 class MessagePassingEnvironment
 {
 public:
+	virtual ~MessagePassingEnvironment();
+
 	virtual void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
 
 	template <typename Fun>

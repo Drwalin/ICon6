@@ -80,7 +80,10 @@ void Peer::Disconnect(uint32_t disconnectData)
 
 void Peer::_InternalDisconnect(uint32_t disconnectData)
 {
-	enet_peer_disconnect(peer, disconnectData);
+	if (peer) {
+		enet_peer_disconnect(peer, disconnectData);
+		peer = nullptr;
+	}
 }
 
 void Peer::_InternalStartHandshake() { encryptionState.StartHandshake(this); }

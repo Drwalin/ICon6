@@ -52,6 +52,8 @@ public:
 class Object
 {
 public:
+	~Object();
+
 	std::shared_ptr<void> objectPtr;
 	Class *obejctClass;
 };

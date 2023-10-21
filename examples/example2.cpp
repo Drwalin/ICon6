@@ -69,6 +69,10 @@ int main()
 	host1->WaitStop();
 	host2->WaitStop();
 
+	delete host1;
+	delete host2;
+	delete mpe;
+
 	icon6::Deinitialize();
 	return 0;
 }

@@ -24,6 +24,8 @@
 
 namespace icon6
 {
+MessagePassingEnvironment::~MessagePassingEnvironment() {}
+
 void MessagePassingEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 										  Flags flags)
 {

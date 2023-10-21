@@ -150,5 +150,9 @@ int main()
 	exeQueue->WaitStopAsyncExecution();
 	exeQueue = nullptr;
 
+	delete host1;
+	delete host2;
+	delete mpe;
+
 	return 0;
 }
