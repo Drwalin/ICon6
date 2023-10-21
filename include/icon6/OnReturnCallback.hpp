@@ -52,7 +52,7 @@ public:
 	static OnReturnCallback
 	Make(Tfunc &&_onReturnedValue, std::function<void(Peer *)> onTimeout,
 		 uint32_t timeoutMilliseconds, Peer *peer,
-		 std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
+		 CommandExecutionQueue *executionQueue = nullptr)
 	{
 		OnReturnCallback ret;
 		OnReturnCallback *self = &ret;
@@ -78,7 +78,7 @@ public:
 	static OnReturnCallback
 	Make(Tfunc &&_onReturnedValue, std::function<void(Peer *)> onTimeout,
 		 uint32_t timeoutMilliseconds, Peer *peer,
-		 std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
+		 CommandExecutionQueue *executionQueue = nullptr)
 	{
 		OnReturnCallback ret;
 		OnReturnCallback *self = &ret;
@@ -100,7 +100,7 @@ public:
 public:
 	std::function<void(Peer *, Flags, ByteReader &)> onReturnedValue;
 	std::function<void(Peer *)> onTimeout;
-	std::shared_ptr<CommandExecutionQueue> executionQueue;
+	CommandExecutionQueue *executionQueue;
 	std::chrono::time_point<std::chrono::steady_clock> timeoutTimePoint;
 	Peer *peer;
 };

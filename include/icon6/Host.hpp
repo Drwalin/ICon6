@@ -97,7 +97,7 @@ public:
 	// thread safe function to connect to a remote host
 	void Connect(std::string address, uint16_t port,
 				 commands::ExecuteOnPeer &&onConnected,
-				 std::shared_ptr<CommandExecutionQueue> queue = nullptr);
+				 CommandExecutionQueue *queue = nullptr);
 
 	Peer *_InternalConnect(ENetAddress address);
 
@@ -135,7 +135,7 @@ private:
 
 	std::unordered_set<Peer *> peers;
 
-	std::shared_ptr<CommandExecutionQueue> commandQueue;
+	CommandExecutionQueue *commandQueue;
 	std::vector<Command> popedCommands;
 
 	void (*callbackOnConnect)(Peer *);

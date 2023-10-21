@@ -79,8 +79,7 @@ bool CommandExecutionQueue::IsRunningAsync() const
 }
 
 void CommandExecutionQueue::RunAsyncExecution(
-	std::shared_ptr<CommandExecutionQueue> queue,
-	uint32_t sleepMicrosecondsOnNoActions)
+	CommandExecutionQueue *queue, uint32_t sleepMicrosecondsOnNoActions)
 {
 	std::thread(&CommandExecutionQueue::_InternalExecuteLoop, queue,
 				sleepMicrosecondsOnNoActions)
@@ -88,14 +87,12 @@ void CommandExecutionQueue::RunAsyncExecution(
 }
 
 void CommandExecutionQueue::_InternalExecuteLoop(
-	std::shared_ptr<CommandExecutionQueue> queue,
-	uint32_t sleepMicrosecondsOnNoActions)
+	CommandExecutionQueue *queue, uint32_t sleepMicrosecondsOnNoActions)
 {
-	std::shared_ptr<CommandExecutionQueue> guard = queue;
-	guard->asyncExecutionFlags = IS_RUNNING;
+	queue->asyncExecutionFlags = IS_RUNNING;
 	std::vector<Command> commands;
-	while (guard->asyncExecutionFlags.load() == IS_RUNNING) {
-		guard->TryDequeueBulkAny(commands);
+	while (queue->asyncExecutionFlags.load() == IS_RUNNING) {
+		queue->TryDequeueBulkAny(commands);
 		if (commands.empty()) {
 			if (sleepMicrosecondsOnNoActions == 0) {
 				std::this_thread::yield();
@@ -110,6 +107,6 @@ void CommandExecutionQueue::_InternalExecuteLoop(
 			commands.clear();
 		}
 	}
-	guard->asyncExecutionFlags = STOPPED;
+	queue->asyncExecutionFlags = STOPPED;
 }
 } // namespace icon6

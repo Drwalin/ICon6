@@ -1,9 +1,9 @@
-
-#include "../include/icon6/Host.hpp"
-#include "../include/icon6/MessagePassingEnvironment.hpp"
 #include <chrono>
 #include <memory>
 #include <thread>
+
+#include "../include/icon6/Host.hpp"
+#include "../include/icon6/MessagePassingEnvironment.hpp"
 
 icon6::MessagePassingEnvironment *mpe = new icon6::MessagePassingEnvironment();
 

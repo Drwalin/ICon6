@@ -51,7 +51,7 @@ public:
 	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
 					  ByteReader &reader, Flags flags) = 0;
 
-	std::shared_ptr<CommandExecutionQueue> executionQueue;
+	CommandExecutionQueue *executionQueue;
 };
 
 template <typename Tret> class InvocationReturnExecutor

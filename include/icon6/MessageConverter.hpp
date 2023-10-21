@@ -42,7 +42,7 @@ public:
 
 	virtual void Call(Peer *peer, ByteReader &reader, Flags flags) = 0;
 
-	std::shared_ptr<CommandExecutionQueue> executionQueue;
+	CommandExecutionQueue *executionQueue;
 };
 
 template <typename Tret> class MessageReturnExecutor

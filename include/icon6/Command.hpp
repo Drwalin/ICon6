@@ -152,7 +152,7 @@ public:
 	Host *host;
 	ENetAddress address;
 
-	std::shared_ptr<CommandExecutionQueue> executionQueue;
+	CommandExecutionQueue *executionQueue;
 	ExecuteOnPeer onConnected;
 
 	virtual void Execute() override;

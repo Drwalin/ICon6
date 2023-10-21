@@ -53,9 +53,9 @@ public:
 	}
 
 	template <typename Tclass, typename Fun>
-	void RegisterMemberFunction(
-		std::string className, std::string methodName, Fun &&memberFunction,
-		std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
+	void RegisterMemberFunction(std::string className, std::string methodName,
+								Fun &&memberFunction,
+								CommandExecutionQueue *executionQueue = nullptr)
 	{
 		Class *cls = GetClassByName(className);
 		if (cls) {

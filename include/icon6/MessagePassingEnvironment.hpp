@@ -47,9 +47,8 @@ public:
 	virtual void OnReceive(Peer *peer, ByteReader &reader, Flags flags);
 
 	template <typename Fun>
-	void RegisterMessage(
-		const std::string &name, Fun &&fun,
-		std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
+	void RegisterMessage(const std::string &name, Fun &&fun,
+						 CommandExecutionQueue *executionQueue = nullptr)
 	{
 		auto f = ConvertLambdaToFunctionPtr(fun);
 		auto func = MakeShared(new MessageConverterSpec(f));

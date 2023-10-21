@@ -37,7 +37,7 @@ public:
 	void EnqueueCommand(Command &&command);
 	void TryDequeueBulkAny(std::vector<Command> &commands);
 
-	static void RunAsyncExecution(std::shared_ptr<CommandExecutionQueue> queue,
+	static void RunAsyncExecution(CommandExecutionQueue *queue,
 								  uint32_t sleepMicrosecondsOnNoActions);
 	void QueueStopAsyncExecution();
 	void WaitStopAsyncExecution();
@@ -51,9 +51,8 @@ private:
 		STOPPED = 0
 	};
 
-	static void
-	_InternalExecuteLoop(std::shared_ptr<CommandExecutionQueue> queue,
-						 uint32_t sleepMicrosecondsOnNoActions);
+	static void _InternalExecuteLoop(CommandExecutionQueue *queue,
+									 uint32_t sleepMicrosecondsOnNoActions);
 	std::atomic<uint32_t> asyncExecutionFlags;
 
 private:

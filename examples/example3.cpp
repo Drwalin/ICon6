@@ -1,9 +1,9 @@
-
-#include "../include/icon6/Host.hpp"
-#include "../include/icon6/MethodInvocationEnvironment.hpp"
 #include <chrono>
 #include <memory>
 #include <thread>
+
+#include "../include/icon6/Host.hpp"
+#include "../include/icon6/MethodInvocationEnvironment.hpp"
 
 icon6::rmi::MethodInvocationEnvironment *mpe =
 	new icon6::rmi::MethodInvocationEnvironment();

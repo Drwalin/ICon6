@@ -1,8 +1,8 @@
+#include <chrono>
+#include <thread>
 
 #include "../include/icon6/Host.hpp"
 #include "icon6/Command.hpp"
-#include <chrono>
-#include <thread>
 
 std::vector<uint8_t> MakeVector(const char *str)
 {

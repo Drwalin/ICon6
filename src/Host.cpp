@@ -95,7 +95,7 @@ void Host::InitRandomSelfsignedCertificate()
 
 void Host::Init(ENetAddress *address, uint32_t maximumHostsNumber)
 {
-	commandQueue = std::make_shared<CommandExecutionQueue>();
+	commandQueue = new CommandExecutionQueue();
 	flags = 0;
 	callbackOnConnect = nullptr;
 	callbackOnReceive = nullptr;
@@ -108,7 +108,9 @@ void Host::Init(ENetAddress *address, uint32_t maximumHostsNumber)
 
 void Host::Destroy()
 {
+	DispatchAllEventsFromQueue();
 	WaitStop();
+	DispatchAllEventsFromQueue();
 	for (Peer *peer : peers) {
 		peer->_InternalDisconnect(0);
 		delete peer;
@@ -116,6 +118,8 @@ void Host::Destroy()
 	peers.clear();
 	enet_host_destroy(host);
 	host = nullptr;
+	delete commandQueue;
+	commandQueue = nullptr;
 }
 
 void Host::RunAsync()
@@ -262,12 +266,12 @@ std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 
 void Host::Connect(std::string address, uint16_t port,
 				   commands::ExecuteOnPeer &&onConnected,
-				   std::shared_ptr<CommandExecutionQueue> queue)
+				   CommandExecutionQueue *queue)
 {
 	std::thread(
 		[](std::string address, uint16_t port, Host *host,
 		   commands::ExecuteOnPeer &&onConnected,
-		   std::shared_ptr<CommandExecutionQueue> queue) {
+		   CommandExecutionQueue *queue) {
 			Command command(commands::ExecuteConnect{});
 			commands::ExecuteConnect &com = command.executeConnect;
 			com.onConnected = std::move(onConnected);

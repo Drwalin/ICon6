@@ -1,4 +1,3 @@
-
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -59,8 +58,7 @@ public:
 
 int main()
 {
-	std::shared_ptr<icon6::CommandExecutionQueue> exeQueue =
-		std::make_shared<icon6::CommandExecutionQueue>();
+	icon6::CommandExecutionQueue *exeQueue = new icon6::CommandExecutionQueue();
 
 	exeQueue->RunAsyncExecution(exeQueue, 1000);
 	while (!exeQueue->IsRunningAsync()) {
@@ -148,6 +146,7 @@ int main()
 	icon6::Deinitialize();
 
 	exeQueue->WaitStopAsyncExecution();
+	delete exeQueue;
 	exeQueue = nullptr;
 
 	delete host1;
