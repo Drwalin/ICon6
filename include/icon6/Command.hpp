@@ -60,10 +60,10 @@ public:
 class ExecuteOnPeer final : public BaseCommandExecute
 {
 public:
-	std::shared_ptr<Peer> peer;
+	Peer *peer;
 	std::vector<uint8_t> data;
 	std::shared_ptr<void> customSharedData;
-	void (*function)(std::shared_ptr<Peer> peer, std::vector<uint8_t> &data,
+	void (*function)(Peer *peer, std::vector<uint8_t> &data,
 					 std::shared_ptr<void> customSharedData);
 
 	virtual void Execute() override;
@@ -72,10 +72,10 @@ public:
 class ExecuteFunctionObjectOnPeer final : public BaseCommandExecute
 {
 public:
-	std::shared_ptr<Peer> peer;
+	Peer *peer;
 	std::vector<uint8_t> data;
 	std::shared_ptr<void> customSharedData;
-	std::function<void(std::shared_ptr<Peer>, std::vector<uint8_t> &,
+	std::function<void(Peer *, std::vector<uint8_t> &,
 					   std::shared_ptr<void> customSharedData)>
 		function;
 
@@ -85,8 +85,8 @@ public:
 class ExecuteFunctionObjectNoArgsOnPeer final : public BaseCommandExecute
 {
 public:
-	std::shared_ptr<Peer> peer;
-	std::function<void(std::shared_ptr<Peer>)> function;
+	Peer *peer;
+	std::function<void(Peer *)> function;
 
 	virtual void Execute() override;
 };
@@ -101,7 +101,7 @@ public:
 	{
 	}
 
-	std::shared_ptr<Peer> peer;
+	Peer *peer;
 	ByteReader reader;
 	std::shared_ptr<MessageConverter> messageConverter;
 	Flags flags;
@@ -119,7 +119,7 @@ public:
 	{
 	}
 
-	std::shared_ptr<Peer> peer;
+	Peer *peer;
 	ByteReader reader;
 	std::shared_ptr<void> objectPtr;
 	std::shared_ptr<rmi::MethodInvocationConverter> methodInvoker;
@@ -138,9 +138,9 @@ public:
 	{
 	}
 
-	std::shared_ptr<Peer> peer;
+	Peer *peer;
 	ByteReader reader;
-	std::function<void(std::shared_ptr<Peer>, Flags, ByteReader &)> function;
+	std::function<void(Peer *, Flags, ByteReader &)> function;
 	Flags flags;
 
 	virtual void Execute() override;
@@ -162,7 +162,7 @@ class ExecuteSend final : public BaseCommandExecute
 {
 public:
 	std::vector<uint8_t> data;
-	std::shared_ptr<Peer> peer;
+	Peer *peer;
 	Flags flags;
 
 	virtual void Execute() override;
@@ -171,7 +171,7 @@ public:
 class ExecuteDisconnect final : public BaseCommandExecute
 {
 public:
-	std::shared_ptr<Peer> peer;
+	Peer *peer;
 	uint32_t disconnectData;
 
 	virtual void Execute() override;

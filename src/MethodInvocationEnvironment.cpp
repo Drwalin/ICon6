@@ -80,7 +80,7 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 				if (mtd->executionQueue) {
 					Command command{commands::ExecuteRMI(std::move(reader))};
 					commands::ExecuteRMI &com = command.executeRMI;
-					com.peer = peer->shared_from_this();
+					com.peer = peer;
 					com.flags = flags;
 					com.methodInvoker = mtd;
 					com.objectPtr = object->second.objectPtr,

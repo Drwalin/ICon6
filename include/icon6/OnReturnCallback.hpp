@@ -50,9 +50,8 @@ public:
 
 	template <typename Tret, typename Tfunc>
 	static OnReturnCallback
-	Make(Tfunc &&_onReturnedValue,
-		 std::function<void(std::shared_ptr<Peer>)> onTimeout,
-		 uint32_t timeoutMilliseconds, std::shared_ptr<Peer> peer,
+	Make(Tfunc &&_onReturnedValue, std::function<void(Peer *)> onTimeout,
+		 uint32_t timeoutMilliseconds, Peer *peer,
 		 std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
 	{
 		OnReturnCallback ret;
@@ -64,8 +63,7 @@ public:
 			std::chrono::steady_clock::now() +
 			(std::chrono::milliseconds(timeoutMilliseconds));
 		self->peer = peer;
-		self->onReturnedValue = [_onReturnedValue](std::shared_ptr<Peer> peer,
-												   Flags flags,
+		self->onReturnedValue = [_onReturnedValue](Peer *peer, Flags flags,
 												   ByteReader &reader) -> void {
 			typename std::remove_const<
 				typename std::remove_reference<Tret>::type>::type ret;
@@ -78,9 +76,8 @@ public:
 
 	template <typename Tfunc>
 	static OnReturnCallback
-	Make(Tfunc &&_onReturnedValue,
-		 std::function<void(std::shared_ptr<Peer>)> onTimeout,
-		 uint32_t timeoutMilliseconds, std::shared_ptr<Peer> peer,
+	Make(Tfunc &&_onReturnedValue, std::function<void(Peer *)> onTimeout,
+		 uint32_t timeoutMilliseconds, Peer *peer,
 		 std::shared_ptr<CommandExecutionQueue> executionQueue = nullptr)
 	{
 		OnReturnCallback ret;
@@ -92,8 +89,7 @@ public:
 			std::chrono::steady_clock::now() +
 			(std::chrono::milliseconds(timeoutMilliseconds));
 		self->peer = peer;
-		self->onReturnedValue = [_onReturnedValue](std::shared_ptr<Peer> peer,
-												   Flags flags,
+		self->onReturnedValue = [_onReturnedValue](Peer *peer, Flags flags,
 												   ByteReader &reader) -> void {
 			_onReturnedValue(peer, flags);
 		};
@@ -102,12 +98,11 @@ public:
 	}
 
 public:
-	std::function<void(std::shared_ptr<Peer>, Flags, ByteReader &)>
-		onReturnedValue;
-	std::function<void(std::shared_ptr<Peer>)> onTimeout;
+	std::function<void(Peer *, Flags, ByteReader &)> onReturnedValue;
+	std::function<void(Peer *)> onTimeout;
 	std::shared_ptr<CommandExecutionQueue> executionQueue;
 	std::chrono::time_point<std::chrono::steady_clock> timeoutTimePoint;
-	std::shared_ptr<Peer> peer;
+	Peer *peer;
 };
 } // namespace icon6
 

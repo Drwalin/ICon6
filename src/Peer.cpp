@@ -47,7 +47,7 @@ void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 	Command command{commands::ExecuteSend{}};
 	commands::ExecuteSend &com = command.executeSend;
 	com.flags = flags;
-	com.peer = shared_from_this();
+	com.peer = this;
 	com.data = std::move(data);
 	host->EnqueueCommand(std::move(command));
 }
@@ -73,7 +73,7 @@ void Peer::Disconnect(uint32_t disconnectData)
 {
 	Command command{commands::ExecuteDisconnect{}};
 	commands::ExecuteDisconnect &com = command.executeDisconnect;
-	com.peer = shared_from_this();
+	com.peer = this;
 	com.disconnectData = disconnectData;
 	host->EnqueueCommand(std::move(command));
 }

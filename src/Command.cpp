@@ -35,14 +35,11 @@ void ExecuteFunctionObjectOnPeer::Execute()
 
 void ExecuteFunctionObjectNoArgsOnPeer::Execute() { function(peer); }
 
-void ExecuteRPC::Execute()
-{
-	messageConverter->Call(peer.get(), reader, flags);
-}
+void ExecuteRPC::Execute() { messageConverter->Call(peer, reader, flags); }
 
 void ExecuteRMI::Execute()
 {
-	methodInvoker->Call(objectPtr, peer.get(), reader, flags);
+	methodInvoker->Call(objectPtr, peer, reader, flags);
 }
 
 void ExecuteReturnRC::Execute() { function(peer, flags, reader); }

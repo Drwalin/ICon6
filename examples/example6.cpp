@@ -116,73 +116,71 @@ int main()
 	}
 
 	if (p1 != nullptr) {
-		mpe->CallInvoke(
-			p1.get(), 0,
-			icon6::OnReturnCallback::Make<std::vector<int>>(
-				[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags,
-				   std::vector<int> data) -> void {
-					printf(" TestClass::Method return callback:");
-					for (int i : data)
-						printf(" %i", i);
-					printf("\n");
-				},
-				[](std::shared_ptr<icon6::Peer> peer) -> void {
-					printf(" void(void) timeout\n");
-				},
-				10000, p1),
-			obj[0], "Method", 123);
+		mpe->CallInvoke(p1, 0,
+						icon6::OnReturnCallback::Make<std::vector<int>>(
+							[](icon6::Peer *peer, icon6::Flags flags,
+							   std::vector<int> data) -> void {
+								printf(" TestClass::Method return callback:");
+								for (int i : data)
+									printf(" %i", i);
+								printf("\n");
+							},
+							[](icon6::Peer *peer) -> void {
+								printf(" void(void) timeout\n");
+							},
+							10000, p1),
+						obj[0], "Method", 123);
 
-		mpe->CallInvoke(
-			p1.get(), 0,
-			icon6::OnReturnCallback::Make<std::vector<int>>(
-				[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags,
-				   std::vector<int> &data) -> void {
-					printf(" InheritedClass::Method return callback:");
-					for (int i : data)
-						printf(" %i", i);
-					printf("\n");
-				},
-				[](std::shared_ptr<icon6::Peer> peer) -> void {
-					printf(" void(void) timeout\n");
-				},
-				10000, p1),
-			obj[1], "Method", 4567);
+		mpe->CallInvoke(p1, 0,
+						icon6::OnReturnCallback::Make<std::vector<int>>(
+							[](icon6::Peer *peer, icon6::Flags flags,
+							   std::vector<int> &data) -> void {
+								printf(
+									" InheritedClass::Method return callback:");
+								for (int i : data)
+									printf(" %i", i);
+								printf("\n");
+							},
+							[](icon6::Peer *peer) -> void {
+								printf(" void(void) timeout\n");
+							},
+							10000, p1),
+						obj[1], "Method", 4567);
 
-		mpe->CallInvoke(p1.get(), 0,
+		mpe->CallInvoke(p1, 0,
 						icon6::OnReturnCallback::Make<std::string>(
-							[](std::shared_ptr<icon6::Peer> peer,
-							   icon6::Flags flags, std::string data) -> void {
+							[](icon6::Peer *peer, icon6::Flags flags,
+							   std::string data) -> void {
 								printf(
 									" TestClass::Method2 return callback: %s\n",
 									data.c_str());
 							},
-							[](std::shared_ptr<icon6::Peer> peer) -> void {
+							[](icon6::Peer *peer) -> void {
 								printf(" void(void) timeout\n");
 							},
 							10000, p1),
 						obj[0], "Method2", "asdf", 666);
 
 		mpe->CallInvoke(
-			p1.get(), 0,
+			p1, 0,
 			icon6::OnReturnCallback::Make<std::string>(
-				[](std::shared_ptr<icon6::Peer> peer, icon6::Flags flags,
+				[](icon6::Peer *peer, icon6::Flags flags,
 				   std::string data) -> void {
 					printf(" InheritedClass::Method2 return callback: %s\n",
 						   data.c_str());
 				},
-				[](std::shared_ptr<icon6::Peer> peer) -> void {
+				[](icon6::Peer *peer) -> void {
 					printf(" void(void) timeout\n");
 				},
 				10000, p1),
 			obj[1], "Method2", "qwerty", 999);
 
-		mpe->CallInvoke(p1.get(), 0,
+		mpe->CallInvoke(p1, 0,
 						icon6::OnReturnCallback::Make(
-							[](std::shared_ptr<icon6::Peer> peer,
-							   icon6::Flags flags) -> void {
+							[](icon6::Peer *peer, icon6::Flags flags) -> void {
 								printf(" TestClass::Method3 return callback\n");
 							},
-							[](std::shared_ptr<icon6::Peer> peer) -> void {
+							[](icon6::Peer *peer) -> void {
 								printf(" TestClass::Method3 timeout\n");
 							},
 							10000, p1),

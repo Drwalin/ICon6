@@ -53,10 +53,10 @@ int main()
 	}
 
 	if (p1 != nullptr) {
-		mpe->Send<std::vector<int>>(p1.get(), 0, "mult", {1, 2, 3, 4, 5});
+		mpe->Send<std::vector<int>>(p1, 0, "mult", {1, 2, 3, 4, 5});
 
 		std::vector<int> s = {1, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2};
-		mpe->Send(p1.get(), 0, "mult", s);
+		mpe->Send(p1, 0, "mult", s);
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 

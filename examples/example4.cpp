@@ -85,9 +85,8 @@ int main()
 		});
 
 	mpe->RegisterMessage("mult", [](icon6::Flags flags, std::vector<int> msg,
-									std::shared_ptr<icon6::Peer> p,
-									icon6::Host *h) {
-		mpe->Send(p.get(), 0, "sum", msg, "Sum of values");
+									icon6::Peer *p, icon6::Host *h) {
+		mpe->Send(p, 0, "sum", msg, "Sum of values");
 		printf(" peer->host(%p) == Host(%p): %s\n", (void *)p->GetHost(),
 			   (void *)h, p->GetHost() == h ? "true" : "false");
 		int sum = 1;
@@ -124,16 +123,16 @@ int main()
 	}
 
 	if (p1 != nullptr) {
-		mpe->SendInvoke(p1.get(), 0, obj[0], "Method2", "asdf", 666);
-		mpe->SendInvoke(p1.get(), 0, obj[1], "Method2", "qwerty", 999);
+		mpe->SendInvoke(p1, 0, obj[0], "Method2", "asdf", 666);
+		mpe->SendInvoke(p1, 0, obj[1], "Method2", "qwerty", 999);
 
-		mpe->Send<std::vector<int>>(p1.get(), 0, "mult", {1, 2, 3, 4, 5});
+		mpe->Send<std::vector<int>>(p1, 0, "mult", {1, 2, 3, 4, 5});
 
 		std::vector<int> s = {1, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2};
-		mpe->Send(p1.get(), 0, "mult", s);
+		mpe->Send(p1, 0, "mult", s);
 
-		mpe->SendInvoke(p1.get(), 0, obj[0], "Method", 123);
-		mpe->SendInvoke(p1.get(), 0, obj[1], "Method", 4567);
+		mpe->SendInvoke(p1, 0, obj[0], "Method", 123);
+		mpe->SendInvoke(p1, 0, obj[1], "Method", 4567);
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 

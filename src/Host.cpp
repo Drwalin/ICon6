@@ -173,7 +173,7 @@ void Host::DispatchEvent(ENetEvent &event)
 	switch (event.type) {
 	case ENET_EVENT_TYPE_CONNECT: {
 		if (event.peer->data == nullptr) {
-			std::shared_ptr<Peer> peer(new Peer(this, event.peer));
+			Peer *peer(new Peer(this, event.peer));
 			peers.insert(peer);
 		}
 		((Peer *)event.peer->data)->_InternalStartHandshake();
@@ -191,7 +191,7 @@ void Host::DispatchEvent(ENetEvent &event)
 	case ENET_EVENT_TYPE_DISCONNECT: {
 		Peer *peer = (Peer *)event.peer->data;
 		peer->CallCallbackDisconnect(event.data);
-		peers.erase(((Peer *)(event.peer->data))->shared_from_this());
+		peers.erase((Peer *)(event.peer->data));
 	} break;
 	case ENET_EVENT_TYPE_NONE:;
 	}
@@ -239,17 +239,15 @@ void Host::WaitStop()
 	}
 }
 
-std::future<std::shared_ptr<Peer>> Host::ConnectPromise(std::string address,
-														uint16_t port)
+std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 {
-	std::shared_ptr<std::promise<std::shared_ptr<Peer>>> promise =
-		std::make_shared<std::promise<std::shared_ptr<Peer>>>();
+	std::shared_ptr<std::promise<Peer *>> promise =
+		std::make_shared<std::promise<Peer *>>();
 	commands::ExecuteOnPeer onConnected;
 	onConnected.customSharedData = promise;
 	onConnected.function = [](auto peer, auto data, auto customSharedData) {
-		std::shared_ptr<std::promise<std::shared_ptr<Peer>>> promise =
-			std::static_pointer_cast<std::promise<std::shared_ptr<Peer>>>(
-				customSharedData);
+		std::shared_ptr<std::promise<Peer *>> promise =
+			std::static_pointer_cast<std::promise<Peer *>>(customSharedData);
 		promise->set_value(peer);
 	};
 	auto future = promise->get_future();
@@ -278,12 +276,12 @@ void Host::Connect(std::string address, uint16_t port,
 		.detach();
 }
 
-std::shared_ptr<Peer> Host::_InternalConnect(ENetAddress address)
+Peer *Host::_InternalConnect(ENetAddress address)
 {
 	ENetPeer *peer = enet_host_connect(host, &address, 2, 0);
 	enet_host_flush(host);
-	std::shared_ptr<Peer> p(new Peer(this, peer));
-	peer->data = p.get();
+	Peer *p(new Peer(this, peer));
+	peer->data = p;
 	peers.insert(p);
 	return p;
 }

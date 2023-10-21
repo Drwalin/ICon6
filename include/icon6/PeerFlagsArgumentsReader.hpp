@@ -46,12 +46,6 @@ public:
 	}
 
 	inline static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
-								std::shared_ptr<Peer> &value)
-	{
-		value = peer->shared_from_this();
-	}
-
-	inline static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
 								Peer *&value)
 	{
 		value = peer;

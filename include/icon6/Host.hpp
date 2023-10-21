@@ -93,14 +93,13 @@ public:
 
 public:
 	// thread safe function to connect to a remote host
-	std::future<std::shared_ptr<Peer>> ConnectPromise(std::string address,
-													  uint16_t port);
+	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);
 	// thread safe function to connect to a remote host
 	void Connect(std::string address, uint16_t port,
 				 commands::ExecuteOnPeer &&onConnected,
 				 std::shared_ptr<CommandExecutionQueue> queue = nullptr);
 
-	std::shared_ptr<Peer> _InternalConnect(ENetAddress address);
+	Peer *_InternalConnect(ENetAddress address);
 
 public:
 	void *userData;
@@ -134,7 +133,7 @@ private:
 	ENetHost *host;
 	std::atomic<uint32_t> flags;
 
-	std::unordered_set<std::shared_ptr<Peer>> peers;
+	std::unordered_set<Peer *> peers;
 
 	std::shared_ptr<CommandExecutionQueue> commandQueue;
 	std::vector<Command> popedCommands;
