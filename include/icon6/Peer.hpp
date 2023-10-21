@@ -21,10 +21,6 @@
 
 #include <cinttypes>
 
-#include <thread>
-#include <memory>
-#include <atomic>
-
 #include <enet/enet.h>
 
 #include "Flags.hpp"
@@ -35,7 +31,7 @@ namespace icon6
 
 class Host;
 
-class Peer final : public std::enable_shared_from_this<Peer>
+class Peer final
 {
 public:
 	~Peer();

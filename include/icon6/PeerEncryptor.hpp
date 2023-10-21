@@ -36,9 +36,8 @@ public:
 	PeerEncryptor();
 	~PeerEncryptor();
 
-	ENetPacket *
-	CreateHandshakePacketData(std::shared_ptr<crypto::CertKey> certKey);
-	ENetPacket *CreateKEXPacket(std::shared_ptr<crypto::CertKey> certKey,
+	ENetPacket *CreateHandshakePacketData(crypto::CertKey *certKey);
+	ENetPacket *CreateKEXPacket(crypto::CertKey *certKey,
 								ENetPacket *receivedHandshake);
 	bool ReceiveKEX(ENetPacket *receivedKEX);
 
@@ -60,11 +59,7 @@ public:
 	friend class ConnectionEncryptionState;
 
 private:
-	uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
-	uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
-	uint8_t sendingKey[32];
-	uint8_t receivingKey[32];
-	uint8_t peerPublicKey[crypto::SIGN_PUBLIC_KEY_BYTES];
+	crypto::KexKeys keys;
 
 	uint32_t sendMessagesCounter;
 };

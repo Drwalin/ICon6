@@ -70,8 +70,8 @@ public:
 	~Host();
 
 	void SetCertificatePolicy(PeerAcceptancePolicy peerAcceptancePolicy);
-	void AddTrustedRootCA(std::shared_ptr<crypto::Cert> rootCA);
-	void SetSelfCertificate(std::shared_ptr<crypto::Cert> root);
+	void AddTrustedRootCA(crypto::Cert *rootCA);
+	void SetSelfCertificate(crypto::Cert *root);
 	void InitRandomSelfsignedCertificate();
 	void SetPolicyMaximumDepthOfCertificateAcceptable(uint32_t maxDepth);
 
@@ -116,9 +116,9 @@ private:
 	void EnqueueCommand(Command &&command);
 
 private:
-	// 		std::shared_ptr<crypto::Cert> cert;
-	std::shared_ptr<crypto::CertKey> certKey;
-	// 		std::vector<std::shared_ptr<crypto::Cert>> trustedRootCertificates;
+	// 		crypto::Cert *cert;
+	crypto::CertKey *certKey;
+	// 		std::vector<crypto::Cert *> trustedRootCertificates;
 	PeerAcceptancePolicy peerAcceptancePolicy =
 		PeerAcceptancePolicy::ACCEPT_ALL;
 	// 		uint32_t maxCertificateDepthAcceptable = 16;

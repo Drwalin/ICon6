@@ -54,7 +54,7 @@ void PeerEncryptor::EncryptMessage(uint8_t *cipher, const uint8_t *message,
 
 	crypto_aead_chacha20poly1305_ietf_encrypt_detached(
 		ptrCipher, ptrMac, nullptr, ptrMessage, messageLength, ad, sizeof(ad),
-		nullptr, nonce, sendingKey);
+		nullptr, nonce, keys.sendingKey);
 }
 
 bool PeerEncryptor::DecryptMessage(std::vector<uint8_t> &receivedData,
@@ -79,38 +79,36 @@ bool PeerEncryptor::DecryptMessage(std::vector<uint8_t> &receivedData,
 
 	if (crypto_aead_chacha20poly1305_ietf_decrypt_detached(
 			ptrMessage, nullptr, ptrCipher, messageLength, ptrMac, ad,
-			sizeof(ad), nonce, receivingKey)) {
+			sizeof(ad), nonce, keys.receivingKey)) {
 		DEBUG("Failed to decrypt `%s`", receivedData.data());
 		return false;
 	}
 	return true;
 }
 
-ENetPacket *PeerEncryptor::CreateHandshakePacketData(
-	std::shared_ptr<crypto::CertKey> certKey)
+ENetPacket *PeerEncryptor::CreateHandshakePacketData(crypto::CertKey *certKey)
 {
 	return enet_packet_create(certKey->GetPublicKey(),
 							  crypto::SIGN_PUBLIC_KEY_BYTES,
 							  ENET_PACKET_FLAG_RELIABLE);
 }
 
-ENetPacket *
-PeerEncryptor::CreateKEXPacket(std::shared_ptr<crypto::CertKey> certKey,
-							   ENetPacket *receivedHandshake)
+ENetPacket *PeerEncryptor::CreateKEXPacket(crypto::CertKey *certKey,
+										   ENetPacket *receivedHandshake)
 {
 	if (receivedHandshake->dataLength != crypto::SIGN_PUBLIC_KEY_BYTES) {
 		DEBUG("Received size of certificate (public key) is invalid");
 		return nullptr;
 	}
-	memcpy(peerPublicKey, receivedHandshake->data,
+	memcpy(keys.peerPublicKey, receivedHandshake->data,
 		   receivedHandshake->dataLength);
 
 	ENetPacket *packet = enet_packet_create(
 		nullptr, crypto::KEX_PUBLIC_KEY_BYTES + crypto::SIGNATURE_BYTES,
 		ENET_PACKET_FLAG_RELIABLE);
 
-	crypto_kx_keypair(publicKey, secretKey);
-	memcpy(packet->data, publicKey, crypto::KEX_PUBLIC_KEY_BYTES);
+	crypto_kx_keypair(keys.publicKey, keys.secretKey);
+	memcpy(packet->data, keys.publicKey, crypto::KEX_PUBLIC_KEY_BYTES);
 	certKey->Sign(packet->data + crypto::KEX_PUBLIC_KEY_BYTES, packet->data,
 				  crypto::KEX_PUBLIC_KEY_BYTES);
 	return packet;
@@ -125,23 +123,24 @@ bool PeerEncryptor::ReceiveKEX(ENetPacket *kex)
 	}
 	if (crypto_sign_ed25519_verify_detached(
 			kex->data + crypto::KEX_PUBLIC_KEY_BYTES, kex->data,
-			crypto::KEX_PUBLIC_KEY_BYTES, peerPublicKey)) {
+			crypto::KEX_PUBLIC_KEY_BYTES, keys.peerPublicKey)) {
 		DEBUG("Failed to verify kex message");
 		return false;
 	}
 
-	uint8_t *rx = receivingKey;
-	uint8_t *tx = sendingKey;
+	uint8_t *rx = keys.receivingKey;
+	uint8_t *tx = keys.sendingKey;
 	uint8_t *clientPublicKey = kex->data;
-	if (memcmp(publicKey, clientPublicKey, crypto::KEX_PUBLIC_KEY_BYTES) < 0) {
-		if (crypto_kx_client_session_keys(rx, tx, publicKey, secretKey,
-										  clientPublicKey)) {
+	if (memcmp(keys.publicKey, clientPublicKey, crypto::KEX_PUBLIC_KEY_BYTES) <
+		0) {
+		if (crypto_kx_client_session_keys(rx, tx, keys.publicKey,
+										  keys.secretKey, clientPublicKey)) {
 			DEBUG("Failed to generate client session key");
 			return false;
 		}
 	} else {
-		if (crypto_kx_server_session_keys(rx, tx, publicKey, secretKey,
-										  clientPublicKey)) {
+		if (crypto_kx_server_session_keys(rx, tx, keys.publicKey,
+										  keys.secretKey, clientPublicKey)) {
 			DEBUG("Failed to generate server session key");
 			return false;
 		}

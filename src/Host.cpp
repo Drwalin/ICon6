@@ -75,13 +75,13 @@ void Host::SetCertificatePolicy(PeerAcceptancePolicy peerAcceptancePolicy)
 	}
 }
 
-void Host::AddTrustedRootCA(std::shared_ptr<crypto::Cert> rootCA)
+void Host::AddTrustedRootCA(crypto::Cert *rootCA)
 {
 	throw "Host::SetSelfCertificate not implemented yet. Please use only "
 		  "Host::SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL)";
 }
 
-void Host::SetSelfCertificate(std::shared_ptr<crypto::Cert> root)
+void Host::SetSelfCertificate(crypto::Cert *root)
 {
 	throw "Host::SetSelfCertificate not implemented yet. Please use only "
 		  "Host::InitRandomSelfsignedCertificate()";

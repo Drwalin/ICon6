@@ -42,8 +42,7 @@ constexpr size_t SIGNATURE_BYTES = crypto_sign_BYTES;
 class CertReq final
 {
 public:
-	CertReq(std::shared_ptr<class Cert> parentCert,
-			std::shared_ptr<class CertKey> certKey);
+	CertReq(class Cert *parentCert, class CertKey *certKey);
 
 	friend class Cert;
 
@@ -59,13 +58,22 @@ private:
 	char *name;
 };
 
+class KexKeys final
+{
+public:
+	uint8_t secretKey[crypto::KEX_SECRET_KEY_BYTES];
+	uint8_t publicKey[crypto::KEX_PUBLIC_KEY_BYTES];
+	uint8_t sendingKey[32];
+	uint8_t receivingKey[32];
+	uint8_t peerPublicKey[crypto::SIGN_PUBLIC_KEY_BYTES];
+};
+
 class CertKey final
 {
 public:
-	static std::shared_ptr<CertKey> GenerateKey();
-	static std::shared_ptr<CertKey> LoadKey(std::string fileName,
-											const char *password,
-											uint32_t passwordLength);
+	static CertKey *GenerateKey();
+	static CertKey *LoadKey(std::string fileName, const char *password,
+							uint32_t passwordLength);
 
 	~CertKey();
 
@@ -101,10 +109,9 @@ private:
 	Cert(std::string fileName);						   // load cert from file
 	Cert(void *certBinary, uint32_t certBinaryLength); // copy cert from
 													   // binary
-	Cert(CertReq *certReq, std::shared_ptr<CertKey> parentCertKey,
-		 std::shared_ptr<Cert> parentCert);
+	Cert(CertReq *certReq, CertKey *parentCertKey, Cert *parentCert);
 	// sign certificate with parent cert
-	Cert(CertReq *selfSignedCert, std::shared_ptr<CertKey> selfKey);
+	Cert(CertReq *selfSignedCert, CertKey *selfKey);
 
 private:
 	std::vector<uint8_t> binaryCert;

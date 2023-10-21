@@ -25,9 +25,9 @@ namespace icon6
 namespace crypto
 {
 
-std::shared_ptr<CertKey> CertKey::GenerateKey()
+CertKey *CertKey::GenerateKey()
 {
-	std::shared_ptr<CertKey> key(new CertKey());
+	CertKey *key = new CertKey();
 	crypto_sign_ed25519_keypair(key->publicKey, key->secretKey);
 	return key;
 }
