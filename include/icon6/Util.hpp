@@ -34,11 +34,6 @@ template <typename Fun> auto ConvertLambdaToFunctionPtr(Fun &&fun)
 {
 	return +fun;
 }
-
-template <typename T> auto MakeShared(T *ptr)
-{
-	return std::shared_ptr<T>(ptr);
-}
 } // namespace icon6
 
 #endif

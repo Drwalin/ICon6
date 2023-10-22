@@ -59,11 +59,11 @@ public:
 	{
 		Class *cls = GetClassByName(className);
 		if (cls) {
-			auto mtd =
-				MakeShared(new MessageNetworkAwareMethodInvocationConverterSpec(
-					cls, memberFunction));
+			auto mtd = new MessageNetworkAwareMethodInvocationConverterSpec(
+				cls, memberFunction);
 			mtd->executionQueue = executionQueue;
 			cls->RegisterMethod(methodName, mtd);
+			methodConverters.insert(mtd);
 		} else {
 			throw std::string("No class named '") + className + "' found.";
 		}
@@ -135,6 +135,7 @@ public:
 protected:
 	std::unordered_map<size_t, Object> objects;
 	std::unordered_map<std::string, Class *> classes;
+	std::unordered_set<MethodInvocationConverter *> methodConverters;
 };
 } // namespace rmi
 } // namespace icon6

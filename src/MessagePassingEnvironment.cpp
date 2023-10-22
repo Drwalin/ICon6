@@ -24,7 +24,13 @@
 
 namespace icon6
 {
-MessagePassingEnvironment::~MessagePassingEnvironment() {}
+MessagePassingEnvironment::~MessagePassingEnvironment()
+{
+	for (auto it : registeredMessages) {
+		delete it.second;
+	}
+	registeredMessages.clear();
+}
 
 void MessagePassingEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 										  Flags flags)

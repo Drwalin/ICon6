@@ -113,7 +113,11 @@ public:
 	{
 	}
 
-	virtual ~MessageNetworkAwareMethodInvocationConverterSpec() = default;
+	virtual ~MessageNetworkAwareMethodInvocationConverterSpec()
+	{
+		_class = nullptr;
+		onReceive = nullptr;
+	}
 
 	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
 					  ByteReader &reader, Flags flags) override

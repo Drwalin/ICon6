@@ -38,13 +38,12 @@ public:
 		  std::shared_ptr<void> (*constructor)());
 
 	void RegisterMethod(std::string methodName,
-						std::shared_ptr<MethodInvocationConverter> converter);
+						MethodInvocationConverter *converter);
 
-	std::unordered_map<std::string, std::shared_ptr<MethodInvocationConverter>>
-		methods;
+	std::unordered_map<std::string, MethodInvocationConverter *> methods;
 	std::shared_ptr<void> (*const constructor)();
 
-	Class *const parentClass;
+	Class *parentClass;
 	std::unordered_set<Class *> inheritedClasses;
 	const std::string name;
 };

@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "../include/icon6/MethodInvocationConverter.hpp"
 #include "../include/icon6/RMIMetadata.hpp"
 
 namespace icon6
@@ -41,7 +42,7 @@ Class::Class(Class *parentClass, std::string name,
 }
 
 void Class::RegisterMethod(std::string methodName,
-						   std::shared_ptr<MethodInvocationConverter> converter)
+						   MethodInvocationConverter *converter)
 {
 	methods[methodName] = converter;
 	for (Class *cls : inheritedClasses) {

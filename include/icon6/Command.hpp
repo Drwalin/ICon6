@@ -103,7 +103,7 @@ public:
 
 	Peer *peer;
 	ByteReader reader;
-	std::shared_ptr<MessageConverter> messageConverter;
+	MessageConverter *messageConverter;
 	Flags flags;
 
 	virtual void Execute() override;
@@ -122,7 +122,7 @@ public:
 	Peer *peer;
 	ByteReader reader;
 	std::shared_ptr<void> objectPtr;
-	std::shared_ptr<rmi::MethodInvocationConverter> methodInvoker;
+	rmi::MethodInvocationConverter *methodInvoker;
 	Flags flags;
 
 	virtual void Execute() override;

@@ -51,7 +51,7 @@ public:
 						 CommandExecutionQueue *executionQueue = nullptr)
 	{
 		auto f = ConvertLambdaToFunctionPtr(fun);
-		auto func = MakeShared(new MessageConverterSpec(f));
+		auto func = new MessageConverterSpec(f);
 		func->executionQueue = executionQueue;
 		registeredMessages[name] = func;
 	}
@@ -97,8 +97,7 @@ public:
 	void CheckForTimeoutFunctionCalls(uint32_t maxChecks = 10);
 
 protected:
-	std::unordered_map<std::string, std::shared_ptr<MessageConverter>>
-		registeredMessages;
+	std::unordered_map<std::string, MessageConverter *> registeredMessages;
 
 	std::mutex mutexReturningCallbacks;
 	uint32_t returnCallCallbackIdGenerator;
