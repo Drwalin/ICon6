@@ -121,7 +121,7 @@ public:
 
 	Peer *peer;
 	ByteReader reader;
-	std::shared_ptr<void> objectPtr;
+	void *objectPtr;
 	rmi::MethodInvocationConverter *methodInvoker;
 	Flags flags;
 

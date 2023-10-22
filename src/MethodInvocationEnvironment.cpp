@@ -24,11 +24,7 @@ namespace rmi
 {
 MethodInvocationEnvironment::~MethodInvocationEnvironment()
 {
-	// TODO: Destroy objects here
 	objects.clear();
-	for (auto it : classes) {
-		delete it.second;
-	}
 	classes.clear();
 	for (auto mtd : methodConverters) {
 		delete mtd;
@@ -58,7 +54,7 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 		if (object != objects.end()) {
 			std::string name;
 			reader.op(name);
-			auto cls = object->second.obejctClass;
+			auto cls = object->second.objectClass;
 			auto method = cls->methods.find(name);
 			if (method != cls->methods.end()) {
 				auto mtd = method->second;
@@ -76,7 +72,7 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 			} else { // method name does not exists
 				printf(" Method %s not found for object %lu of type %s\n",
 					   name.c_str(), objectId,
-					   object->second.obejctClass->name.c_str());
+					   object->second.objectClass->name.c_str());
 				// TODO: do something, show error or anything
 			}
 		} else { // this object does not exists locally

@@ -48,8 +48,8 @@ class MethodInvocationConverter
 public:
 	virtual ~MethodInvocationConverter() = default;
 
-	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
-					  ByteReader &reader, Flags flags) = 0;
+	virtual void Call(void *objectPtr, Peer *peer, ByteReader &reader,
+					  Flags flags) = 0;
 
 	CommandExecutionQueue *executionQueue;
 };
@@ -119,26 +119,25 @@ public:
 		onReceive = nullptr;
 	}
 
-	virtual void Call(std::shared_ptr<void> objectPtr, Peer *peer,
-					  ByteReader &reader, Flags flags) override
+	virtual void Call(void *objectPtr, Peer *peer, ByteReader &reader,
+					  Flags flags) override
 	{
-		std::shared_ptr<Tclass> ptr =
-			std::static_pointer_cast<Tclass>(objectPtr);
+		Tclass *ptr = (Tclass *)objectPtr;
 		auto seq = std::index_sequence_for<Targs...>{};
 		_InternalCall(ptr, peer, flags, reader, seq);
 	}
 
 private:
 	template <size_t... SeqArgs>
-	void _InternalCall(std::shared_ptr<Tclass> ptr, Peer *peer, Flags flags,
-					   ByteReader &reader, std::index_sequence<SeqArgs...> seq)
+	void _InternalCall(Tclass *ptr, Peer *peer, Flags flags, ByteReader &reader,
+					   std::index_sequence<SeqArgs...> seq)
 	{
 		TupleType args;
 		(PeerFlagsArgumentsReader::ReadType(peer, flags, reader,
 											std::get<SeqArgs>(args)),
 		 ...);
-		InvocationReturnExecutor<Tret>::Execute(ptr.get(), onReceive, args,
-												peer, flags, reader, seq);
+		InvocationReturnExecutor<Tret>::Execute(ptr, onReceive, args, peer,
+												flags, reader, seq);
 	}
 
 private:

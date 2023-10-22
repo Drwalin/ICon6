@@ -34,14 +34,15 @@ class MethodInvocationConverter;
 class Class
 {
 public:
-	Class(Class *parentClass, std::string name,
-		  std::shared_ptr<void> (*constructor)());
+	Class(Class *parentClass, std::string name, void *(*constructor)(),
+		  void (*const destructor)(void *));
 
 	void RegisterMethod(std::string methodName,
 						MethodInvocationConverter *converter);
 
 	std::unordered_map<std::string, MethodInvocationConverter *> methods;
-	std::shared_ptr<void> (*const constructor)();
+	void *(*const constructor)();
+	void (*const destructor)(void *);
 
 	Class *parentClass;
 	std::unordered_set<Class *> inheritedClasses;
@@ -51,10 +52,15 @@ public:
 class Object
 {
 public:
+	Object();
+	Object(void *objectPtr, Class *objectClass);
 	~Object();
 
-	std::shared_ptr<void> objectPtr;
-	Class *obejctClass;
+	Object(Object &&);
+	Object &operator=(Object &&);
+
+	void *objectPtr;
+	Class *objectClass;
 };
 
 } // namespace rmi

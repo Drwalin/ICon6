@@ -45,10 +45,9 @@ public:
 	template <typename T>
 	void RegisterClass(std::string className, Class *parentClass)
 	{
-		Class *cls =
-			new Class(parentClass, className, []() -> std::shared_ptr<void> {
-				return std::make_shared<T>();
-			});
+		Class *cls = new Class(
+			parentClass, className, []() -> void * { return new T(); },
+			[](void *ptr) -> void { delete (T *)ptr; });
 		classes[className] = cls;
 	}
 
@@ -69,24 +68,24 @@ public:
 		}
 	}
 
-	template <typename T> std::shared_ptr<T> GetObject(uint64_t id)
+	template <typename T> T *GetObject(uint64_t id)
 	{
 		auto it = objects.find(id);
 		if (it != objects.end())
-			return std::static_pointer_cast<T>(it->second.objectPtr);
+			return (T *)(it->second.objectPtr);
 		return nullptr;
 	}
 
 	template <typename T>
-	std::shared_ptr<T> CreateLocalObject(std::string className, uint64_t &id)
+	T *CreateLocalObject(std::string className, uint64_t &id)
 	{
 		static uint64_t ids = 1;
 		id = ++ids;
 		auto cls = GetClassByName(className);
 		if (cls) {
 			auto obj = cls->constructor();
-			objects[id] = Object{obj, cls};
-			return std::static_pointer_cast<T>(obj);
+			objects[id] = Object(obj, cls);
+			return (T *)obj;
 		}
 		return nullptr;
 	}

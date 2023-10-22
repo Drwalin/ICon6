@@ -23,9 +23,10 @@ namespace icon6
 {
 namespace rmi
 {
-Class::Class(Class *parentClass, std::string name,
-			 std::shared_ptr<void> (*constructor)())
-	: constructor(constructor), parentClass(parentClass), name(name)
+Class::Class(Class *parentClass, std::string name, void *(*constructor)(),
+			 void (*const destructor)(void *))
+	: constructor(constructor), destructor(destructor),
+	  parentClass(parentClass), name(name)
 {
 	if (parentClass) {
 		parentClass->inheritedClasses.insert(this);
@@ -52,10 +53,35 @@ void Class::RegisterMethod(std::string methodName,
 	}
 }
 
+Object::Object() : objectPtr(nullptr), objectClass(nullptr) {}
+Object::Object(void *objectPtr, Class *objectClass)
+	: objectPtr(objectPtr), objectClass(objectClass)
+{
+}
+
 Object::~Object()
 {
-	// TODO: destroy object
-	// 	delete objectPtr;
+	if (objectPtr) {
+		objectClass->destructor(objectPtr);
+		objectPtr = nullptr;
+	}
+}
+
+Object::Object(Object &&o)
+{
+	objectPtr = o.objectPtr;
+	objectClass = o.objectClass;
+	o.objectPtr = nullptr;
+	o.objectClass = nullptr;
+}
+
+Object &Object::operator=(Object &&o)
+{
+	objectPtr = o.objectPtr;
+	objectClass = o.objectClass;
+	o.objectPtr = nullptr;
+	o.objectClass = nullptr;
+	return *this;
 }
 } // namespace rmi
 } // namespace icon6
