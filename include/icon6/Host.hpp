@@ -90,11 +90,12 @@ public:
 
 	void Stop();
 	void WaitStop();
-
+	
 public:
 	// thread safe function to connect to a remote host
 	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);
 	// thread safe function to connect to a remote host
+	void Connect(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port,
 				 commands::ExecuteOnPeer &&onConnected,
 				 CommandExecutionQueue *queue = nullptr);
@@ -111,7 +112,7 @@ public:
 private:
 	void Init(ENetAddress *address, uint32_t maximumHostsNumber);
 	void DispatchEvent(ENetEvent &event);
-	void DispatchAllEventsFromQueue();
+	void DispatchAllEventsFromQueue(uint32_t mexEvents=999999999);
 	void DispatchPopedEventsFromQueue();
 	void EnqueueCommand(Command &&command);
 

@@ -60,6 +60,19 @@ void CommandExecutionQueue::TryDequeueBulkAny(std::vector<Command> &commands)
 	commands.resize(nextSize);
 }
 
+void CommandExecutionQueue::TryDequeueBulkNotMore(std::vector<Command> &commands, uint32_t max)
+{
+	commands.clear();
+	size_t size = ((QueueType *)concurrentQueueCommands)->size_approx();
+	if (size == 0)
+		size = 1;
+	size = std::min<size_t>(size, max);
+	commands.resize(size);
+	size_t nextSize = ((QueueType *)concurrentQueueCommands)
+						  ->try_dequeue_bulk(commands.data(), size);
+	commands.resize(nextSize);
+}
+
 void CommandExecutionQueue::QueueStopAsyncExecution()
 {
 	asyncExecutionFlags |= QUEUE_STOP;

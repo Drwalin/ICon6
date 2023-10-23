@@ -171,7 +171,7 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 			if (mpe != nullptr) {
 				mpe->CheckForTimeoutFunctionCalls(6);
 			}
-			DispatchAllEventsFromQueue();
+			DispatchAllEventsFromQueue(8);
 			DispatchEvent(event);
 		}
 	}
@@ -184,6 +184,12 @@ void Host::DispatchEvent(ENetEvent &event)
 		if (event.peer->data == nullptr) {
 			Peer *peer(new Peer(this, event.peer));
 			peers.insert(peer);
+		} else {
+			if (event.peer != ((Peer*)event.peer->data)->peer) {
+				// TODO: This should never happen. Following is only temporary
+				// counter measure. Find cause and fix.
+				((Peer*)event.peer->data)->peer = event.peer;
+			}
 		}
 		((Peer *)event.peer->data)->_InternalStartHandshake();
 	} break;
@@ -202,18 +208,20 @@ void Host::DispatchEvent(ENetEvent &event)
 		peer->CallCallbackDisconnect(event.data);
 		peers.erase((Peer *)(event.peer->data));
 	} break;
-	case ENET_EVENT_TYPE_NONE:;
+	case ENET_EVENT_TYPE_NONE:
+		DispatchAllEventsFromQueue(64);
+		std::this_thread::yield();
 	}
 }
 
-void Host::DispatchAllEventsFromQueue()
+void Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 {
 	for (int i = 0; i < 10; ++i) {
 		popedCommands.clear();
-		commandQueue->TryDequeueBulkAny(popedCommands);
+		commandQueue->TryDequeueBulkNotMore(popedCommands, maxEvents);
 
 		if (popedCommands.empty())
-			return;
+			break;
 		for (Command &c : popedCommands) {
 			c.Execute();
 			++i;
@@ -262,6 +270,13 @@ std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 	auto future = promise->get_future();
 	Connect(address, port, std::move(onConnected), nullptr);
 	return future;
+}
+
+void Host::Connect(std::string address, uint16_t port)
+{
+	commands::ExecuteOnPeer com;
+	com.function = [](auto a, auto b, auto c){};
+	Connect(address, port, std::move(com), nullptr);
 }
 
 void Host::Connect(std::string address, uint16_t port,
