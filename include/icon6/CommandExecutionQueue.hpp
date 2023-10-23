@@ -19,7 +19,6 @@
 #ifndef ICON6_COMMAND_EXECUTION_QUEUE_HPP
 #define ICON6_COMMAND_EXECUTION_QUEUE_HPP
 
-#include <memory>
 #include <vector>
 #include <atomic>
 

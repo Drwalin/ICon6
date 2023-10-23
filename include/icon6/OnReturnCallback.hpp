@@ -19,9 +19,6 @@
 #ifndef ICON6_ON_RETURN_CALLBACK_HPP
 #define ICON6_ON_RETURN_CALLBACK_HPP
 
-#include <memory>
-#include <functional>
-
 #include "Host.hpp"
 #include "Peer.hpp"
 
@@ -50,7 +47,7 @@ public:
 
 	template <typename Tret, typename Tfunc>
 	static OnReturnCallback
-	Make(Tfunc &&_onReturnedValue, std::function<void(Peer *)> onTimeout,
+	Make(Tfunc &&_onReturnedValue, void (*onTimeout)(Peer *),
 		 uint32_t timeoutMilliseconds, Peer *peer,
 		 CommandExecutionQueue *executionQueue = nullptr)
 	{
@@ -59,16 +56,18 @@ public:
 
 		self->onTimeout = onTimeout;
 		self->executionQueue = executionQueue;
+		self->onReturned = (void *)ConvertLambdaToFunctionPtr(_onReturnedValue);
 		self->timeoutTimePoint =
 			std::chrono::steady_clock::now() +
 			(std::chrono::milliseconds(timeoutMilliseconds));
 		self->peer = peer;
-		self->onReturnedValue = [_onReturnedValue](Peer *peer, Flags flags,
-												   ByteReader &reader) -> void {
+		self->_internalOnReturnedValue = [](Peer *peer, Flags flags,
+											ByteReader &reader,
+											void *func) -> void {
 			typename std::remove_const<
 				typename std::remove_reference<Tret>::type>::type ret;
 			reader.op(ret);
-			_onReturnedValue(peer, flags, ret);
+			((void (*)(Peer *, Flags, Tret))func)(peer, flags, ret);
 		};
 
 		return ret;
@@ -76,7 +75,7 @@ public:
 
 	template <typename Tfunc>
 	static OnReturnCallback
-	Make(Tfunc &&_onReturnedValue, std::function<void(Peer *)> onTimeout,
+	Make(Tfunc &&_onReturnedValue, void (*onTimeout)(Peer *),
 		 uint32_t timeoutMilliseconds, Peer *peer,
 		 CommandExecutionQueue *executionQueue = nullptr)
 	{
@@ -85,24 +84,27 @@ public:
 
 		self->onTimeout = onTimeout;
 		self->executionQueue = executionQueue;
+		self->onReturned = (void *)ConvertLambdaToFunctionPtr(_onReturnedValue);
 		self->timeoutTimePoint =
 			std::chrono::steady_clock::now() +
 			(std::chrono::milliseconds(timeoutMilliseconds));
 		self->peer = peer;
-		self->onReturnedValue = [_onReturnedValue](Peer *peer, Flags flags,
-												   ByteReader &reader) -> void {
-			_onReturnedValue(peer, flags);
+		self->_internalOnReturnedValue = [](Peer *peer, Flags flags,
+											ByteReader &reader,
+											void *func) -> void {
+			((void (*)(Peer *, Flags))func)(peer, flags);
 		};
 
 		return ret;
 	}
 
 public:
-	std::function<void(Peer *, Flags, ByteReader &)> onReturnedValue;
-	std::function<void(Peer *)> onTimeout;
+	void (*_internalOnReturnedValue)(Peer *, Flags, ByteReader &, void *func);
+	void (*onTimeout)(Peer *);
 	CommandExecutionQueue *executionQueue;
 	std::chrono::time_point<std::chrono::steady_clock> timeoutTimePoint;
 	Peer *peer;
+	void *onReturned;
 };
 } // namespace icon6
 

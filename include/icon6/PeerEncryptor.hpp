@@ -21,8 +21,6 @@
 
 #include <cinttypes>
 
-#include <memory>
-
 #include <enet/enet.h>
 
 #include "Cert.hpp"

@@ -19,7 +19,6 @@
 #ifndef ICON6_MESSAGE_PASSING_ENVIRONMENT_HPP
 #define ICON6_MESSAGE_PASSING_ENVIRONMENT_HPP
 
-#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>

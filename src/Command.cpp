@@ -27,13 +27,7 @@ namespace icon6
 namespace commands
 {
 void ExecuteOnPeer::Execute() { function(peer, data, customSharedData); }
-
-void ExecuteFunctionObjectOnPeer::Execute()
-{
-	function(peer, data, customSharedData);
-}
-
-void ExecuteFunctionObjectNoArgsOnPeer::Execute() { function(peer); }
+void ExecuteOnPeerNoArgs::Execute() { function(peer); }
 
 void ExecuteRPC::Execute() { messageConverter->Call(peer, reader, flags); }
 
@@ -42,7 +36,7 @@ void ExecuteRMI::Execute()
 	methodInvoker->Call(objectPtr, peer, reader, flags);
 }
 
-void ExecuteReturnRC::Execute() { function(peer, flags, reader); }
+void ExecuteReturnRC::Execute() { function(peer, flags, reader, funcPtr); }
 
 void ExecuteConnect::Execute()
 {
@@ -58,8 +52,6 @@ void ExecuteSend::Execute() { peer->_InternalSend(std::move(data), flags); }
 void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(disconnectData); }
 
 void ExecuteFunctionPointer::Execute() { function(); }
-
-void ExecuteFunctionObject::Execute() { function(); }
 } // namespace commands
 
 using namespace commands;

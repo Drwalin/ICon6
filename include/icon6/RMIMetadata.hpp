@@ -20,7 +20,6 @@
 #define ICON6_RMI_METADATA_HPP
 
 #include <string>
-#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 

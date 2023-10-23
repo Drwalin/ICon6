@@ -24,9 +24,6 @@
 #include <string>
 #include <memory>
 #include <vector>
-#include <variant>
-#include <future>
-#include <functional>
 
 #include <enet/enet.h>
 
@@ -57,6 +54,15 @@ public:
 	virtual void Execute() = 0;
 };
 
+class ExecuteOnPeerNoArgs final : public BaseCommandExecute
+{
+public:
+	Peer *peer;
+	void (*function)(Peer *peer);
+
+	virtual void Execute() override;
+};
+
 class ExecuteOnPeer final : public BaseCommandExecute
 {
 public:
@@ -65,28 +71,6 @@ public:
 	std::shared_ptr<void> customSharedData;
 	void (*function)(Peer *peer, std::vector<uint8_t> &data,
 					 std::shared_ptr<void> customSharedData);
-
-	virtual void Execute() override;
-};
-
-class ExecuteFunctionObjectOnPeer final : public BaseCommandExecute
-{
-public:
-	Peer *peer;
-	std::vector<uint8_t> data;
-	std::shared_ptr<void> customSharedData;
-	std::function<void(Peer *, std::vector<uint8_t> &,
-					   std::shared_ptr<void> customSharedData)>
-		function;
-
-	virtual void Execute() override;
-};
-
-class ExecuteFunctionObjectNoArgsOnPeer final : public BaseCommandExecute
-{
-public:
-	Peer *peer;
-	std::function<void(Peer *)> function;
 
 	virtual void Execute() override;
 };
@@ -139,8 +123,9 @@ public:
 	}
 
 	Peer *peer;
+	void *funcPtr;
 	ByteReader reader;
-	std::function<void(Peer *, Flags, ByteReader &)> function;
+	void (*function)(Peer *, Flags, ByteReader &, void *);
 	Flags flags;
 
 	virtual void Execute() override;
@@ -184,14 +169,6 @@ public:
 
 	virtual void Execute() override;
 };
-
-class ExecuteFunctionObject final : public BaseCommandExecute
-{
-public:
-	std::function<void()> function;
-
-	virtual void Execute() override;
-};
 } // namespace commands
 
 class Command final
@@ -212,9 +189,7 @@ public:
 
 	union {
 		commands::ExecuteOnPeer executeOnPeer;
-		commands::ExecuteFunctionObjectOnPeer executeFunctionObjectOnPeer;
-		commands::ExecuteFunctionObjectNoArgsOnPeer
-			executeFunctionObjectNoArgsOnPeer;
+		commands::ExecuteOnPeerNoArgs executeOnPeerNoArgs;
 		commands::ExecuteRPC executeRPC;
 		commands::ExecuteRMI executeRMI;
 		commands::ExecuteReturnRC executeReturnRC;
@@ -222,7 +197,6 @@ public:
 		commands::ExecuteSend executeSend;
 		commands::ExecuteDisconnect executeDisconnect;
 		commands::ExecuteFunctionPointer executeFunctionPointer;
-		commands::ExecuteFunctionObject executeFunctionObject;
 	};
 
 	bool hasValue;
@@ -235,18 +209,10 @@ public:
 	{
 		this->executeOnPeer = std::move(executeOnPeer);
 	}
-	Command(commands::ExecuteFunctionObjectOnPeer &&executeFunctionObjectOnPeer)
-		: executeFunctionObjectOnPeer(), hasValue(true)
+	Command(commands::ExecuteOnPeerNoArgs &&executeOnPeerNoArgs)
+		: executeOnPeerNoArgs(), hasValue(true)
 	{
-		this->executeFunctionObjectOnPeer =
-			std::move(executeFunctionObjectOnPeer);
-	}
-	Command(commands::ExecuteFunctionObjectNoArgsOnPeer
-				&&executeFunctionObjectNoArgsOnPeer)
-		: executeFunctionObjectNoArgsOnPeer(), hasValue(true)
-	{
-		this->executeFunctionObjectNoArgsOnPeer =
-			std::move(executeFunctionObjectNoArgsOnPeer);
+		this->executeOnPeerNoArgs = std::move(executeOnPeerNoArgs);
 	}
 	Command(commands::ExecuteRPC &&executeRPC)
 		: executeRPC(std::move(executeRPC)), hasValue(true)
@@ -278,11 +244,6 @@ public:
 		: executeFunctionPointer(), hasValue(true)
 	{
 		this->executeFunctionPointer = std::move(executeFunctionPointer);
-	}
-	Command(commands::ExecuteFunctionObject &&executeFunctionObject)
-		: executeFunctionObject(), hasValue(true)
-	{
-		this->executeFunctionObject = std::move(executeFunctionObject);
 	}
 };
 } // namespace icon6

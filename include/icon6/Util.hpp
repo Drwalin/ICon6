@@ -19,11 +19,8 @@
 #ifndef ICON6_UTIL_HPP
 #define ICON6_UTIL_HPP
 
-#include <memory>
-
 namespace icon6
 {
-
 template <typename... Args>
 auto ConvertLambdaToFunctionPtr(void (*fun)(Args...))
 {

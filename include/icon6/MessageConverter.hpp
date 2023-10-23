@@ -19,7 +19,6 @@
 #ifndef ICON6_MESSAGE_CONVERTER_HPP
 #define ICON6_MESSAGE_CONVERTER_HPP
 
-#include <memory>
 #include <tuple>
 
 #include <bitscpp/ByteWriterExtensions.hpp>

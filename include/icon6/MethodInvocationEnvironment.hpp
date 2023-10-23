@@ -19,8 +19,6 @@
 #ifndef ICON6_METHOD_INVOCATION_ENVIRONMENT_HPP
 #define ICON6_METHOD_INVOCATION_ENVIRONMENT_HPP
 
-#include <memory>
-
 #include "MethodInvocationConverter.hpp"
 #include "Flags.hpp"
 #include "RMIMetadata.hpp"

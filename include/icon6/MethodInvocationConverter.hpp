@@ -19,9 +19,7 @@
 #ifndef ICON6_METHOD_INVOCATION_CONVERTER_HPP
 #define ICON6_METHOD_INVOCATION_CONVERTER_HPP
 
-#include <memory>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
