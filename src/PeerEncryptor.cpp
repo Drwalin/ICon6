@@ -41,14 +41,18 @@ void PeerEncryptor::EncryptMessage(uint8_t *cipher, const uint8_t *message,
 	flags.GetNetworkOrder(ad);
 	sendMessagesCounter++;
 
-	uint8_t nonce[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
-	memset(nonce, 0, sizeof(nonce));
-	*(decltype(sendMessagesCounter) *)nonce = htonl(sendMessagesCounter);
-
 	uint8_t *ptrCipher = cipher;
 	uint8_t *ptrNonce = ptrCipher + messageLength;
 	uint8_t *ptrMac = ptrNonce + nonceSize;
-	*(decltype(sendMessagesCounter) *)(ptrNonce) = htonl(sendMessagesCounter);
+
+	uint8_t nonce[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
+	memset(nonce, 0, sizeof(nonce));
+	
+	{
+		uint32_t v = htonl(sendMessagesCounter);
+		memcpy(ptrNonce, &v, sizeof(uint32_t));
+		memcpy(nonce, &v, sizeof(uint32_t));
+	}
 
 	const uint8_t *ptrMessage = message;
 
