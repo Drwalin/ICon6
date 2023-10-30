@@ -158,7 +158,6 @@ class ExecuteDisconnect final : public BaseCommandExecute
 {
 public:
 	Peer *peer;
-	uint32_t disconnectData;
 
 	virtual void Execute() override;
 };

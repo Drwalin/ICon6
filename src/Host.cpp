@@ -88,34 +88,6 @@ Host::Host(uint32_t maximumHosts) {
 
 Host::~Host() { Destroy(); }
 
-void Host::SetCertificatePolicy(PeerAcceptancePolicy peerAcceptancePolicy)
-{
-	if (peerAcceptancePolicy == PeerAcceptancePolicy::ACCEPT_ALL) {
-		this->peerAcceptancePolicy = peerAcceptancePolicy;
-	} else {
-		throw "Please use only "
-			  "Host::SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL)";
-	}
-}
-
-void Host::AddTrustedRootCA(crypto::Cert *rootCA)
-{
-	throw "Host::SetSelfCertificate not implemented yet. Please use only "
-		  "Host::SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL)";
-}
-
-void Host::SetSelfCertificate(crypto::Cert *root)
-{
-	throw "Host::SetSelfCertificate not implemented yet. Please use only "
-		  "Host::InitRandomSelfsignedCertificate()";
-}
-
-void Host::InitRandomSelfsignedCertificate()
-{
-	certKey = crypto::CertKey::GenerateKey();
-	// TODO: generate self signed certificate
-}
-
 void Host::StaticSteamNetConnectionStatusChangedCallback(
 			SteamNetConnectionStatusChangedCallback_t *pInfo) {
 	Host *host = steam_listen_socket_to_Host_transator::GetHost(pInfo);
@@ -131,8 +103,6 @@ void Host::Init(const SteamNetworkingIPAddr *address)
 	callbackOnReceive = nullptr;
 	callbackOnDisconnect = nullptr;
 	userData = nullptr;
-	SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL);
-	InitRandomSelfsignedCertificate();
 	
 	host = SteamNetworkingSockets();
 	if (address) {
@@ -313,7 +283,7 @@ void Host::SetConnect(void (*callback)(Peer *))
 	callbackOnConnect = callback;
 }
 
-void Host::SetReceive(void (*callback)(Peer *, std::vector<uint8_t> &data,
+void Host::SetReceive(void (*callback)(Peer *, ISteamNetworkingMessage *,
 									   Flags flags))
 {
 	callbackOnReceive = callback;
@@ -362,8 +332,9 @@ void Host::Connect(std::string address, uint16_t port,
 			commands::ExecuteConnect &com = command.executeConnect;
 			com.onConnected = std::move(onConnected);
 			com.executionQueue = queue;
-			enet_address_set_host(&com.address, address.c_str());
-			com.address.port = port;
+			com.address.Clear();
+			com.address.m_port = port;
+			com.address.ParseString(address.c_str());
 			com.host = host;
 			host->EnqueueCommand(std::move(command));
 		},
@@ -371,13 +342,15 @@ void Host::Connect(std::string address, uint16_t port,
 		.detach();
 }
 
-Peer *Host::_InternalConnect(ENetAddress address)
+Peer *Host::_InternalConnect(const SteamNetworkingIPAddr *address)
 {
-	ENetPeer *peer = enet_host_connect(host, &address, 2, 0);
-	enet_host_flush(host);
-	Peer *p(new Peer(this, peer));
-	peer->data = p;
-	peers.insert(p);
+	SteamNetworkingConfigValue_t opt;
+	opt.SetPtr( k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
+			(void*)Host::StaticSteamNetConnectionStatusChangedCallback);
+	
+	auto connection = host->ConnectByIPAddress(*address, 1, &opt);
+	Peer *p(new Peer(this, connection));
+	peers[connection] = p;
 	return p;
 }
 
@@ -390,16 +363,49 @@ void Host::SetMessagePassingEnvironment(MessagePassingEnvironment *mpe)
 {
 	this->mpe = mpe;
 	if (mpe) {
-		this->callbackOnReceive = [](Peer *peer, std::vector<uint8_t> &data,
+		this->callbackOnReceive = [](Peer *peer, ISteamNetworkingMessage *packet,
 									 Flags flags) {
-			ByteReader reader(std::move(data), 0);
+			ByteReader reader(packet, 0);
 			peer->GetHost()->GetMessagePassingEnvironment()->OnReceive(
 				peer, reader, flags);
 		};
 	}
 }
 
-uint32_t Initialize() { return enet_initialize(); }
+uint32_t Initialize() {
+#ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
+	SteamDatagramErrMsg errMsg;
+	if (!GameNetworkingSockets_Init(nullptr, errMsg)) {
+		throw (std::string("GameNetworkingSockets_Init failed: ") + errMsg);
+		return -1;
+	}
+#else
+	SteamDatagram_SetAppID(570); // Just set something, doesn't matter what
+	SteamDatagram_SetUniverse(false, k_EUniverseDev);
 
-void Deinitialize() { enet_deinitialize(); }
+	SteamDatagramErrMsg errMsg;
+	if (!SteamDatagramClient_Init(errMsg))
+		FatalError("SteamDatagramClient_Init failed.  %s", errMsg);
+
+	// Disable authentication when running with Steam, for this
+	// example, since we're not a real app.
+	//
+	// Authentication is disabled automatically in the open-source
+	// version since we don't have a trusted third party to issue
+	// certs.
+	SteamNetworkingUtils()->SetGlobalConfigValueInt32(
+		k_ESteamNetworkingConfig_IP_AllowWithoutAuth, 1);
+#endif
+
+	SteamNetworkingUtils()->SetDebugOutputFunction(
+		k_ESteamNetworkingSocketsDebugOutputType_Msg, [](
+		ESteamNetworkingSocketsDebugOutputType eType, const char *msg){
+			DEBUG("%s", msg);
+		});
+	return 0;
+}
+
+void Deinitialize() {
+	GameNetworkingSockets_Kill();
+}
 } // namespace icon6

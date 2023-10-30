@@ -40,7 +40,7 @@ public:
 
 	void Send(std::vector<uint8_t> &&data, Flags flags);
 
-	void Disconnect(uint32_t disconnectData);
+	void Disconnect();
 
 	inline uint32_t GetMTU() const {
 		// TODO: get mtu of connection
@@ -75,7 +75,7 @@ public:
 
 	inline Host *GetHost() { return host; }
 
-	void SetReceiveCallback(void (*callback)(Peer *, std::vector<uint8_t> &data,
+	void SetReceiveCallback(void (*callback)(Peer *, ISteamNetworkingMessage *,
 											 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
 
@@ -89,10 +89,9 @@ public:
 public:
 	void _InternalSend(std::vector<uint8_t> &&data, Flags flags);
 	void _InternalDisconnect();
-	void _InternalStartHandshake();
 
 private:
-	void CallCallbackReceive(ISteamNetworkingMessage *packet, Flags flags);
+	void CallCallbackReceive(ISteamNetworkingMessage *packet);
 	void CallCallbackDisconnect();
 
 	enum SteamMessageFlags {
@@ -109,7 +108,7 @@ private:
 	Host *host;
 	HSteamNetConnection peer;
 
-	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data, Flags flags);
+	void (*callbackOnReceive)(Peer *, ISteamNetworkingMessage *, Flags);
 	void (*callbackOnDisconnect)(Peer *);
 };
 } // namespace icon6

@@ -61,7 +61,7 @@ public:
 						std::index_sequence<SeqArgs...>)
 	{
 		Tret ret = (objectPtr->*onReceive)(std::get<SeqArgs>(args)...);
-		if (reader.bytes[0] == MethodProtocolSendFlags::METHOD_CALL_PREFIX &&
+		if (reader.data()[0] == MethodProtocolSendFlags::METHOD_CALL_PREFIX &&
 			reader.get_remaining_bytes() == 4) {
 			uint32_t id;
 			reader.op(id);
@@ -84,7 +84,7 @@ public:
 						std::index_sequence<SeqArgs...>)
 	{
 		(objectPtr->*onReceive)(std::get<SeqArgs>(args)...);
-		if (reader.bytes[0] == MethodProtocolSendFlags::METHOD_CALL_PREFIX &&
+		if (reader.data()[0] == MethodProtocolSendFlags::METHOD_CALL_PREFIX &&
 			reader.get_remaining_bytes() == 4) {
 			uint32_t id;
 			reader.op(id);

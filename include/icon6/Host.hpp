@@ -34,8 +34,6 @@
 #include "Command.hpp"
 #include "CommandExecutionQueue.hpp"
 
-#include "Cert.hpp"
-
 #define DEBUG(...) icon6::Debug(__FILE__, __LINE__, __VA_ARGS__)
 
 namespace icon6
@@ -68,12 +66,6 @@ public:
 	Host(uint32_t maximumHostsNumber);
 	~Host();
 
-	void SetCertificatePolicy(PeerAcceptancePolicy peerAcceptancePolicy);
-	void AddTrustedRootCA(crypto::Cert *rootCA);
-	void SetSelfCertificate(crypto::Cert *root);
-	void InitRandomSelfsignedCertificate();
-	void SetPolicyMaximumDepthOfCertificateAcceptable(uint32_t maxDepth);
-
 	void Destroy();
 
 	void RunAsync();
@@ -83,7 +75,7 @@ public:
 	void DisconnectAllGracefully();
 
 	void SetConnect(void (*callback)(Peer *));
-	void SetReceive(void (*callback)(Peer *, std::vector<uint8_t> &data,
+	void SetReceive(void (*callback)(Peer *, ISteamNetworkingMessage *,
 									 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
 
@@ -98,7 +90,7 @@ public:
 				 commands::ExecuteOnPeer &&onConnected,
 				 CommandExecutionQueue *queue = nullptr);
 
-	Peer *_InternalConnect(const SteamNetworkingIPAddr &address);
+	Peer *_InternalConnect(const SteamNetworkingIPAddr *address);
 
 public:
 	void *userData;
@@ -118,12 +110,6 @@ private:
 	void EnqueueCommand(Command &&command);
 
 private:
-	// 		crypto::Cert *cert;
-	crypto::CertKey *certKey;
-	// 		std::vector<crypto::Cert *> trustedRootCertificates;
-	PeerAcceptancePolicy peerAcceptancePolicy =
-		PeerAcceptancePolicy::ACCEPT_ALL;
-	// 		uint32_t maxCertificateDepthAcceptable = 16;
 
 	MessagePassingEnvironment *mpe;
 
@@ -143,7 +129,7 @@ private:
 	std::vector<Command> popedCommands;
 
 	void (*callbackOnConnect)(Peer *);
-	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data, Flags flags);
+	void (*callbackOnReceive)(Peer *, ISteamNetworkingMessage *, Flags);
 	void (*callbackOnDisconnect)(Peer *);
 };
 

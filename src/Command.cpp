@@ -40,7 +40,7 @@ void ExecuteReturnRC::Execute() { function(peer, flags, reader, funcPtr); }
 
 void ExecuteConnect::Execute()
 {
-	onConnected.peer = host->_InternalConnect(address);
+	onConnected.peer = host->_InternalConnect(&address);
 	if (executionQueue)
 		executionQueue->EnqueueCommand(Command(std::move(onConnected)));
 	else
@@ -49,7 +49,7 @@ void ExecuteConnect::Execute()
 
 void ExecuteSend::Execute() { peer->_InternalSend(std::move(data), flags); }
 
-void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(disconnectData); }
+void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(); }
 
 void ExecuteFunctionPointer::Execute() { function(); }
 } // namespace commands

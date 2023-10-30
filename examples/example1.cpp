@@ -15,19 +15,23 @@ int main()
 
 	icon6::Initialize();
 
-	auto host1 = icon6::Host::Make(port1, 16);
-	auto host2 = icon6::Host::Make(port2, 16);
+	auto host1 = new icon6::Host(port1, 16);
+	auto host2 = new icon6::Host(port2, 16);
 
 	host1->SetReceive(
-		[](icon6::Peer *p, std::vector<uint8_t> &data, icon6::Flags flags) {
-			printf(" message in host1: %s\n", data.data());
+		[](icon6::Peer *p, ISteamNetworkingMessage *data, icon6::Flags flags) {
+			printf("\n");
+			printf(" message in host1: %s\n", (char*)data->m_pData);
 			fflush(stdout);
+			data->Release();
 		});
 	host2->SetReceive(
-		[](icon6::Peer *p, std::vector<uint8_t> &data, icon6::Flags flags) {
-			printf(" message in host2: %s\n", data.data());
+		[](icon6::Peer *p, ISteamNetworkingMessage *data, icon6::Flags flags) {
+			printf("\n");
+			printf(" message in host2: %s\n", (char*)data->m_pData);
 			fflush(stdout);
-			std::string res = (char *)data.data();
+			fflush(stdout);
+			std::string res = (char *)data->m_pData;
 			res = "Response " + res;
 			p->Send(MakeVector(res.c_str()), flags);
 		});
@@ -38,23 +42,24 @@ int main()
 	auto P1 = host1->ConnectPromise("localhost", port2);
 	P1.wait();
 	auto p1 = P1.get();
-
-	auto time_end = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-	while (time_end > std::chrono::steady_clock::now()) {
-		if (p1->GetState() == icon6::STATE_READY_TO_USE) {
-			break;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
+	
+// 	auto time_end = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+// 	while (time_end > std::chrono::steady_clock::now()) {
+// 		if (p1->GetState() == icon6::STATE_READY_TO_USE) {
+// 			break;
+// 		}
+// 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+// 	}
+	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
 	if (p1 != nullptr) {
 		p1->Send(MakeVector("Message 1"), 0);
 		p1->Send(MakeVector("Message 2"), 0);
 		p1->Send(MakeVector("Message 3"), 0);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
-		p1->Disconnect(0);
+		p1->Disconnect();
 	} else {
 		throw "Didn't connect to peer.";
 	}

@@ -53,8 +53,8 @@ int main()
 
 	icon6::Initialize();
 
-	auto host1 = icon6::Host::Make(port1, 16);
-	auto host2 = icon6::Host::Make(port2, 16);
+	auto host1 = new icon6::Host(port1, 16);
+	auto host2 = new icon6::Host(port2, 16);
 
 	host1->SetMessagePassingEnvironment(mpe);
 	host2->SetMessagePassingEnvironment(mpe);
@@ -95,13 +95,14 @@ int main()
 	P1.wait();
 	auto p1 = P1.get();
 
-	auto time_end = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-	while (time_end > std::chrono::steady_clock::now()) {
-		if (p1->GetState() == icon6::STATE_READY_TO_USE) {
-			break;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
+// 	auto time_end = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+// 	while (time_end > std::chrono::steady_clock::now()) {
+// 		if (p1->GetState() == icon6::STATE_READY_TO_USE) {
+// 			break;
+// 		}
+// 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+// 	}
+	std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
 	if (p1 != nullptr) {
 		mpe->Send<std::vector<int>>(p1, 0, "mult", {1, 2, 3, 4, 5});
@@ -117,7 +118,7 @@ int main()
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-		p1->Disconnect(0);
+		p1->Disconnect();
 	} else {
 		throw "Didn't connect to peer.";
 	}
