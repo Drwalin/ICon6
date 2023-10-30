@@ -23,10 +23,11 @@
 #include <memory>
 #include <future>
 #include <atomic>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
-#include <enet/enet.h>
+#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingutils.h>
 
 #include "Flags.hpp"
 #include "Peer.hpp"
@@ -54,8 +55,6 @@ enum class PeerAcceptancePolicy {
 class Host final
 {
 public:
-	static Host *Make(uint16_t port, uint32_t maximumHostsNumber);
-
 	void SetMessagePassingEnvironment(MessagePassingEnvironment *mpe);
 	inline MessagePassingEnvironment *GetMessagePassingEnvironment()
 	{
@@ -86,7 +85,7 @@ public:
 	void SetConnect(void (*callback)(Peer *));
 	void SetReceive(void (*callback)(Peer *, std::vector<uint8_t> &data,
 									 Flags flags));
-	void SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData));
+	void SetDisconnect(void (*callback)(Peer *));
 
 	void Stop();
 	void WaitStop();
@@ -99,7 +98,7 @@ public:
 				 commands::ExecuteOnPeer &&onConnected,
 				 CommandExecutionQueue *queue = nullptr);
 
-	Peer *_InternalConnect(ENetAddress address);
+	Peer *_InternalConnect(const SteamNetworkingIPAddr &address);
 
 public:
 	void *userData;
@@ -109,8 +108,11 @@ public:
 	friend class ConnectionEncryptionState;
 
 private:
-	void Init(ENetAddress *address, uint32_t maximumHostsNumber);
-	void DispatchEvent(ENetEvent &event);
+	static void StaticSteamNetConnectionStatusChangedCallback(
+			SteamNetConnectionStatusChangedCallback_t *pInfo);
+	void Init(const SteamNetworkingIPAddr *address);
+	void SteamNetConnectionStatusChangedCallback(
+			SteamNetConnectionStatusChangedCallback_t *pInfo);
 	void DispatchAllEventsFromQueue();
 	void DispatchPopedEventsFromQueue();
 	void EnqueueCommand(Command &&command);
@@ -130,17 +132,19 @@ private:
 		TO_STOP = 1 << 1,
 	};
 
-	ENetHost *host;
+	ISteamNetworkingSockets *host;
+	HSteamListenSocket listeningSocket;
+	HSteamNetPollGroup pollGroup;
 	std::atomic<uint32_t> flags;
 
-	std::unordered_set<Peer *> peers;
+	std::unordered_map<HSteamNetConnection, Peer *> peers;
 
 	CommandExecutionQueue *commandQueue;
 	std::vector<Command> popedCommands;
 
 	void (*callbackOnConnect)(Peer *);
 	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data, Flags flags);
-	void (*callbackOnDisconnect)(Peer *, uint32_t disconnectData);
+	void (*callbackOnDisconnect)(Peer *);
 };
 
 uint32_t Initialize();

@@ -25,6 +25,9 @@
 #include <mutex>
 #include <vector>
 
+#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingutils.h>
+
 #include "../include/icon6/Peer.hpp"
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 
@@ -48,20 +51,40 @@ void Debug(const char *file, int line, const char *fmt, ...)
 	fflush(stderr);
 }
 
-Host *Host::Make(uint16_t port, uint32_t maximumHostsNumber)
+
+namespace steam_listen_socket_to_Host_transator
 {
-	return new Host(port, maximumHostsNumber);
+	std::mutex mutex;
+	std::unordered_map<HSteamListenSocket, Host*> hosts;
+	
+	void SetHost(HSteamListenSocket listenSocket, Host* host)
+	{
+		std::lock_guard lock(mutex);
+		hosts[listenSocket] = host;
+	}
+	
+	Host* GetHost(SteamNetConnectionStatusChangedCallback_t *pInfo)
+	{
+		if (pInfo->m_info.m_hListenSocket == k_HSteamListenSocket_Invalid) {
+			return ((Peer*)pInfo->m_info.m_nUserData)->GetHost();
+		} else {
+			std::lock_guard lock(mutex);
+			return hosts[pInfo->m_info.m_hListenSocket];
+		}
+	}
 }
 
 Host::Host(uint16_t port, uint32_t maximumHostsNumber)
 {
-	ENetAddress addr;
-	addr.host = ENET_HOST_ANY;
-	addr.port = port;
-	Init(&addr, maximumHostsNumber);
+	SteamNetworkingIPAddr serverLocalAddr;
+	serverLocalAddr.Clear();
+	serverLocalAddr.m_port = port;
+	Init(&serverLocalAddr);
 }
 
-Host::Host(uint32_t maximumHostsNumber) { Init(nullptr, maximumHostsNumber); }
+Host::Host(uint32_t maximumHosts) {
+	Init(nullptr);
+}
 
 Host::~Host() { Destroy(); }
 
@@ -93,7 +116,14 @@ void Host::InitRandomSelfsignedCertificate()
 	// TODO: generate self signed certificate
 }
 
-void Host::Init(ENetAddress *address, uint32_t maximumHostsNumber)
+void Host::StaticSteamNetConnectionStatusChangedCallback(
+			SteamNetConnectionStatusChangedCallback_t *pInfo) {
+	Host *host = steam_listen_socket_to_Host_transator::GetHost(pInfo);
+	host->SteamNetConnectionStatusChangedCallback(pInfo);
+}
+
+
+void Host::Init(const SteamNetworkingIPAddr *address)
 {
 	commandQueue = new CommandExecutionQueue();
 	flags = 0;
@@ -101,9 +131,21 @@ void Host::Init(ENetAddress *address, uint32_t maximumHostsNumber)
 	callbackOnReceive = nullptr;
 	callbackOnDisconnect = nullptr;
 	userData = nullptr;
-	host = enet_host_create(address, maximumHostsNumber, 2, 0, 0);
 	SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL);
 	InitRandomSelfsignedCertificate();
+	
+	host = SteamNetworkingSockets();
+	if (address) {
+		SteamNetworkingConfigValue_t opt;
+		opt.SetPtr( k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
+				(void*)Host::StaticSteamNetConnectionStatusChangedCallback);
+		listeningSocket = host->CreateListenSocketIP(*address, 1, &opt);
+		steam_listen_socket_to_Host_transator::SetHost(listeningSocket, this);
+	} else {
+		listeningSocket = k_HSteamListenSocket_Invalid;
+	}
+	
+	pollGroup = host->CreatePollGroup();
 }
 
 void Host::Destroy()
@@ -111,12 +153,15 @@ void Host::Destroy()
 	DispatchAllEventsFromQueue();
 	WaitStop();
 	DispatchAllEventsFromQueue();
-	for (Peer *peer : peers) {
-		peer->_InternalDisconnect(0);
-		delete peer;
+	for (auto it : peers) {
+		it.second->_InternalDisconnect();
+		delete it.second;
 	}
 	peers.clear();
-	enet_host_destroy(host);
+	host->CloseListenSocket(listeningSocket);
+	listeningSocket = k_HSteamListenSocket_Invalid;
+	host->DestroyPollGroup( pollGroup );
+	pollGroup = k_HSteamNetPollGroup_Invalid;
 	host = nullptr;
 	delete commandQueue;
 	commandQueue = nullptr;
@@ -139,22 +184,7 @@ void Host::RunSync()
 void Host::DisconnectAllGracefully()
 {
 	for (auto p : peers) {
-		p->_InternalDisconnect(0);
-	}
-	ENetEvent event;
-	for (int i = 0; i < 1000000 && enet_host_service(host, &event, 10) >= 0;
-		 ++i) {
-		DispatchEvent(event);
-		if (event.type == ENET_EVENT_TYPE_CONNECT) {
-			enet_peer_disconnect(event.peer, 0);
-		} else if (event.type == ENET_EVENT_TYPE_NONE && i % 10 == 0) {
-			for (auto p : peers) {
-				p->_InternalDisconnect(0);
-			}
-		}
-		if (peers.empty()) {
-			break;
-		}
+		p.second->_InternalDisconnect();
 	}
 }
 
@@ -165,45 +195,101 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 		flags &= ~RUNNING;
 	} else {
 		flags |= RUNNING;
-		ENetEvent event;
 		while (!(flags & TO_STOP)) {
-			enet_host_service(host, &event, maxWaitTimeMilliseconds);
+			ISteamNetworkingMessage *msg = nullptr;
+			int numMsgs = host->ReceiveMessagesOnPollGroup( pollGroup, &msg, 1 );
+			if (numMsgs == 1) {
+				Peer *peer = (Peer *)msg->m_nConnUserData;
+				peer->CallCallbackReceive(msg);
+				msg->Release();
+			}
+			
 			if (mpe != nullptr) {
 				mpe->CheckForTimeoutFunctionCalls(6);
 			}
 			DispatchAllEventsFromQueue();
-			DispatchEvent(event);
 		}
 	}
 }
 
-void Host::DispatchEvent(ENetEvent &event)
+void Host::SteamNetConnectionStatusChangedCallback(
+		SteamNetConnectionStatusChangedCallback_t *pInfo)
 {
-	switch (event.type) {
-	case ENET_EVENT_TYPE_CONNECT: {
-		if (event.peer->data == nullptr) {
-			Peer *peer(new Peer(this, event.peer));
-			peers.insert(peer);
+	switch (pInfo->m_info.m_eState) {
+		case k_ESteamNetworkingConnectionState_None:
+			// NOTE: We will get callbacks here when we destroy connections.  You can ignore these.
+			break;
+
+		case k_ESteamNetworkingConnectionState_ClosedByPeer:
+		case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
+		{
+			// Ignore if they were not previously connected.  (If they disconnected
+			// before we accepted the connection.)
+			if ( pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connected )
+			{
+				auto userData = host->GetConnectionUserData(pInfo->m_hConn);
+				Peer *peer = nullptr;
+				if (userData == -1) {
+					peer = new Peer(this, pInfo->m_hConn);
+					peers[pInfo->m_hConn] = peer;
+				} else {
+					peer = (Peer *)userData;
+				}
+				
+				if (peer) {
+					peer->CallCallbackDisconnect();
+					// TODO: delay Peer object destruction
+ 					// delete peer;
+					peers.erase(pInfo->m_hConn);
+				}
+			}
+
+			// Clean up the connection.  This is important!
+			// The connection is "closed" in the network sense, but
+			// it has not been destroyed.  We must close it on our end, too
+			// to finish up.  The reason information do not matter in this case,
+			// and we cannot linger because it's already closed on the other end,
+			// so we just pass 0's.
+			host->CloseConnection( pInfo->m_hConn, 0, nullptr, false );
+			break;
 		}
-		((Peer *)event.peer->data)->_InternalStartHandshake();
-	} break;
-	case ENET_EVENT_TYPE_RECEIVE: {
-		Flags flags = 0;
-		if (event.packet->flags & ENET_PACKET_FLAG_RELIABLE)
-			flags &= FLAG_RELIABLE;
-		if (!(event.packet->flags & ENET_PACKET_FLAG_UNSEQUENCED))
-			flags &= FLAG_SEQUENCED;
-		Peer *peer = (Peer *)event.peer->data;
-		peer->CallCallbackReceive(event.packet, flags);
-		enet_packet_destroy(event.packet);
-	} break;
-	case ENET_EVENT_TYPE_DISCONNECT: {
-		Peer *peer = (Peer *)event.peer->data;
-		peer->CallCallbackDisconnect(event.data);
-		peers.erase((Peer *)(event.peer->data));
-	} break;
-	case ENET_EVENT_TYPE_NONE:;
-	}
+
+		case k_ESteamNetworkingConnectionState_Connecting:
+		{
+			// A client is attempting to connect
+			// Try to accept the connection.
+			if (host->AcceptConnection( pInfo->m_hConn ) != k_EResultOK) {
+				// This could fail.  If the remote host tried to connect, but then
+				// disconnected, the connection may already be half closed.  Just
+				// destroy whatever we have on our side.
+				host->CloseConnection( pInfo->m_hConn, 0, nullptr, false );
+				break;
+			}
+			
+			auto userData = host->GetConnectionUserData(pInfo->m_hConn);
+			Peer *peer = nullptr;
+			if (userData == -1) {
+				peer = new Peer(this, pInfo->m_hConn);
+				peers[pInfo->m_hConn] = peer;
+			} else {
+				peer = (Peer *)userData;
+			}
+			
+			if (callbackOnConnect) {
+				callbackOnConnect(peer);
+			}
+			break;
+		}
+
+		case k_ESteamNetworkingConnectionState_Connected:
+			// We will get a callback immediately after accepting the connection.
+			// Since we are the server, we can ignore this, it's not news to us.
+			break;
+
+		default:
+			// Silences -Wswitch
+			break;
+	}	
 }
 
 void Host::DispatchAllEventsFromQueue()
@@ -233,7 +319,7 @@ void Host::SetReceive(void (*callback)(Peer *, std::vector<uint8_t> &data,
 	callbackOnReceive = callback;
 }
 
-void Host::SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData))
+void Host::SetDisconnect(void (*callback)(Peer *))
 {
 	callbackOnDisconnect = callback;
 }

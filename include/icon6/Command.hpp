@@ -25,7 +25,8 @@
 #include <memory>
 #include <vector>
 
-#include <enet/enet.h>
+#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingutils.h>
 
 #include "Flags.hpp"
 #include "ByteReader.hpp"
@@ -135,7 +136,7 @@ class ExecuteConnect final : public BaseCommandExecute
 {
 public:
 	Host *host;
-	ENetAddress address;
+	SteamNetworkingIPAddr address;
 
 	CommandExecutionQueue *executionQueue;
 	ExecuteOnPeer onConnected;

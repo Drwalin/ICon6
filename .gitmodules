@@ -1,9 +1,9 @@
-[submodule "enet"]
-	path = enet
-	url = https://github.com/lsalzman/enet.git
 [submodule "concurrentqueue"]
 	path = concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue.git
 [submodule "bitscpp"]
 	path = bitscpp
 	url = https://github.com/Drwalin/bitscpp.git
+[submodule "GameNetworkingSockets"]
+	path = GameNetworkingSockets
+	url = https://github.com/ValveSoftware/GameNetworkingSockets.git

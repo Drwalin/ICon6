@@ -137,19 +137,17 @@ void Peer::CallCallbackReceive(ENetPacket *packet, Flags flags)
 	}
 }
 
-void Peer::SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData))
+void Peer::SetDisconnect(void (*callback)(Peer *))
 {
 	callbackOnDisconnect = callback;
 }
 
-void Peer::CallCallbackDisconnect(uint32_t data)
+void Peer::CallCallbackDisconnect()
 {
-	if (GetState() == STATE_READY_TO_USE) {
-		if (callbackOnDisconnect) {
-			callbackOnDisconnect(this, data);
-		} else if (host->callbackOnDisconnect) {
-			host->callbackOnDisconnect(this, data);
-		}
+	if (callbackOnDisconnect) {
+		callbackOnDisconnect(this);
+	} else if (host->callbackOnDisconnect) {
+		host->callbackOnDisconnect(this);
 	}
 }
 } // namespace icon6

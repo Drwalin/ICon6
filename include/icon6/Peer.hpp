@@ -22,15 +22,15 @@
 #include <cinttypes>
 
 #include <memory>
+#include <vector>
 
-#include <enet/enet.h>
+#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingutils.h>
 
 #include "Flags.hpp"
-#include "ConnectionEncryptionState.hpp"
 
 namespace icon6
 {
-
 class Host;
 
 class Peer final
@@ -42,41 +42,42 @@ public:
 
 	void Disconnect(uint32_t disconnectData);
 
-	inline uint32_t GetMTU() const { return peer->mtu; }
+	inline uint32_t GetMTU() const {
+		// TODO: get mtu of connection
+		return 1400;
+	}
+	static constexpr uint32_t GetEncryptedMessageOverhead()
+	{
+		// TODO: find packet overhead
+		return 64;
+	}
 	inline uint32_t GetEncryptedMTU() const
 	{
-		return peer->mtu - PeerEncryptor::GetEncryptedMessageOverhead();
+		// TODO: get mtu of connection
+		return GetMTU() - GetEncryptedMessageOverhead();
 	}
 	inline uint32_t GetMaxSinglePackedMessageSize() const
 	{
-		return GetEncryptedMTU() -
-			   sizeof(ENetProtocolHeader)		  // ENet protocol overhead
-			   - sizeof(ENetProtocolSendFragment) // ENet protocol overhead
-			   - sizeof(uint32_t) // ENet protocol checksum overhead
-			;
+		// TODO: find this value
+		return GetEncryptedMTU() - 64;
 	}
 	inline uint32_t GetRoundtripTime() const
 	{
-		return peer->roundTripTime >= 2 ? peer->roundTripTime : 2;
+		// TODO: implement
+		throw "Peer::GetRoundTripUnimplemented";
 	}
 	inline uint32_t GetLatency() const { return GetRoundtripTime() >> 1; }
 
-	inline bool IsValid() const { return peer != nullptr && IsHandshakeDone(); }
-
-	inline PeerConnectionState GetState() const
-	{
-		return encryptionState.state;
-	}
-	inline bool IsHandshakeDone() const
-	{
-		return GetState() == STATE_READY_TO_USE;
+	inline bool IsValid() const {
+		// TODO: implement
+		return true;
 	}
 
 	inline Host *GetHost() { return host; }
 
 	void SetReceiveCallback(void (*callback)(Peer *, std::vector<uint8_t> &data,
 											 Flags flags));
-	void SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData));
+	void SetDisconnect(void (*callback)(Peer *));
 
 	friend class Host;
 	friend class ConnectionEncryptionState;
@@ -87,35 +88,30 @@ public:
 
 public:
 	void _InternalSend(std::vector<uint8_t> &&data, Flags flags);
-	void _InternalDisconnect(uint32_t disconnectData);
+	void _InternalDisconnect();
 	void _InternalStartHandshake();
 
 private:
-	void CallCallbackReceive(ENetPacket *packet, Flags flags);
-	void CallCallbackDisconnect(uint32_t data);
+	void CallCallbackReceive(ISteamNetworkingMessage *packet, Flags flags);
+	void CallCallbackDisconnect();
 
-	enum ENetPacketFlags {
-		INTERNAL_SEQUENCED = ENET_PACKET_FLAG_RELIABLE,
-		INTERNAL_UNSEQUENCED =
-			ENET_PACKET_FLAG_RELIABLE | ENET_PACKET_FLAG_UNSEQUENCED,
-		INTERNAL_UNRELIABLE = 0,
+	enum SteamMessageFlags {
+		INTERNAL_SEQUENCED = k_nSteamNetworkingSend_Reliable,
+		INTERNAL_UNRELIABLE = k_nSteamNetworkingSend_UnreliableNoNagle,
 	};
 
 protected:
-	Peer(Host *host, ENetPeer *peer);
+	Peer(Host *host, HSteamNetConnection connection);
 
 private:
-	ConnectionEncryptionState encryptionState;
-
 	std::vector<uint8_t> receivedData;
 
 	Host *host;
-	ENetPeer *peer;
+	HSteamNetConnection peer;
 
 	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data, Flags flags);
-	void (*callbackOnDisconnect)(Peer *, uint32_t disconnectData);
+	void (*callbackOnDisconnect)(Peer *);
 };
-
 } // namespace icon6
 
 #endif

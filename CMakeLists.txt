@@ -9,13 +9,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(ICON6_BUILD_EXAMPLES "Build examples" ON)
 option(ICON6_BUILD_TEST "Build tests" ON)
 
-add_subdirectory(enet)
-target_compile_definitions(enet PRIVATE -DENET_DEBUG)
+add_subdirectory(GameNetworkingSockets)
+target_compile_definitions(GameNetworkingSockets PRIVATE -DENET_DEBUG)
 
 add_subdirectory(bitscpp)
 
 include_directories(./include/)
-include_directories(./enet/include/)
+include_directories(./GameNetworkingSockets/include/)
 include_directories(./bitscpp/include/)
 
 aux_source_directory(./include/icon6/ header_files)
@@ -26,7 +26,7 @@ add_library(icon6 STATIC
 	${source_files}
 )
 # TODO: add code to find if libsodium is installed on system
-target_link_libraries(icon6 enet sodium)
+target_link_libraries(icon6 GameNetworkingSockets::static sodium)
 
 add_executable(keygen src/keygen)
 target_link_libraries(keygen icon6)
