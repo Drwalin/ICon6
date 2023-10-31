@@ -51,7 +51,7 @@ void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 	host->EnqueueCommand(std::move(command));
 }
 
-void Peer::_InternalSend(std::vector<uint8_t> &&data, Flags flags)
+void Peer::_InternalSend(const void *data, uint32_t length, Flags flags)
 {
 	int steamFlags = 0;
 	if (flags & FLAG_RELIABLE) {
@@ -59,8 +59,8 @@ void Peer::_InternalSend(std::vector<uint8_t> &&data, Flags flags)
 	} else {
 		steamFlags = k_nSteamNetworkingSend_Unreliable;
 	}
-	host->host->SendMessageToConnection(peer, data.data(), data.size(),
-										steamFlags, nullptr);
+	host->host->SendMessageToConnection(peer, data, length, steamFlags,
+										nullptr);
 }
 
 void Peer::Disconnect()

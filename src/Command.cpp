@@ -47,7 +47,10 @@ void ExecuteConnect::Execute()
 		onConnected.Execute();
 }
 
-void ExecuteSend::Execute() { peer->_InternalSend(std::move(data), flags); }
+void ExecuteSend::Execute()
+{
+	peer->_InternalSend(data.data(), data.size(), flags);
+}
 
 void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(); }
 

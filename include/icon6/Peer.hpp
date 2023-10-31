@@ -62,7 +62,7 @@ public:
 	std::shared_ptr<void> userSharedPointer;
 
 public:
-	void _InternalSend(std::vector<uint8_t> &&data, Flags flags);
+	void _InternalSend(const void *data, uint32_t length, Flags flags);
 	void _InternalDisconnect();
 
 private:

@@ -113,23 +113,25 @@ void Host::Init(const SteamNetworkingIPAddr *address)
 
 void Host::Destroy()
 {
-	DispatchAllEventsFromQueue();
-	WaitStop();
-	DispatchAllEventsFromQueue();
-	for (auto it : peers) {
-		it.second->_InternalDisconnect();
-		delete it.second;
+	if (host) {
+		DispatchAllEventsFromQueue();
+		WaitStop();
+		DispatchAllEventsFromQueue();
+		for (auto it : peers) {
+			it.second->_InternalDisconnect();
+			delete it.second;
+		}
+		peers.clear();
+		if (listeningSocket != k_HSteamListenSocket_Invalid) {
+			host->CloseListenSocket(listeningSocket);
+			listeningSocket = k_HSteamListenSocket_Invalid;
+		}
+		host->DestroyPollGroup(pollGroup);
+		pollGroup = k_HSteamNetPollGroup_Invalid;
+		host = nullptr;
+		delete commandQueue;
+		commandQueue = nullptr;
 	}
-	peers.clear();
-	if (listeningSocket != k_HSteamListenSocket_Invalid) {
-		host->CloseListenSocket(listeningSocket);
-		listeningSocket = k_HSteamListenSocket_Invalid;
-	}
-	host->DestroyPollGroup(pollGroup);
-	pollGroup = k_HSteamNetPollGroup_Invalid;
-	host = nullptr;
-	delete commandQueue;
-	commandQueue = nullptr;
 }
 
 void Host::RunAsync()

@@ -28,7 +28,6 @@ int main()
 
 		host1->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
 							 icon6::Flags flags) {
-			printf("\n");
 			printf(" message received by client: %s\n", (char *)reader.data());
 			fflush(stdout);
 		});
@@ -57,7 +56,6 @@ int main()
 
 		host2->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
 							 icon6::Flags flags) {
-			printf("\n");
 			printf(" message received by server: %s\n", (char *)reader.data());
 			fflush(stdout);
 			fflush(stdout);
