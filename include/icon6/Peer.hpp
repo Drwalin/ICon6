@@ -24,7 +24,7 @@
 #include <memory>
 #include <vector>
 
-#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
 
 #include "Flags.hpp"
@@ -43,7 +43,8 @@ public:
 
 	void Disconnect();
 
-	inline uint32_t GetMTU() const {
+	inline uint32_t GetMTU() const
+	{
 		// TODO: get mtu of connection
 		return 1400;
 	}
@@ -69,14 +70,11 @@ public:
 	}
 	inline uint32_t GetLatency() const { return GetRoundtripTime() >> 1; }
 
-	inline bool IsValid() const {
-		// TODO: implement
-		return true;
-	}
+	inline bool IsReadyToUse() const { return readyToUse; }
 
 	inline Host *GetHost() { return host; }
 
-	void SetReceiveCallback(void (*callback)(Peer *, ByteReader&,
+	void SetReceiveCallback(void (*callback)(Peer *, ByteReader &,
 											 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
 
@@ -92,6 +90,8 @@ public:
 	void _InternalDisconnect();
 
 private:
+	void SetReadyToUse();
+
 	void CallCallbackReceive(ISteamNetworkingMessage *msg);
 	void CallCallbackDisconnect();
 
@@ -109,7 +109,9 @@ private:
 	Host *host;
 	HSteamNetConnection peer;
 
-	void (*callbackOnReceive)(Peer *, ByteReader&, Flags);
+	bool readyToUse;
+
+	void (*callbackOnReceive)(Peer *, ByteReader &, Flags);
 	void (*callbackOnDisconnect)(Peer *);
 };
 } // namespace icon6

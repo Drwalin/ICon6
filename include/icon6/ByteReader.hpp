@@ -32,8 +32,9 @@ public:
 
 public:
 	ByteReader(ISteamNetworkingMessage *packet, uint32_t offset)
-		: bitscpp::ByteReader<true>((uint8_t*)packet->m_pData, offset, packet->m_cbSize),
-		packet(packet)
+		: bitscpp::ByteReader<true>((uint8_t *)packet->m_pData, offset,
+									packet->m_cbSize),
+		  packet(packet)
 	{
 	}
 	~ByteReader()
@@ -45,8 +46,9 @@ public:
 	}
 
 	ByteReader(ByteReader &&o)
-		: bitscpp::ByteReader<true>((uint8_t*)o.packet->m_pData, o.offset, o.packet->m_cbSize),
-			packet(o.packet)
+		: bitscpp::ByteReader<true>((uint8_t *)o.packet->m_pData, o.offset,
+									o.packet->m_cbSize),
+		  packet(o.packet)
 	{
 		o.packet = nullptr;
 	}
@@ -56,11 +58,8 @@ public:
 		new (this) ByteReader(std::move(o));
 		return *this;
 	}
-	
-	inline uint8_t* data()
-	{
-		return (uint8_t*)packet->m_pData;
-	}
+
+	inline uint8_t *data() { return (uint8_t *)packet->m_pData; }
 
 	ByteReader(ByteReader &) = delete;
 	ByteReader(const ByteReader &) = delete;

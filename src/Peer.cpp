@@ -28,20 +28,21 @@
 
 namespace icon6
 {
-Peer::Peer(Host *host, HSteamNetConnection connection) : host(host), peer(connection)
+Peer::Peer(Host *host, HSteamNetConnection connection)
+	: host(host), peer(connection)
 {
 	host->host->SetConnectionUserData(peer, (uint64_t)(size_t)this);
 	callbackOnReceive = host->callbackOnReceive;
 	callbackOnDisconnect = host->callbackOnDisconnect;
+	readyToUse = false;
 }
 Peer::~Peer() {}
 
 void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 {
-// 	if (GetState() != STATE_READY_TO_USE) {
-// 		throw "Peer::Send Handshake is not finished yet. Sending is not "
-// 			  "posible.";
-// 	}
+	if (!IsReadyToUse()) {
+		DEBUG("Send called on peer %p before ready to use", this);
+	}
 	Command command{commands::ExecuteSend{}};
 	commands::ExecuteSend &com = command.executeSend;
 	com.flags = flags;
@@ -59,7 +60,7 @@ void Peer::_InternalSend(std::vector<uint8_t> &&data, Flags flags)
 		steamFlags = k_nSteamNetworkingSend_Unreliable;
 	}
 	host->host->SendMessageToConnection(peer, data.data(), data.size(),
-			steamFlags,  nullptr);
+										steamFlags, nullptr);
 }
 
 void Peer::Disconnect()
@@ -78,9 +79,7 @@ void Peer::_InternalDisconnect()
 	}
 }
 
-void Peer::SetReceiveCallback(void (*callback)(Peer *,
-											   ByteReader &,
-											   Flags))
+void Peer::SetReceiveCallback(void (*callback)(Peer *, ByteReader &, Flags))
 {
 	callbackOnReceive = callback;
 }
@@ -110,4 +109,6 @@ void Peer::CallCallbackDisconnect()
 		host->callbackOnDisconnect(this);
 	}
 }
+
+void Peer::SetReadyToUse() { readyToUse = true; }
 } // namespace icon6

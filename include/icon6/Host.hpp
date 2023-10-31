@@ -26,7 +26,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
 
 #include "Flags.hpp"
@@ -75,8 +75,7 @@ public:
 	void DisconnectAllGracefully();
 
 	void SetConnect(void (*callback)(Peer *));
-	void SetReceive(void (*callback)(Peer *, ByteReader&,
-									 Flags flags));
+	void SetReceive(void (*callback)(Peer *, ByteReader &, Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
 
 	void Stop();
@@ -91,8 +90,8 @@ public:
 				 CommandExecutionQueue *queue = nullptr);
 
 	Peer *_InternalConnect(const SteamNetworkingIPAddr *address);
-	
-	static Host* GetThreadLocalHost();
+
+	static Host *GetThreadLocalHost();
 	static void SetThreadLocalHost(Host *host);
 
 public:
@@ -104,17 +103,17 @@ public:
 
 private:
 	static void StaticSteamNetConnectionStatusChangedCallback(
-			SteamNetConnectionStatusChangedCallback_t *pInfo);
+		SteamNetConnectionStatusChangedCallback_t *pInfo);
 	void Init(const SteamNetworkingIPAddr *address);
 	void SteamNetConnectionStatusChangedCallback(
-			SteamNetConnectionStatusChangedCallback_t *pInfo);
+		SteamNetConnectionStatusChangedCallback_t *pInfo);
 	int DispatchAllEventsFromQueue();
 	void DispatchPopedEventsFromQueue();
 	void EnqueueCommand(Command &&command);
 
-	static Host* _InternalGetSetThreadLocalHost(bool set, Host *host);
-private:
+	static Host *_InternalGetSetThreadLocalHost(bool set, Host *host);
 
+private:
 	MessagePassingEnvironment *mpe;
 
 	enum HostFlags : uint32_t {
@@ -133,10 +132,11 @@ private:
 	std::vector<Command> popedCommands;
 
 	void (*callbackOnConnect)(Peer *);
-	void (*callbackOnReceive)(Peer *, ByteReader&, Flags);
+	void (*callbackOnReceive)(Peer *, ByteReader &, Flags);
 	void (*callbackOnDisconnect)(Peer *);
 };
 
+void EnableSteamNetworkingDebug(bool value);
 uint32_t Initialize();
 void Deinitialize();
 } // namespace icon6

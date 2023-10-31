@@ -25,8 +25,6 @@
 #include <mutex>
 #include <vector>
 
-#include <unistd.h>
-
 #include <steam/steamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
 
@@ -53,16 +51,16 @@ void Debug(const char *file, int line, const char *fmt, ...)
 	fflush(stderr);
 }
 
-Host* Host::_InternalGetSetThreadLocalHost(bool set, Host *host)
+Host *Host::_InternalGetSetThreadLocalHost(bool set, Host *host)
 {
-	static thread_local Host* _host = nullptr;
+	static thread_local Host *_host = nullptr;
 	if (set) {
 		_host = host;
 	}
 	return _host;
 }
 
-Host* Host::GetThreadLocalHost()
+Host *Host::GetThreadLocalHost()
 {
 	return _InternalGetSetThreadLocalHost(false, nullptr);
 }
@@ -80,18 +78,16 @@ Host::Host(uint16_t port, uint32_t maximumHostsNumber)
 	Init(&serverLocalAddr);
 }
 
-Host::Host(uint32_t maximumHosts) {
-	Init(nullptr);
-}
+Host::Host(uint32_t maximumHosts) { Init(nullptr); }
 
 Host::~Host() { Destroy(); }
 
 void Host::StaticSteamNetConnectionStatusChangedCallback(
-			SteamNetConnectionStatusChangedCallback_t *pInfo) {
+	SteamNetConnectionStatusChangedCallback_t *pInfo)
+{
 	Host *host = Host::GetThreadLocalHost();
 	host->SteamNetConnectionStatusChangedCallback(pInfo);
 }
-
 
 void Host::Init(const SteamNetworkingIPAddr *address)
 {
@@ -101,17 +97,17 @@ void Host::Init(const SteamNetworkingIPAddr *address)
 	callbackOnReceive = nullptr;
 	callbackOnDisconnect = nullptr;
 	userData = nullptr;
-	
+
 	host = SteamNetworkingSockets();
 	if (address) {
 		SteamNetworkingConfigValue_t opt;
-		opt.SetPtr( k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
-				(void*)Host::StaticSteamNetConnectionStatusChangedCallback);
+		opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
+				   (void *)Host::StaticSteamNetConnectionStatusChangedCallback);
 		listeningSocket = host->CreateListenSocketIP(*address, 1, &opt);
 	} else {
 		listeningSocket = k_HSteamListenSocket_Invalid;
 	}
-	
+
 	pollGroup = host->CreatePollGroup();
 }
 
@@ -125,9 +121,11 @@ void Host::Destroy()
 		delete it.second;
 	}
 	peers.clear();
-	host->CloseListenSocket(listeningSocket);
-	listeningSocket = k_HSteamListenSocket_Invalid;
-	host->DestroyPollGroup( pollGroup );
+	if (listeningSocket != k_HSteamListenSocket_Invalid) {
+		host->CloseListenSocket(listeningSocket);
+		listeningSocket = k_HSteamListenSocket_Invalid;
+	}
+	host->DestroyPollGroup(pollGroup);
 	pollGroup = k_HSteamNetPollGroup_Invalid;
 	host = nullptr;
 	delete commandQueue;
@@ -165,9 +163,11 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 		flags |= RUNNING;
 		while (!(flags & TO_STOP)) {
 			int receivedMessages = 0;
-			for (receivedMessages=0; receivedMessages<10; ++receivedMessages) {
+			for (receivedMessages = 0; receivedMessages < 10;
+				 ++receivedMessages) {
 				ISteamNetworkingMessage *msg = nullptr;
-				int numMsgs = host->ReceiveMessagesOnPollGroup( pollGroup, &msg, 1 );
+				int numMsgs =
+					host->ReceiveMessagesOnPollGroup(pollGroup, &msg, 1);
 				if (numMsgs == 1) {
 					Peer *peer = (Peer *)msg->m_nConnUserData;
 					peer->CallCallbackReceive(msg);
@@ -182,7 +182,8 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 			int dispatchedNum = DispatchAllEventsFromQueue();
 			if (receivedMessages == 0) {
 				if (dispatchedNum == 0) {
-					std::this_thread::sleep_for(std::chrono::microseconds(1000));
+					std::this_thread::sleep_for(
+						std::chrono::microseconds(1000));
 				} else if (dispatchedNum < 3) {
 					std::this_thread::sleep_for(std::chrono::microseconds(100));
 				} else if (dispatchedNum < 9) {
@@ -194,71 +195,15 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 }
 
 void Host::SteamNetConnectionStatusChangedCallback(
-		SteamNetConnectionStatusChangedCallback_t *pInfo)
+	SteamNetConnectionStatusChangedCallback_t *pInfo)
 {
 	switch (pInfo->m_info.m_eState) {
-		case k_ESteamNetworkingConnectionState_None:
-			// NOTE: We will get callbacks here when we destroy connections.  You can ignore these.
-			break;
+	case k_ESteamNetworkingConnectionState_None:
+		break;
 
-		case k_ESteamNetworkingConnectionState_ClosedByPeer:
-		case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
-		{
-			// Ignore if they were not previously connected.  (If they disconnected
-			// before we accepted the connection.)
-			if ( pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connected )
-			{
-				auto userData = host->GetConnectionUserData(pInfo->m_hConn);
-				Peer *peer = nullptr;
-				if (userData == -1) {
-					peer = new Peer(this, pInfo->m_hConn);
-					peers[pInfo->m_hConn] = peer;
-				} else {
-					peer = (Peer *)userData;
-				}
-				
-				if (peer) {
-					peer->CallCallbackDisconnect();
-					// TODO: delay Peer object destruction
- 					// delete peer;
-					peers.erase(pInfo->m_hConn);
-				}
-			}
-
-			// Clean up the connection.  This is important!
-			// The connection is "closed" in the network sense, but
-			// it has not been destroyed.  We must close it on our end, too
-			// to finish up.  The reason information do not matter in this case,
-			// and we cannot linger because it's already closed on the other end,
-			// so we just pass 0's.
-			host->CloseConnection( pInfo->m_hConn, 0, nullptr, false );
-			break;
-		}
-
-		case k_ESteamNetworkingConnectionState_Connecting:
-		{
-			// A client is attempting to connect
-			// Try to accept the connection.
-			if (peers.find(pInfo->m_hConn) != peers.end()) {
-				break;
-			}
-			if (host->AcceptConnection( pInfo->m_hConn ) != k_EResultOK) {
-				// This could fail.  If the remote host tried to connect, but then
-				// disconnected, the connection may already be half closed.  Just
-				// destroy whatever we have on our side.
-				host->CloseConnection( pInfo->m_hConn, 0, nullptr, false );
-				DEBUG( "Can't accept connection.  (It was already closed?)" );
-				break;
-			}
-			
-			// Assign the poll group
-			if ( !host->SetConnectionPollGroup( pInfo->m_hConn, pollGroup ) )
-			{
-				host->CloseConnection( pInfo->m_hConn, 0, nullptr, false );
-				DEBUG( "Failed to set poll group?" );
-				break;
-			}
-			
+	case k_ESteamNetworkingConnectionState_ClosedByPeer:
+	case k_ESteamNetworkingConnectionState_ProblemDetectedLocally: {
+		if (pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connected) {
 			auto userData = host->GetConnectionUserData(pInfo->m_hConn);
 			Peer *peer = nullptr;
 			if (userData == -1) {
@@ -267,22 +212,63 @@ void Host::SteamNetConnectionStatusChangedCallback(
 			} else {
 				peer = (Peer *)userData;
 			}
-			
-			if (callbackOnConnect) {
-				callbackOnConnect(peer);
+
+			if (peer) {
+				peer->CallCallbackDisconnect();
+				// TODO: delay Peer object destruction
+				// delete peer;
+				peers.erase(pInfo->m_hConn);
 			}
+		}
+
+		host->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+		break;
+	}
+
+	case k_ESteamNetworkingConnectionState_Connecting: {
+		if (peers.find(pInfo->m_hConn) != peers.end()) {
+			break;
+		}
+		if (host->AcceptConnection(pInfo->m_hConn) != k_EResultOK) {
+			host->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+			DEBUG("Can't accept connection.  (It was already closed?)");
 			break;
 		}
 
-		case k_ESteamNetworkingConnectionState_Connected:
-			// We will get a callback immediately after accepting the connection.
-			// Since we are the server, we can ignore this, it's not news to us.
+		if (!host->SetConnectionPollGroup(pInfo->m_hConn, pollGroup)) {
+			host->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+			DEBUG("Failed to set poll group?");
 			break;
+		}
 
-		default:
-			// Silences -Wswitch
-			break;
-	}	
+		auto userData = host->GetConnectionUserData(pInfo->m_hConn);
+		Peer *peer = nullptr;
+		if (userData == -1) {
+			peer = new Peer(this, pInfo->m_hConn);
+			peers[pInfo->m_hConn] = peer;
+		} else {
+			peer = (Peer *)userData;
+		}
+
+		if (callbackOnConnect) {
+			callbackOnConnect(peer);
+		}
+		break;
+	}
+
+	case k_ESteamNetworkingConnectionState_Connected: {
+		Peer *peer = (Peer *)host->GetConnectionUserData(pInfo->m_hConn);
+		peer->SetReadyToUse();
+		break;
+	}
+
+	case k_ESteamNetworkingConnectionState_Dead:
+	case k_ESteamNetworkingConnectionState_Linger:
+	case k_ESteamNetworkingConnectionState_FinWait:
+	case k_ESteamNetworkingConnectionState_FindingRoute:
+	case k_ESteamNetworkingConnectionState__Force32Bit:
+		break;
+	}
 }
 
 int Host::DispatchAllEventsFromQueue()
@@ -308,8 +294,7 @@ void Host::SetConnect(void (*callback)(Peer *))
 	callbackOnConnect = callback;
 }
 
-void Host::SetReceive(void (*callback)(Peer *, ByteReader &,
-									   Flags flags))
+void Host::SetReceive(void (*callback)(Peer *, ByteReader &, Flags flags))
 {
 	callbackOnReceive = callback;
 }
@@ -370,17 +355,17 @@ void Host::Connect(std::string address, uint16_t port,
 Peer *Host::_InternalConnect(const SteamNetworkingIPAddr *address)
 {
 	SteamNetworkingConfigValue_t opt;
-	opt.SetPtr( k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
-			(void*)Host::StaticSteamNetConnectionStatusChangedCallback);
-	
+	opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
+			   (void *)Host::StaticSteamNetConnectionStatusChangedCallback);
+
 	auto connection = host->ConnectByIPAddress(*address, 1, &opt);
-	
+
 	if (!host->SetConnectionPollGroup(connection, pollGroup)) {
-		host->CloseConnection(connection, 0, nullptr, false );
-		DEBUG( "Failed to set poll group?" );
+		host->CloseConnection(connection, 0, nullptr, false);
+		DEBUG("Failed to set poll group?");
 		return nullptr;
 	}
-	
+
 	Peer *p(new Peer(this, connection));
 	peers[connection] = p;
 	return p;
@@ -403,40 +388,31 @@ void Host::SetMessagePassingEnvironment(MessagePassingEnvironment *mpe)
 	}
 }
 
-uint32_t Initialize() {
-#ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
+static bool _enableSteamNetworkingDebugPrinting = false;
+
+void EnableSteamNetworkingDebug(bool value)
+{
+	_enableSteamNetworkingDebugPrinting = value;
+}
+
+uint32_t Initialize()
+{
 	SteamDatagramErrMsg errMsg;
 	if (!GameNetworkingSockets_Init(nullptr, errMsg)) {
-		throw (std::string("GameNetworkingSockets_Init failed: ") + errMsg);
+		DEBUG("GameNetworkingSockets_Init failed: %s",
+			  ((std::string)errMsg).c_str());
 		return -1;
 	}
-#else
-	SteamDatagram_SetAppID(570); // Just set something, doesn't matter what
-	SteamDatagram_SetUniverse(false, k_EUniverseDev);
-
-	SteamDatagramErrMsg errMsg;
-	if (!SteamDatagramClient_Init(errMsg))
-		FatalError("SteamDatagramClient_Init failed.  %s", errMsg);
-
-	// Disable authentication when running with Steam, for this
-	// example, since we're not a real app.
-	//
-	// Authentication is disabled automatically in the open-source
-	// version since we don't have a trusted third party to issue
-	// certs.
-	SteamNetworkingUtils()->SetGlobalConfigValueInt32(
-		k_ESteamNetworkingConfig_IP_AllowWithoutAuth, 1);
-#endif
 
 	SteamNetworkingUtils()->SetDebugOutputFunction(
-		k_ESteamNetworkingSocketsDebugOutputType_Msg, [](
-		ESteamNetworkingSocketsDebugOutputType eType, const char *msg){
-			DEBUG("%s     ::: pid=%i, type(%i)", msg, getpid(), eType);
+		k_ESteamNetworkingSocketsDebugOutputType_Msg,
+		[](ESteamNetworkingSocketsDebugOutputType eType, const char *msg) {
+			if (_enableSteamNetworkingDebugPrinting) {
+				DEBUG("%s     ::: type(%i)", msg, eType);
+			}
 		});
 	return 0;
 }
 
-void Deinitialize() {
-	GameNetworkingSockets_Kill();
-}
+void Deinitialize() { GameNetworkingSockets_Kill(); }
 } // namespace icon6
