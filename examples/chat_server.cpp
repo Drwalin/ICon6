@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 							}
 						});
 
-	icon6::Host host(port, 16);
+	icon6::Host host(port);
 	host.SetDisconnect([](icon6::Peer *peer) {
 		if (peer->userSharedPointer != nullptr) {
 			std::string oldName;

@@ -24,7 +24,7 @@ int main()
 		perror("fork");
 		exit(EXIT_FAILURE);
 	} else if (c_pid <= 0) {
-		auto host1 = new icon6::Host(port1, 16);
+		auto host1 = new icon6::Host(port1);
 
 		host1->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
 							 icon6::Flags flags) {
@@ -52,7 +52,7 @@ int main()
 		host1->WaitStop();
 		delete host1;
 	} else {
-		auto host2 = new icon6::Host(port2, 16);
+		auto host2 = new icon6::Host(port2);
 
 		host2->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
 							 icon6::Flags flags) {

@@ -70,7 +70,7 @@ void Host::SetThreadLocalHost(Host *host)
 	_InternalGetSetThreadLocalHost(true, host);
 }
 
-Host::Host(uint16_t port, uint32_t maximumHostsNumber)
+Host::Host(uint16_t port)
 {
 	SteamNetworkingIPAddr serverLocalAddr;
 	serverLocalAddr.Clear();
@@ -78,7 +78,7 @@ Host::Host(uint16_t port, uint32_t maximumHostsNumber)
 	Init(&serverLocalAddr);
 }
 
-Host::Host(uint32_t maximumHosts) { Init(nullptr); }
+Host::Host() { Init(nullptr); }
 
 Host::~Host() { Destroy(); }
 

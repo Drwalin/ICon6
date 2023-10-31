@@ -60,10 +60,10 @@ public:
 	}
 
 	// create host on 127.0.0.1:port
-	Host(uint16_t port, uint32_t maximumHostsNumber);
+	Host(uint16_t port);
 
 	// create client host on any port
-	Host(uint32_t maximumHostsNumber);
+	Host();
 	~Host();
 
 	void Destroy();
@@ -81,6 +81,7 @@ public:
 	void Stop();
 	void WaitStop();
 
+	// Thread unsafe. Can be used from main Host's thread.
 	template <typename TFunc> void ForEachPeer(TFunc &&func)
 	{
 		for (auto it : peers) {

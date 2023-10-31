@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 			   message.c_str());
 	});
 
-	icon6::Host host(16);
+	icon6::Host host;
 	host.SetMessagePassingEnvironment(&mpi);
 	host.RunAsync();
 

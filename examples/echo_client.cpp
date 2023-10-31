@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 
 	icon6::Initialize();
 
-	icon6::Host host(16);
+	icon6::Host host;
 
 	host.SetReceive(
 		[](icon6::Peer *peer, icon6::ByteReader &reader, icon6::Flags flags) {
