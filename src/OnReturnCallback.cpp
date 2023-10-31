@@ -30,7 +30,7 @@ void OnReturnCallback::Execute(Peer *peer, Flags flags, ByteReader &reader)
 {
 	if (peer != this->peer) {
 		DEBUG("OnReturnedCallback executed by different peer than the request "
-				"was sent to");
+			  "was sent to");
 	}
 
 	if (executionQueue) {

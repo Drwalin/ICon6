@@ -72,8 +72,8 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 			} else { // method name does not exists
 				// TODO: do something, show error or anything
 				DEBUG(" Method %s not found for object %lu of type %s\n",
-					   name.c_str(), objectId,
-					   object->second.objectClass->name.c_str());
+					  name.c_str(), objectId,
+					  object->second.objectClass->name.c_str());
 			}
 		} else { // this object does not exists locally
 				 // TODO: do something, show error or anything
