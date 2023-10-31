@@ -13,6 +13,43 @@ Each message is limited by GameNetworkingSockets to 512KiB.
 
 - cmake
 
+## How to compile
+
+```bash
+mkdir build
+cmake ..
+make
+```
+
+## Usage
+
+### Examples
+
+Examples are provided in `examples/` directory. Examples called `example1.cpp`
+and `example6.cpp` work only on linux. It is recommended to learn on
+chat\_server/chat\_client or echo\_server/echo\_client.
+
+### Basic functionality
+
+Befor starting using ay of the functions user needs to call:
+```c++
+icon6::Initialize();
+```
+
+And to exit gracefully user needs needs to call:
+```c++
+icon6::Deinitialize();
+```
+
+There are 2 basic classes:
+    - icon6::Host
+    - icon6::Peer
+
+Host represents socket or listening socket while Peer represents connection.
+
+Data receiving is implemented using callbacks which can be set per Host (all new
+Peers will use this new callback) or per Peer basis.
+
 ## Vulnerability
 
 At least the same as ValveSoftware/GameNetworkingSockets.

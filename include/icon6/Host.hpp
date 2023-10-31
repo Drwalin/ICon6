@@ -59,19 +59,22 @@ public:
 		return mpe;
 	}
 
-	// create host on 127.0.0.1:port
+	// create host on given port
 	Host(uint16_t port);
-
-	// create client host on any port
+	// create client host with automatic port
 	Host();
 	~Host();
 
+	// thread unsafe
 	void Destroy();
 
 	void RunAsync();
+	// thread unsafe
 	void RunSync();
+	// thread unsafe
 	void RunSingleLoop(uint32_t maxWaitTimeMilliseconds = 4);
 
+	// thread unsafe
 	void DisconnectAllGracefully();
 
 	void SetConnect(void (*callback)(Peer *));
@@ -81,7 +84,7 @@ public:
 	void Stop();
 	void WaitStop();
 
-	// Thread unsafe. Can be used from main Host's thread.
+	// Thread unsafe.
 	template <typename TFunc> void ForEachPeer(TFunc &&func)
 	{
 		for (auto it : peers) {
@@ -90,20 +93,20 @@ public:
 	}
 
 public:
-	// thread safe function to connect to a remote host
 	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);
-	// thread safe function to connect to a remote host
 	void Connect(std::string address, uint16_t port,
 				 commands::ExecuteOnPeer &&onConnected,
 				 CommandExecutionQueue *queue = nullptr);
 
+	// thread unsafe.
 	Peer *_InternalConnect(const SteamNetworkingIPAddr *address);
 
 	static Host *GetThreadLocalHost();
 	static void SetThreadLocalHost(Host *host);
 
 public:
-	void *userData;
+	uint64_t userData;
+	void *userPointer;
 	std::shared_ptr<void> userSharedPointer;
 
 	friend class Peer;
@@ -136,8 +139,8 @@ private:
 
 	std::unordered_map<HSteamNetConnection, Peer *> peers;
 
-	CommandExecutionQueue *commandQueue;
 	std::vector<Command> popedCommands;
+	CommandExecutionQueue *commandQueue;
 
 	void (*callbackOnConnect)(Peer *);
 	void (*callbackOnReceive)(Peer *, ByteReader &, Flags);

@@ -54,15 +54,18 @@ public:
 											 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
 
+public:
+	uint64_t userData;
+	void *userPointer;
+	std::shared_ptr<void> userSharedPointer;
+
 	friend class Host;
 	friend class ConnectionEncryptionState;
 
 public:
-	void *userData;
-	std::shared_ptr<void> userSharedPointer;
-
-public:
+	// thread unsafe
 	void _InternalSend(const void *data, uint32_t length, Flags flags);
+	// thread unsafe
 	void _InternalDisconnect();
 
 private:
@@ -85,10 +88,10 @@ private:
 	Host *host;
 	HSteamNetConnection peer;
 
-	bool readyToUse;
-
 	void (*callbackOnReceive)(Peer *, ByteReader &, Flags);
 	void (*callbackOnDisconnect)(Peer *);
+
+	bool readyToUse;
 };
 } // namespace icon6
 
