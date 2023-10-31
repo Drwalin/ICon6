@@ -79,7 +79,7 @@ void Peer::_InternalDisconnect()
 }
 
 void Peer::SetReceiveCallback(void (*callback)(Peer *,
-											   ISteamNetworkingMessage *,
+											   ByteReader &,
 											   Flags))
 {
 	callbackOnReceive = callback;
@@ -87,12 +87,13 @@ void Peer::SetReceiveCallback(void (*callback)(Peer *,
 
 void Peer::CallCallbackReceive(ISteamNetworkingMessage *packet)
 {
+	ByteReader reader(packet, 0);
 	if (callbackOnReceive) {
 		Flags flags = 0;
 		if (packet->m_nFlags & k_nSteamNetworkingSend_Reliable) {
 			flags = FLAG_RELIABLE;
 		}
-		callbackOnReceive(this, packet, flags);
+		callbackOnReceive(this, reader, flags);
 	}
 }
 

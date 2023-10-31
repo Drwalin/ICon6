@@ -28,6 +28,7 @@
 #include <steam/isteamnetworkingutils.h>
 
 #include "Flags.hpp"
+#include "ByteReader.hpp"
 
 namespace icon6
 {
@@ -75,7 +76,7 @@ public:
 
 	inline Host *GetHost() { return host; }
 
-	void SetReceiveCallback(void (*callback)(Peer *, ISteamNetworkingMessage *,
+	void SetReceiveCallback(void (*callback)(Peer *, ByteReader&,
 											 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
 
@@ -91,7 +92,7 @@ public:
 	void _InternalDisconnect();
 
 private:
-	void CallCallbackReceive(ISteamNetworkingMessage *packet);
+	void CallCallbackReceive(ISteamNetworkingMessage *msg);
 	void CallCallbackDisconnect();
 
 	enum SteamMessageFlags {
@@ -108,7 +109,7 @@ private:
 	Host *host;
 	HSteamNetConnection peer;
 
-	void (*callbackOnReceive)(Peer *, ISteamNetworkingMessage *, Flags);
+	void (*callbackOnReceive)(Peer *, ByteReader&, Flags);
 	void (*callbackOnDisconnect)(Peer *);
 };
 } // namespace icon6

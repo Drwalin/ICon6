@@ -25,6 +25,8 @@
 #include <mutex>
 #include <vector>
 
+#include <unistd.h>
+
 #include <steam/steamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
 
@@ -51,27 +53,23 @@ void Debug(const char *file, int line, const char *fmt, ...)
 	fflush(stderr);
 }
 
-
-namespace steam_listen_socket_to_Host_transator
+Host* Host::_InternalGetSetThreadLocalHost(bool set, Host *host)
 {
-	std::mutex mutex;
-	std::unordered_map<HSteamListenSocket, Host*> hosts;
-	
-	void SetHost(HSteamListenSocket listenSocket, Host* host)
-	{
-		std::lock_guard lock(mutex);
-		hosts[listenSocket] = host;
+	static thread_local Host* _host = nullptr;
+	if (set) {
+		_host = host;
 	}
-	
-	Host* GetHost(SteamNetConnectionStatusChangedCallback_t *pInfo)
-	{
-		if (pInfo->m_info.m_hListenSocket == k_HSteamListenSocket_Invalid) {
-			return ((Peer*)pInfo->m_info.m_nUserData)->GetHost();
-		} else {
-			std::lock_guard lock(mutex);
-			return hosts[pInfo->m_info.m_hListenSocket];
-		}
-	}
+	return _host;
+}
+
+Host* Host::GetThreadLocalHost()
+{
+	return _InternalGetSetThreadLocalHost(false, nullptr);
+}
+
+void Host::SetThreadLocalHost(Host *host)
+{
+	_InternalGetSetThreadLocalHost(true, host);
 }
 
 Host::Host(uint16_t port, uint32_t maximumHostsNumber)
@@ -90,7 +88,7 @@ Host::~Host() { Destroy(); }
 
 void Host::StaticSteamNetConnectionStatusChangedCallback(
 			SteamNetConnectionStatusChangedCallback_t *pInfo) {
-	Host *host = steam_listen_socket_to_Host_transator::GetHost(pInfo);
+	Host *host = Host::GetThreadLocalHost();
 	host->SteamNetConnectionStatusChangedCallback(pInfo);
 }
 
@@ -110,7 +108,6 @@ void Host::Init(const SteamNetworkingIPAddr *address)
 		opt.SetPtr( k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
 				(void*)Host::StaticSteamNetConnectionStatusChangedCallback);
 		listeningSocket = host->CreateListenSocketIP(*address, 1, &opt);
-		steam_listen_socket_to_Host_transator::SetHost(listeningSocket, this);
 	} else {
 		listeningSocket = k_HSteamListenSocket_Invalid;
 	}
@@ -160,24 +157,38 @@ void Host::DisconnectAllGracefully()
 
 void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 {
+	Host::SetThreadLocalHost(this);
 	if (flags & TO_STOP) {
 		DisconnectAllGracefully();
 		flags &= ~RUNNING;
 	} else {
 		flags |= RUNNING;
 		while (!(flags & TO_STOP)) {
-			ISteamNetworkingMessage *msg = nullptr;
-			int numMsgs = host->ReceiveMessagesOnPollGroup( pollGroup, &msg, 1 );
-			if (numMsgs == 1) {
-				Peer *peer = (Peer *)msg->m_nConnUserData;
-				peer->CallCallbackReceive(msg);
-				msg->Release();
+			int receivedMessages = 0;
+			for (receivedMessages=0; receivedMessages<10; ++receivedMessages) {
+				ISteamNetworkingMessage *msg = nullptr;
+				int numMsgs = host->ReceiveMessagesOnPollGroup( pollGroup, &msg, 1 );
+				if (numMsgs == 1) {
+					Peer *peer = (Peer *)msg->m_nConnUserData;
+					peer->CallCallbackReceive(msg);
+				} else {
+					break;
+				}
 			}
-			
+			host->RunCallbacks();
 			if (mpe != nullptr) {
 				mpe->CheckForTimeoutFunctionCalls(6);
 			}
-			DispatchAllEventsFromQueue();
+			int dispatchedNum = DispatchAllEventsFromQueue();
+			if (receivedMessages == 0) {
+				if (dispatchedNum == 0) {
+					std::this_thread::sleep_for(std::chrono::microseconds(1000));
+				} else if (dispatchedNum < 3) {
+					std::this_thread::sleep_for(std::chrono::microseconds(100));
+				} else if (dispatchedNum < 9) {
+					std::this_thread::yield();
+				}
+			}
 		}
 	}
 }
@@ -228,11 +239,23 @@ void Host::SteamNetConnectionStatusChangedCallback(
 		{
 			// A client is attempting to connect
 			// Try to accept the connection.
+			if (peers.find(pInfo->m_hConn) != peers.end()) {
+				break;
+			}
 			if (host->AcceptConnection( pInfo->m_hConn ) != k_EResultOK) {
 				// This could fail.  If the remote host tried to connect, but then
 				// disconnected, the connection may already be half closed.  Just
 				// destroy whatever we have on our side.
 				host->CloseConnection( pInfo->m_hConn, 0, nullptr, false );
+				DEBUG( "Can't accept connection.  (It was already closed?)" );
+				break;
+			}
+			
+			// Assign the poll group
+			if ( !host->SetConnectionPollGroup( pInfo->m_hConn, pollGroup ) )
+			{
+				host->CloseConnection( pInfo->m_hConn, 0, nullptr, false );
+				DEBUG( "Failed to set poll group?" );
 				break;
 			}
 			
@@ -262,20 +285,22 @@ void Host::SteamNetConnectionStatusChangedCallback(
 	}	
 }
 
-void Host::DispatchAllEventsFromQueue()
+int Host::DispatchAllEventsFromQueue()
 {
-	for (int i = 0; i < 10; ++i) {
+	int i = 0;
+	for (i = 0; i < 10; ++i) {
 		popedCommands.clear();
 		commandQueue->TryDequeueBulkAny(popedCommands);
 
 		if (popedCommands.empty())
-			return;
+			break;
 		for (Command &c : popedCommands) {
 			c.Execute();
 			++i;
 		}
 		popedCommands.clear();
 	}
+	return i;
 }
 
 void Host::SetConnect(void (*callback)(Peer *))
@@ -283,7 +308,7 @@ void Host::SetConnect(void (*callback)(Peer *))
 	callbackOnConnect = callback;
 }
 
-void Host::SetReceive(void (*callback)(Peer *, ISteamNetworkingMessage *,
+void Host::SetReceive(void (*callback)(Peer *, ByteReader &,
 									   Flags flags))
 {
 	callbackOnReceive = callback;
@@ -333,8 +358,8 @@ void Host::Connect(std::string address, uint16_t port,
 			com.onConnected = std::move(onConnected);
 			com.executionQueue = queue;
 			com.address.Clear();
-			com.address.m_port = port;
 			com.address.ParseString(address.c_str());
+			com.address.m_port = port;
 			com.host = host;
 			host->EnqueueCommand(std::move(command));
 		},
@@ -349,6 +374,13 @@ Peer *Host::_InternalConnect(const SteamNetworkingIPAddr *address)
 			(void*)Host::StaticSteamNetConnectionStatusChangedCallback);
 	
 	auto connection = host->ConnectByIPAddress(*address, 1, &opt);
+	
+	if (!host->SetConnectionPollGroup(connection, pollGroup)) {
+		host->CloseConnection(connection, 0, nullptr, false );
+		DEBUG( "Failed to set poll group?" );
+		return nullptr;
+	}
+	
 	Peer *p(new Peer(this, connection));
 	peers[connection] = p;
 	return p;
@@ -363,9 +395,8 @@ void Host::SetMessagePassingEnvironment(MessagePassingEnvironment *mpe)
 {
 	this->mpe = mpe;
 	if (mpe) {
-		this->callbackOnReceive = [](Peer *peer, ISteamNetworkingMessage *packet,
+		this->callbackOnReceive = [](Peer *peer, ByteReader &reader,
 									 Flags flags) {
-			ByteReader reader(packet, 0);
 			peer->GetHost()->GetMessagePassingEnvironment()->OnReceive(
 				peer, reader, flags);
 		};
@@ -400,7 +431,7 @@ uint32_t Initialize() {
 	SteamNetworkingUtils()->SetDebugOutputFunction(
 		k_ESteamNetworkingSocketsDebugOutputType_Msg, [](
 		ESteamNetworkingSocketsDebugOutputType eType, const char *msg){
-			DEBUG("%s", msg);
+			DEBUG("%s     ::: pid=%i, type(%i)", msg, getpid(), eType);
 		});
 	return 0;
 }

@@ -75,7 +75,7 @@ public:
 	void DisconnectAllGracefully();
 
 	void SetConnect(void (*callback)(Peer *));
-	void SetReceive(void (*callback)(Peer *, ISteamNetworkingMessage *,
+	void SetReceive(void (*callback)(Peer *, ByteReader&,
 									 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
 
@@ -91,6 +91,9 @@ public:
 				 CommandExecutionQueue *queue = nullptr);
 
 	Peer *_InternalConnect(const SteamNetworkingIPAddr *address);
+	
+	static Host* GetThreadLocalHost();
+	static void SetThreadLocalHost(Host *host);
 
 public:
 	void *userData;
@@ -105,10 +108,11 @@ private:
 	void Init(const SteamNetworkingIPAddr *address);
 	void SteamNetConnectionStatusChangedCallback(
 			SteamNetConnectionStatusChangedCallback_t *pInfo);
-	void DispatchAllEventsFromQueue();
+	int DispatchAllEventsFromQueue();
 	void DispatchPopedEventsFromQueue();
 	void EnqueueCommand(Command &&command);
 
+	static Host* _InternalGetSetThreadLocalHost(bool set, Host *host);
 private:
 
 	MessagePassingEnvironment *mpe;
@@ -129,7 +133,7 @@ private:
 	std::vector<Command> popedCommands;
 
 	void (*callbackOnConnect)(Peer *);
-	void (*callbackOnReceive)(Peer *, ISteamNetworkingMessage *, Flags);
+	void (*callbackOnReceive)(Peer *, ByteReader&, Flags);
 	void (*callbackOnDisconnect)(Peer *);
 };
 

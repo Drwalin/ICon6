@@ -51,7 +51,7 @@ int main()
 // 		}
 // 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 // 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 	if (p1 != nullptr) {
 		mpe->Send<std::vector<int>>(p1, 0, "mult", {1, 2, 3, 4, 5});
@@ -59,7 +59,7 @@ int main()
 		std::vector<int> s = {1, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2};
 		mpe->Send(p1, 0, "mult", s);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 		p1->Disconnect();
 	} else {
