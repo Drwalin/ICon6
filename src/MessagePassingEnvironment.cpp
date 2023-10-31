@@ -54,7 +54,8 @@ void MessagePassingEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 		if (found) {
 			callback.Execute(peer, flags, reader);
 		} else {
-			// TODO: returned valued didn't found callback
+			DEBUG("Remote function call returned value but OnReturnedCallback"
+					"already expired.");
 		}
 	} else {
 		std::string name;

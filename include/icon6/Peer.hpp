@@ -43,32 +43,8 @@ public:
 
 	void Disconnect();
 
-	inline uint32_t GetMTU() const
-	{
-		// TODO: get mtu of connection
-		return 1400;
-	}
-	static constexpr uint32_t GetEncryptedMessageOverhead()
-	{
-		// TODO: find packet overhead
-		return 64;
-	}
-	inline uint32_t GetEncryptedMTU() const
-	{
-		// TODO: get mtu of connection
-		return GetMTU() - GetEncryptedMessageOverhead();
-	}
-	inline uint32_t GetMaxSinglePackedMessageSize() const
-	{
-		// TODO: find this value
-		return GetEncryptedMTU() - 64;
-	}
-	inline uint32_t GetRoundtripTime() const
-	{
-		// TODO: implement
-		throw "Peer::GetRoundTripUnimplemented";
-	}
-	inline uint32_t GetLatency() const { return GetRoundtripTime() >> 1; }
+	static constexpr uint32_t GetMaxMessagePayload() { return 1200; }
+	uint32_t GetRoundTripTime() const;
 
 	inline bool IsReadyToUse() const { return readyToUse; }
 

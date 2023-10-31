@@ -111,4 +111,11 @@ void Peer::CallCallbackDisconnect()
 }
 
 void Peer::SetReadyToUse() { readyToUse = true; }
+
+uint32_t Peer::GetRoundTripTime() const
+{
+	SteamNetConnectionRealTimeStatus_t status;
+	host->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
+	return status.m_nPing;
+}
 } // namespace icon6
