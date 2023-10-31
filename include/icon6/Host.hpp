@@ -81,6 +81,13 @@ public:
 	void Stop();
 	void WaitStop();
 
+	template <typename TFunc> void ForEachPeer(TFunc &&func)
+	{
+		for (auto it : peers) {
+			func(it.second);
+		}
+	}
+
 public:
 	// thread safe function to connect to a remote host
 	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);

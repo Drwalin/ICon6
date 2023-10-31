@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 	while (true) {
 		std::string str;
 		std::getline(std::cin, str);
-		if (str.substr() == "quit" && str.size() <= 6) {
+		if (str.substr(0, 4) == "quit" && str.size() <= 6) {
 			peer->Disconnect();
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			host.Stop();
