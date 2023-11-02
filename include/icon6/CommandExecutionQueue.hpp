@@ -35,6 +35,7 @@ public:
 
 	void EnqueueCommand(Command &&command);
 	void TryDequeueBulkAny(std::vector<Command> &commands);
+	void TryDequeueBulkNotMore(std::vector<Command> &commands, uint32_t max);
 
 	static void RunAsyncExecution(CommandExecutionQueue *queue,
 								  uint32_t sleepMicrosecondsOnNoActions);

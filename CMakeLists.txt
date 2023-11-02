@@ -26,12 +26,12 @@ add_library(icon6 STATIC
 )
 target_link_libraries(icon6 GameNetworkingSockets::shared)
 
-# if(ICON6_BUILD_TESTS)
-# 	add_executable(tests
-# 		tests/TestMain
-# 	)
-# 	target_link_libraries(tests icon6)
-# endif()
+if(ICON6_BUILD_TEST)
+	add_executable(stress_test
+		tests/stress_test
+	)
+	target_link_libraries(stress_test icon6)
+endif()
 
 if(ICON6_BUILD_EXAMPLES)
 	add_subdirectory(examples)

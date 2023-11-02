@@ -55,6 +55,12 @@ public:
 	virtual void Execute() = 0;
 };
 
+class ExecuteNOP final : public BaseCommandExecute
+{
+public:
+	virtual void Execute() override;
+};
+
 class ExecuteOnPeerNoArgs final : public BaseCommandExecute
 {
 public:
@@ -188,6 +194,7 @@ public:
 	template <typename T> T &Ref() { return *(T *)&executeOnPeer; }
 
 	union {
+		commands::ExecuteNOP executeNOP;
 		commands::ExecuteOnPeer executeOnPeer;
 		commands::ExecuteOnPeerNoArgs executeOnPeerNoArgs;
 		commands::ExecuteRPC executeRPC;
@@ -204,6 +211,11 @@ public:
 	void Execute();
 
 public:
+	Command(commands::ExecuteNOP &&executeNOP)
+		: executeNOP(), hasValue(true)
+	{
+		this->executeNOP = std::move(executeNOP);
+	}
 	Command(commands::ExecuteOnPeer &&executeOnPeer)
 		: executeOnPeer(), hasValue(true)
 	{

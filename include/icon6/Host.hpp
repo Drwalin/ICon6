@@ -94,6 +94,7 @@ public:
 
 public:
 	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);
+	void Connect(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port,
 				 commands::ExecuteOnPeer &&onConnected,
 				 CommandExecutionQueue *queue = nullptr);
@@ -118,7 +119,7 @@ private:
 	void Init(const SteamNetworkingIPAddr *address);
 	void SteamNetConnectionStatusChangedCallback(
 		SteamNetConnectionStatusChangedCallback_t *pInfo);
-	int DispatchAllEventsFromQueue();
+	uint32_t DispatchAllEventsFromQueue(uint32_t maxEventsDispatched=100);
 	void DispatchPopedEventsFromQueue();
 	void EnqueueCommand(Command &&command);
 

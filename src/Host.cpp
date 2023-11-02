@@ -96,7 +96,8 @@ void Host::Init(const SteamNetworkingIPAddr *address)
 	callbackOnConnect = nullptr;
 	callbackOnReceive = nullptr;
 	callbackOnDisconnect = nullptr;
-	userData = nullptr;
+	userData = 0;
+	userPointer = nullptr;
 
 	host = SteamNetworkingSockets();
 	if (address) {
@@ -109,6 +110,7 @@ void Host::Init(const SteamNetworkingIPAddr *address)
 	}
 
 	pollGroup = host->CreatePollGroup();
+	popedCommands.reserve(1000);
 }
 
 void Host::Destroy()
@@ -181,7 +183,7 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 			if (mpe != nullptr) {
 				mpe->CheckForTimeoutFunctionCalls(6);
 			}
-			int dispatchedNum = DispatchAllEventsFromQueue();
+			uint32_t dispatchedNum = DispatchAllEventsFromQueue(10);
 			if (receivedMessages == 0) {
 				if (dispatchedNum == 0) {
 					std::this_thread::sleep_for(
@@ -228,7 +230,20 @@ void Host::SteamNetConnectionStatusChangedCallback(
 	}
 
 	case k_ESteamNetworkingConnectionState_Connecting: {
-		if (peers.find(pInfo->m_hConn) != peers.end()) {
+		if (peers.find(pInfo->m_hConn) != peers.end()) { // this is outgoing
+														 // connection, thus
+														 // icon6::Peer* object
+														 // already exists.
+			if (callbackOnConnect) {
+				auto userData = host->GetConnectionUserData(pInfo->m_hConn);
+				Peer *peer = nullptr;
+				if (userData == -1) {
+					throw "userData == -1 when connected from self";
+				} else {
+					peer = (Peer *)userData;
+				}
+				callbackOnConnect(peer);
+			}
 			break;
 		}
 		if (host->AcceptConnection(pInfo->m_hConn) != k_EResultOK) {
@@ -273,12 +288,12 @@ void Host::SteamNetConnectionStatusChangedCallback(
 	}
 }
 
-int Host::DispatchAllEventsFromQueue()
+uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 {
-	int i = 0;
+	uint32_t i = 0;
 	for (i = 0; i < 10; ++i) {
 		popedCommands.clear();
-		commandQueue->TryDequeueBulkAny(popedCommands);
+		commandQueue->TryDequeueBulkNotMore(popedCommands, maxEvents);
 
 		if (popedCommands.empty())
 			break;
@@ -330,6 +345,13 @@ std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 	auto future = promise->get_future();
 	Connect(address, port, std::move(onConnected), nullptr);
 	return future;
+}
+
+void Host::Connect(std::string address, uint16_t port)
+{
+	commands::ExecuteOnPeer com;
+	com.function = [](auto a, auto b, auto c){};
+	Connect(address, port, std::move(com), nullptr);
 }
 
 void Host::Connect(std::string address, uint16_t port,
