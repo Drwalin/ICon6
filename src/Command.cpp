@@ -52,7 +52,7 @@ void ExecuteConnect::Execute()
 
 void ExecuteSend::Execute()
 {
-	peer->_InternalSend(data.data(), data.size(), flags);
+	peer->_InternalSend(data, flags);
 }
 
 void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(); }

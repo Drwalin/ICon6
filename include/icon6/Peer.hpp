@@ -53,6 +53,8 @@ public:
 	void SetReceiveCallback(void (*callback)(Peer *, ByteReader &,
 											 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
+	
+	SteamNetConnectionRealTimeStatus_t GetRealTimeStats();
 
 public:
 	uint64_t userData;
@@ -65,6 +67,8 @@ public:
 public:
 	// thread unsafe
 	void _InternalSend(const void *data, uint32_t length, Flags flags);
+	// thread unsafe
+	void _InternalSend(std::vector<uint8_t> &data, Flags flags);
 	// thread unsafe
 	void _InternalDisconnect();
 

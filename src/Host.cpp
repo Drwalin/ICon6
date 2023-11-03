@@ -44,11 +44,11 @@ void Debug(const char *file, int line, const char *fmt, ...)
 	va_list va;
 	va_start(va, fmt);
 	static std::mutex mutex;
-	std::lock_guard<std::mutex> lock(mutex);
-	fprintf(stderr, "%s:%i\t\t [ %2i ] \t ", file, line, id);
-	vfprintf(stderr, fmt, va);
-	fprintf(stderr, "\n");
-	fflush(stderr);
+	std::lock_guard lock(mutex);
+	fprintf(stdout, "%s:%i\t\t [ %2i ] \t ", file, line, id);
+	vfprintf(stdout, fmt, va);
+	fprintf(stdout, "\n");
+	fflush(stdout);
 }
 
 Host *Host::_InternalGetSetThreadLocalHost(bool set, Host *host)
@@ -183,7 +183,7 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 			if (mpe != nullptr) {
 				mpe->CheckForTimeoutFunctionCalls(6);
 			}
-			uint32_t dispatchedNum = DispatchAllEventsFromQueue(10);
+			uint32_t dispatchedNum = DispatchAllEventsFromQueue(1);
 			if (receivedMessages == 0) {
 				if (dispatchedNum == 0) {
 					std::this_thread::sleep_for(
@@ -203,8 +203,6 @@ void Host::SteamNetConnectionStatusChangedCallback(
 {
 	switch (pInfo->m_info.m_eState) {
 	case k_ESteamNetworkingConnectionState_None:
-		break;
-
 	case k_ESteamNetworkingConnectionState_ClosedByPeer:
 	case k_ESteamNetworkingConnectionState_ProblemDetectedLocally: {
 		if (pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connected) {
@@ -234,16 +232,6 @@ void Host::SteamNetConnectionStatusChangedCallback(
 														 // connection, thus
 														 // icon6::Peer* object
 														 // already exists.
-			if (callbackOnConnect) {
-				auto userData = host->GetConnectionUserData(pInfo->m_hConn);
-				Peer *peer = nullptr;
-				if (userData == -1) {
-					throw "userData == -1 when connected from self";
-				} else {
-					peer = (Peer *)userData;
-				}
-				callbackOnConnect(peer);
-			}
 			break;
 		}
 		if (host->AcceptConnection(pInfo->m_hConn) != k_EResultOK) {
@@ -267,15 +255,15 @@ void Host::SteamNetConnectionStatusChangedCallback(
 			peer = (Peer *)userData;
 		}
 
-		if (callbackOnConnect) {
-			callbackOnConnect(peer);
-		}
 		break;
 	}
 
 	case k_ESteamNetworkingConnectionState_Connected: {
 		Peer *peer = (Peer *)host->GetConnectionUserData(pInfo->m_hConn);
 		peer->SetReadyToUse();
+		if (callbackOnConnect) {
+			callbackOnConnect(peer);
+		}
 		break;
 	}
 
@@ -295,8 +283,9 @@ uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 		popedCommands.clear();
 		commandQueue->TryDequeueBulkNotMore(popedCommands, maxEvents);
 
-		if (popedCommands.empty())
+		if (popedCommands.empty()) {
 			break;
+		}
 		for (Command &c : popedCommands) {
 			c.Execute();
 			++i;

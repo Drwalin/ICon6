@@ -28,6 +28,13 @@
 
 namespace icon6
 {
+SteamNetConnectionRealTimeStatus_t Peer::GetRealTimeStats()
+{
+	SteamNetConnectionRealTimeStatus_t status;
+	host->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
+	return status;
+}
+	
 Peer::Peer(Host *host, HSteamNetConnection connection)
 	: host(host), peer(connection)
 {
@@ -51,7 +58,7 @@ void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 	host->EnqueueCommand(std::move(command));
 }
 
-void Peer::_InternalSend(const void *data, uint32_t length, Flags flags)
+void Peer::_InternalSend(std::vector<uint8_t> &data, Flags flags)
 {
 	int steamFlags = 0;
 	if (flags & FLAG_RELIABLE) {
@@ -59,8 +66,28 @@ void Peer::_InternalSend(const void *data, uint32_t length, Flags flags)
 	} else {
 		steamFlags = k_nSteamNetworkingSend_Unreliable;
 	}
-	host->host->SendMessageToConnection(peer, data, length, steamFlags,
+	auto result = host->host->SendMessageToConnection(peer, data.data(), data.size(), steamFlags,
 										nullptr);
+	if (result == k_EResultLimitExceeded) {
+		Send(std::move(data), flags);
+		return;
+	}
+}
+
+void Peer::_InternalSend(const void *data, uint32_t length, const Flags flags)
+{
+	int steamFlags = 0;
+	if (flags & FLAG_RELIABLE) {
+		steamFlags = k_nSteamNetworkingSend_Reliable;
+	} else {
+		steamFlags = k_nSteamNetworkingSend_Unreliable;
+	}
+	auto result = host->host->SendMessageToConnection(peer, data, length, steamFlags,
+										nullptr);
+	if (result == k_EResultLimitExceeded) {
+		Send(std::vector<uint8_t>((uint8_t*)data, (uint8_t*)data+length), flags);
+		return;
+	}
 }
 
 void Peer::Disconnect()
@@ -75,7 +102,6 @@ void Peer::_InternalDisconnect()
 {
 	if (peer) {
 		host->host->CloseConnection(peer, 0, nullptr, true);
-		peer = 0;
 	}
 }
 
@@ -92,6 +118,7 @@ void Peer::CallCallbackReceive(ISteamNetworkingMessage *packet)
 		if (packet->m_nFlags & k_nSteamNetworkingSend_Reliable) {
 			flags = FLAG_RELIABLE;
 		}
+		
 		callbackOnReceive(this, reader, flags);
 	}
 }
