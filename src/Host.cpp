@@ -166,8 +166,9 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 	} else {
 		flags |= RUNNING;
 		while (!(flags & TO_STOP)) {
+			host->RunCallbacks();
 			int receivedMessages = 0;
-			for (receivedMessages = 0; receivedMessages < 10;
+			for (receivedMessages = 0; receivedMessages < 128;
 				 ++receivedMessages) {
 				ISteamNetworkingMessage *msg = nullptr;
 				int numMsgs =
@@ -179,15 +180,13 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 					break;
 				}
 			}
-			host->RunCallbacks();
 			if (mpe != nullptr) {
 				mpe->CheckForTimeoutFunctionCalls(6);
 			}
-			uint32_t dispatchedNum = DispatchAllEventsFromQueue(1);
+			uint32_t dispatchedNum = DispatchAllEventsFromQueue(64);
 			if (receivedMessages == 0) {
 				if (dispatchedNum == 0) {
-					std::this_thread::sleep_for(
-						std::chrono::microseconds(1000));
+					std::this_thread::sleep_for(std::chrono::microseconds(1000));
 				} else if (dispatchedNum < 3) {
 					std::this_thread::sleep_for(std::chrono::microseconds(100));
 				} else if (dispatchedNum < 9) {

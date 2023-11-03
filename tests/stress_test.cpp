@@ -145,21 +145,23 @@ void Runner(icon6::Peer *peer)
 	while (peer->IsReadyToUse() == false) {
 		std::this_thread::sleep_for(std::chrono::microseconds(10));
 	}
-// 	auto beg = std::chrono::steady_clock::now();
 	std::vector<TestStruct> data;
-// 	uint32_t msgSent = 0;
+	uint32_t msgSent = 0;
 	for (uint32_t i = 0; i < ipc->countMessages; ++i) {
 		if (ipc->runTestFlag == 0)
 			break;
-		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		for (uint32_t j = 0; j < ((processId == -1) ? 4 : 1); ++j) {
 			uint32_t s = (processId == -1) ? GetRandomMessageSize() : 100;
-			data.resize(s / sizeof(TestStruct));
+			data.resize(s / 21);
 			auto now = std::chrono::steady_clock::now();
 			double dt = std::chrono::duration<double>(now - originTime).count();
-			mpe.Send(peer, icon6::FLAG_RELIABLE, "first", data, dt);
-// 			++msgSent;
-			uint64_t bytes = data.size() * sizeof(TestStruct) + 8 + 4 + 8;
+			icon6::Flags flag = ((processId >= 0) || ((msgSent % 1000) == 0))
+						 ? icon6::FLAG_RELIABLE
+						 : icon6::Flags(0);
+			mpe.Send(peer, flag, "first", data, dt);
+			++msgSent;
+			uint64_t bytes = data.size() * 21 + 8 + 4 + 7;
 			if (processId >= 0) {
 				ipc->counterSentByClients++;
 				ipc->clientsSendBytes += bytes;
@@ -169,10 +171,7 @@ void Runner(icon6::Peer *peer)
 			}
 		}
 	}
-// 	auto end = std::chrono::steady_clock::now();
 	ipc->flags += 1;
-// 	double t = std::chrono::duration<double>(end - beg).count();
-// 	Print(" sending %i messages by %i took: %f s\n", msgSent, processId, t);
 	ipc->connectionsDoneSending++;
 }
 
@@ -180,7 +179,7 @@ void Run(icon6::Peer *peer) { std::thread(Runner, peer).detach(); }
 
 void FunctionReceive(icon6::Peer *peer, std::vector<TestStruct> &data, double t)
 {
-	const uint64_t bytes = data.size() * sizeof(TestStruct) + 8 + 4 + 8;
+	const uint64_t bytes = data.size() * 21 + 8 + 4 + 7;
 	if (processId >= 0) {
 		ipc->counterReceivedByClient++;
 		ipc->clientsReceivedBytes += bytes;
@@ -196,26 +195,32 @@ void ReportPrint(const uint32_t messages, const uint32_t clientsNum)
 	Print(" reporting clients sending done %i / %i\n",
 		  ipc->connectionsDoneSending.load(), clientsNum * 2);
 	Print(" reporting messages = %i\n", messages);
-	
+
 	Print("      counterSentByClients =              %i / %i\n",
 		  ipc->counterSentByClients.load(), messages);
 	Print("      counterReceivedByServer =           %i\n",
 		  ipc->counterReceivedByServer.load());
-	
+
 	Print("      counterSentByServer =               %i / %i\n",
 		  ipc->counterSentByServer.load(), messages * 4);
 	Print("      counterReceivedByClient =           %i\n",
 		  ipc->counterReceivedByClient.load());
 
-	Print("      serverSendBytes =                   %i\n",
+	Print("      serverSendBytes =                   %lu\n",
 		  ipc->serverSendBytes.load());
-	Print("      clientsReceivedBytes =              %i\n",
+	Print("      clientsReceivedBytes =              %lu\n",
 		  ipc->clientsReceivedBytes.load());
-	
-	Print("      clientsSendBytes =                  %i\n",
+
+	Print("      clientsSendBytes =                  %lu\n",
 		  ipc->clientsSendBytes.load());
-	Print("      serverReceivedBytes =               %i\n",
+	Print("      serverReceivedBytes =               %lu\n",
 		  ipc->serverReceivedBytes.load());
+
+	double packetLoss =
+		1.0 -
+		(double)(ipc->counterReceivedByClient + ipc->counterReceivedByServer) /
+			(double)(ipc->counterSentByServer + ipc->counterSentByClients);
+	Print("    Packet loss = %f %%\n", packetLoss * 100.0);
 
 	// host->ForEachPeer([](icon6::Peer *peer) {
 	// 	auto stats = peer->GetRealTimeStats();
@@ -233,7 +238,7 @@ void ReportPrint(const uint32_t messages, const uint32_t clientsNum)
 	// }
 }
 
-void runTestMaster(const uint32_t messages, const uint32_t clientsNum)
+void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 {
 	ipc->counterSentByClients = 0;
 	ipc->counterSentByServer = 0;
@@ -248,6 +253,7 @@ void runTestMaster(const uint32_t messages, const uint32_t clientsNum)
 	ipc->connectionsDoneSending = 0;
 
 	ipc->countMessages = messages / clientsNum;
+	messages = ipc->countMessages * clientsNum;
 	Print("count messages = %i\n", ipc->countMessages.load());
 	ipc->flags = 0;
 	ipc->numberOfClients = clientsNum;
@@ -260,8 +266,10 @@ void runTestMaster(const uint32_t messages, const uint32_t clientsNum)
 		   ipc->counterSentByServer < messages * 4) {
 		auto now = std::chrono::steady_clock::now();
 		double dt = std::chrono::duration<double>(now - t0).count();
-		if (dt > 1) {
+		if (dt > 5) {
 			ReportPrint(messages, clientsNum);
+			const double dt = std::chrono::duration<double>(now - beg).count();
+			Print("          Elapsed time: %fs\n", dt);
 			t0 = now;
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -289,7 +297,7 @@ void runTestMaster(const uint32_t messages, const uint32_t clientsNum)
 
 	double packetLoss =
 		1.0 -
-		(ipc->counterReceivedByClient + ipc->counterReceivedByServer) /
+		(double)(ipc->counterReceivedByClient + ipc->counterReceivedByServer) /
 			(double)(ipc->counterSentByServer + ipc->counterSentByClients);
 
 	ReportPrint(messages, clientsNum);
@@ -302,7 +310,6 @@ void runTestMaster(const uint32_t messages, const uint32_t clientsNum)
 
 void runTestSlave()
 {
-// 	Print("Slave %i starting test\n", processId);
 	host->Connect("127.0.0.1", serverPort);
 	while (ipc->runTestFlag != 0) {
 		host->ForEachPeer([](auto p) {
@@ -312,7 +319,6 @@ void runTestSlave()
 		});
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-// 	Print("Slave %i ending test\n", processId);
 	host->ForEachPeer([](auto p) { p->Disconnect(); });
 }
 
