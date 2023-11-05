@@ -26,8 +26,6 @@ namespace icon6
 {
 namespace commands
 {
-void ExecuteNOP::Execute() {}
-
 void ExecuteOnPeer::Execute() { function(peer, data, customSharedData); }
 
 void ExecuteOnPeerNoArgs::Execute() { function(peer); }
