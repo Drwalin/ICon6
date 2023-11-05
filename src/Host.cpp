@@ -110,7 +110,6 @@ void Host::Init(const SteamNetworkingIPAddr *address)
 	}
 
 	pollGroup = host->CreatePollGroup();
-	popedCommands.reserve(1000);
 }
 
 void Host::Destroy()
@@ -281,18 +280,29 @@ void Host::SteamNetConnectionStatusChangedCallback(
 uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 {
 	uint32_t i = 0;
+	const uint32_t MAX_DEQUEUE_COMMANDS = 128;
+	maxEvents = std::min(maxEvents, MAX_DEQUEUE_COMMANDS);
+	struct PopedCommand {
+		Command commands[MAX_DEQUEUE_COMMANDS];
+	};
+	union X {
+		X() {}
+		~X() {}
+		PopedCommand com;
+		uint32_t __pad;
+	} x;
+	new (&x.com) PopedCommand;
 	for (i = 0; i < 10; ++i) {
-		popedCommands.clear();
-		commandQueue->TryDequeueBulkNotMore(popedCommands, maxEvents);
+		const uint32_t dequeued =
+			commandQueue->TryDequeueBulkAny(x.com.commands, maxEvents);
 
-		if (popedCommands.empty()) {
+		if (dequeued == 0) {
 			break;
 		}
-		for (Command &c : popedCommands) {
-			c.Execute();
-			++i;
+		for (uint32_t i = 0; i < dequeued; ++i) {
+			x.com.commands[i].Execute();
+			x.com.commands[i].~Command();
 		}
-		popedCommands.clear();
 	}
 	return i;
 }

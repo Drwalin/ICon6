@@ -145,7 +145,6 @@ private:
 
 	std::unordered_map<HSteamNetConnection, Peer *> peers;
 
-	std::vector<Command> popedCommands;
 	CommandExecutionQueue *commandQueue;
 
 	void (*callbackOnConnect)(Peer *);

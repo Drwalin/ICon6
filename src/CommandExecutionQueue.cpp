@@ -48,30 +48,16 @@ void CommandExecutionQueue::EnqueueCommand(Command &&command)
 	((QueueType *)concurrentQueueCommands)->enqueue(std::move(command));
 }
 
-void CommandExecutionQueue::TryDequeueBulkAny(std::vector<Command> &commands)
+uint32_t CommandExecutionQueue::TryDequeueBulkAny(Command *commands,
+												  uint32_t max)
 {
-	commands.clear();
-	size_t size = ((QueueType *)concurrentQueueCommands)->size_approx();
-	if (size == 0)
-		size = 1;
-	commands.resize(size);
-	size_t nextSize = ((QueueType *)concurrentQueueCommands)
-						  ->try_dequeue_bulk(commands.data(), size);
-	commands.resize(nextSize);
-}
-
-void CommandExecutionQueue::TryDequeueBulkNotMore(
-	std::vector<Command> &commands, uint32_t max)
-{
-	commands.clear();
 	size_t size = ((QueueType *)concurrentQueueCommands)->size_approx();
 	if (size == 0)
 		size = 1;
 	size = std::min<size_t>(size, max);
-	commands.resize(size);
-	size_t nextSize = ((QueueType *)concurrentQueueCommands)
-						  ->try_dequeue_bulk(commands.data(), size);
-	commands.resize(nextSize);
+	size_t dequeued = ((QueueType *)concurrentQueueCommands)
+						  ->try_dequeue_bulk(commands, size);
+	return dequeued;
 }
 
 void CommandExecutionQueue::QueueStopAsyncExecution()
@@ -104,21 +90,19 @@ void CommandExecutionQueue::_InternalExecuteLoop(
 	CommandExecutionQueue *queue, uint32_t sleepMicrosecondsOnNoActions)
 {
 	queue->asyncExecutionFlags = IS_RUNNING;
-	std::vector<Command> commands;
+	const uint32_t MAX_DEQUEUE_COMMANDS = 128;
+	Command commands[MAX_DEQUEUE_COMMANDS];
 	while (queue->asyncExecutionFlags.load() == IS_RUNNING) {
-		queue->TryDequeueBulkAny(commands);
-		if (commands.empty()) {
-			if (sleepMicrosecondsOnNoActions == 0) {
-				std::this_thread::yield();
-			} else {
-				std::this_thread::sleep_for(
-					std::chrono::microseconds(sleepMicrosecondsOnNoActions));
+		const uint32_t dequeued =
+			queue->TryDequeueBulkAny(commands, MAX_DEQUEUE_COMMANDS);
+		if (dequeued > 0) {
+			for (uint32_t i = 0; i < dequeued; ++i) {
+				commands[i].Execute();
+				commands[i].~Command();
 			}
 		} else {
-			for (Command &com : commands) {
-				com.Execute();
-			}
-			commands.clear();
+			std::this_thread::sleep_for(
+				std::chrono::microseconds(sleepMicrosecondsOnNoActions));
 		}
 	}
 	queue->asyncExecutionFlags = STOPPED;

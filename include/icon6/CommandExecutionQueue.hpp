@@ -19,7 +19,6 @@
 #ifndef ICON6_COMMAND_EXECUTION_QUEUE_HPP
 #define ICON6_COMMAND_EXECUTION_QUEUE_HPP
 
-#include <vector>
 #include <atomic>
 
 #include "Command.hpp"
@@ -34,8 +33,7 @@ public:
 	~CommandExecutionQueue();
 
 	void EnqueueCommand(Command &&command);
-	void TryDequeueBulkAny(std::vector<Command> &commands);
-	void TryDequeueBulkNotMore(std::vector<Command> &commands, uint32_t max);
+	uint32_t TryDequeueBulkAny(Command *commands, uint32_t max);
 
 	static void RunAsyncExecution(CommandExecutionQueue *queue,
 								  uint32_t sleepMicrosecondsOnNoActions);
