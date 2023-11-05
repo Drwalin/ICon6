@@ -19,8 +19,6 @@
 #include <cstdarg>
 
 #include <chrono>
-#include <memory>
-#include <exception>
 #include <thread>
 #include <mutex>
 #include <vector>
@@ -91,6 +89,7 @@ void Host::StaticSteamNetConnectionStatusChangedCallback(
 
 void Host::Init(const SteamNetworkingIPAddr *address)
 {
+	mpe = nullptr;
 	commandQueue = new CommandExecutionQueue();
 	flags = 0;
 	callbackOnConnect = nullptr;
@@ -334,14 +333,13 @@ void Host::WaitStop()
 
 std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 {
-	std::shared_ptr<std::promise<Peer *>> promise =
-		std::make_shared<std::promise<Peer *>>();
+	std::promise<Peer *> *promise = new std::promise<Peer *>();
 	commands::ExecuteOnPeer onConnected;
-	onConnected.customSharedData = promise;
-	onConnected.function = [](auto peer, auto data, auto customSharedData) {
-		std::shared_ptr<std::promise<Peer *>> promise =
-			std::static_pointer_cast<std::promise<Peer *>>(customSharedData);
+	onConnected.userPointer = promise;
+	onConnected.function = [](auto peer, auto data, auto userPointer) {
+		std::promise<Peer *> *promise = (std::promise<Peer *> *)(userPointer);
 		promise->set_value(peer);
+		delete promise;
 	};
 	auto future = promise->get_future();
 	Connect(address, port, std::move(onConnected), nullptr);
@@ -391,7 +389,7 @@ Peer *Host::_InternalConnect(const SteamNetworkingIPAddr *address)
 		return nullptr;
 	}
 
-	Peer *p(new Peer(this, connection));
+	Peer *p = new Peer(this, connection);
 	peers[connection] = p;
 	return p;
 }

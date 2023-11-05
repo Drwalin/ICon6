@@ -20,7 +20,6 @@
 #define ICON6_HOST_HPP
 
 #include <string>
-#include <memory>
 #include <future>
 #include <atomic>
 #include <unordered_map>
@@ -30,8 +29,6 @@
 #include <steam/isteamnetworkingutils.h>
 
 #include "Flags.hpp"
-#include "Peer.hpp"
-#include "Command.hpp"
 #include "CommandExecutionQueue.hpp"
 
 #define DEBUG(...) icon6::Debug(__FILE__, __LINE__, __VA_ARGS__)
@@ -43,12 +40,6 @@ void Debug(const char *file, int line, const char *fmt, ...);
 class Peer;
 class ConnectionEncryptionState;
 class MessagePassingEnvironment;
-
-enum class PeerAcceptancePolicy {
-	ACCEPT_ALL,
-	ACCEPT_DIRECTLY_TRUSTED,
-	ACCEPT_INDIRECTLY_TRUSTED_BY_CA,
-};
 
 class Host final
 {
@@ -108,7 +99,6 @@ public:
 public:
 	uint64_t userData;
 	void *userPointer;
-	std::shared_ptr<void> userSharedPointer;
 
 	friend class Peer;
 	friend class ConnectionEncryptionState;

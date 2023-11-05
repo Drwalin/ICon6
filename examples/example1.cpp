@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include "../include/icon6/Host.hpp"
-#include "icon6/Command.hpp"
+#include <icon6/Host.hpp>
+#include <icon6/Peer.hpp>
 
 std::vector<uint8_t> MakeVector(const char *str)
 {

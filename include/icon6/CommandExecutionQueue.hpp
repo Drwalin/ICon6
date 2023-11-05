@@ -26,7 +26,6 @@
 namespace icon6
 {
 class CommandExecutionQueue
-	: std::enable_shared_from_this<CommandExecutionQueue>
 {
 public:
 	CommandExecutionQueue();

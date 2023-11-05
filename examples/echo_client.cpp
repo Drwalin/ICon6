@@ -6,6 +6,7 @@
 #include <thread>
 
 #include <icon6/Host.hpp>
+#include <icon6/Peer.hpp>
 
 int main(int argc, char **argv)
 {

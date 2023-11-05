@@ -2,10 +2,10 @@
 
 #include <iostream>
 #include <chrono>
-#include <memory>
 #include <thread>
 
 #include <icon6/Host.hpp>
+#include <icon6/Peer.hpp>
 #include <icon6/MethodInvocationEnvironment.hpp>
 #include <icon6/Flags.hpp>
 #include <icon6/MessagePassingEnvironment.hpp>
@@ -29,50 +29,42 @@ int main(int argc, char **argv)
 	mpi.RegisterMessage(
 		"SetNickname",
 		[](icon6::Peer *peer, const std::string &nickname) -> bool {
-			if (peer->userSharedPointer != nullptr) {
-				std::string oldName;
-				oldName = *std::static_pointer_cast<std::string>(
-							   peer->userSharedPointer)
-							   .get();
-				peers.erase(oldName);
-				peer->userSharedPointer = nullptr;
+			if (peer->userPointer != nullptr) {
+				std::string *oldName = (std::string *)(peer->userPointer);
+				peers.erase(*oldName);
+				delete oldName;
+				peer->userPointer = nullptr;
 			}
 			if (nickname != "") {
 				if (peers.find(nickname) != peers.end()) {
 					return false;
 				}
-				peer->userSharedPointer =
-					std::make_shared<std::string>(nickname);
+				peer->userPointer = new std::string(nickname);
 				peers[nickname] = peer;
 			}
 			return true;
 		});
-	mpi.RegisterMessage("Broadcast", [](icon6::Peer *peer,
-										std::string message) {
-		std::string nickname = "";
-		if (peer->userSharedPointer != nullptr) {
-			nickname =
-				*std::static_pointer_cast<std::string>(peer->userSharedPointer)
-					 .get();
-		}
+	mpi.RegisterMessage("Broadcast",
+						[](icon6::Peer *peer, std::string message) {
+							std::string nickname = "";
+							if (peer->userPointer != nullptr) {
+								nickname = *(std::string *)(peer->userPointer);
+							}
 
-		peer->GetHost()->ForEachPeer([&](icon6::Peer *p2) {
-			if (p2 != peer) {
-				mpi.Send(p2, icon6::FLAG_RELIABLE, "Broadcasted", nickname,
-						 message);
-			}
-		});
-		peer->userSharedPointer = std::make_shared<std::string>(nickname);
-	});
+							peer->GetHost()->ForEachPeer([&](icon6::Peer *p2) {
+								if (p2 != peer) {
+									mpi.Send(p2, icon6::FLAG_RELIABLE,
+											 "Broadcasted", nickname, message);
+								}
+							});
+						});
 	mpi.RegisterMessage("Msg",
 						[](icon6::Peer *peer, const std::string nickname,
 						   std::string message) -> bool {
 							std::string srcNickname = "";
-							if (peer->userSharedPointer != nullptr) {
+							if (peer->userPointer != nullptr) {
 								srcNickname =
-									*std::static_pointer_cast<std::string>(
-										 peer->userSharedPointer)
-										 .get();
+									*(std::string *)(peer->userPointer);
 							}
 							auto it = peers.find(nickname);
 							if (it != peers.end()) {
@@ -87,13 +79,11 @@ int main(int argc, char **argv)
 
 	icon6::Host host(port);
 	host.SetDisconnect([](icon6::Peer *peer) {
-		if (peer->userSharedPointer != nullptr) {
-			std::string oldName;
-			oldName =
-				*std::static_pointer_cast<std::string>(peer->userSharedPointer)
-					 .get();
-			peers.erase(oldName);
-			peer->userSharedPointer = nullptr;
+		if (peer->userPointer != nullptr) {
+			std::string *oldName = (std::string *)(peer->userPointer);
+			peers.erase(*oldName);
+			delete oldName;
+			peer->userPointer = nullptr;
 		}
 	});
 	host.SetMessagePassingEnvironment(&mpi);

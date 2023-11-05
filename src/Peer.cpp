@@ -16,9 +16,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <thread>
-#include <memory>
 #include <cstring>
+
+#include <thread>
 
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 #include "../include/icon6/Host.hpp"
@@ -38,6 +38,8 @@ SteamNetConnectionRealTimeStatus_t Peer::GetRealTimeStats()
 Peer::Peer(Host *host, HSteamNetConnection connection)
 	: host(host), peer(connection)
 {
+	userData = 0;
+	userPointer = nullptr;
 	host->host->SetConnectionUserData(peer, (uint64_t)(size_t)this);
 	callbackOnReceive = host->callbackOnReceive;
 	callbackOnDisconnect = host->callbackOnDisconnect;

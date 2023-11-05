@@ -22,7 +22,6 @@
 #include <cinttypes>
 
 #include <string>
-#include <memory>
 #include <vector>
 
 #include <steam/steamnetworkingsockets.h>
@@ -69,9 +68,9 @@ class ExecuteOnPeer final : public BaseCommandExecute
 public:
 	Peer *peer;
 	std::vector<uint8_t> data;
-	std::shared_ptr<void> customSharedData;
+	void *userPointer;
 	void (*function)(Peer *peer, std::vector<uint8_t> &data,
-					 std::shared_ptr<void> customSharedData);
+					 void *customSharedData);
 
 	virtual void Execute() override;
 };

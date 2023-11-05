@@ -2,10 +2,10 @@
 
 #include <iostream>
 #include <chrono>
-#include <memory>
 #include <thread>
 
 #include <icon6/Host.hpp>
+#include <icon6/Peer.hpp>
 #include <icon6/MethodInvocationEnvironment.hpp>
 #include <icon6/Flags.hpp>
 #include <icon6/MessagePassingEnvironment.hpp>

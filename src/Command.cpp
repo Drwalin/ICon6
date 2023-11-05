@@ -26,7 +26,7 @@ namespace icon6
 {
 namespace commands
 {
-void ExecuteOnPeer::Execute() { function(peer, data, customSharedData); }
+void ExecuteOnPeer::Execute() { function(peer, data, userPointer); }
 
 void ExecuteOnPeerNoArgs::Execute() { function(peer); }
 
@@ -85,5 +85,11 @@ Command::~Command()
 	}
 }
 
-void Command::Execute() { ((BaseCommandExecute *)(&executeOnPeer))->Execute(); }
+void Command::Execute()
+{
+	if (hasValue) {
+		((BaseCommandExecute *)(&executeOnPeer))->Execute();
+		this->~Command();
+	}
+}
 } // namespace icon6

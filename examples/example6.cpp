@@ -1,13 +1,13 @@
 #include <chrono>
-#include <memory>
 #include <thread>
 #include <atomic>
 
 #include <unistd.h>
 #include <signal.h>
 
-#include "../include/icon6/Host.hpp"
-#include "../include/icon6/MethodInvocationEnvironment.hpp"
+#include <icon6/Host.hpp>
+#include <icon6/MethodInvocationEnvironment.hpp>
+#include <icon6/Peer.hpp>
 
 icon6::rmi::MethodInvocationEnvironment *mpe =
 	new icon6::rmi::MethodInvocationEnvironment();

@@ -21,7 +21,6 @@
 
 #include <cinttypes>
 
-#include <memory>
 #include <vector>
 #include <queue>
 
@@ -60,7 +59,6 @@ public:
 public:
 	uint64_t userData;
 	void *userPointer;
-	std::shared_ptr<void> userSharedPointer;
 
 	friend class Host;
 	friend class ConnectionEncryptionState;

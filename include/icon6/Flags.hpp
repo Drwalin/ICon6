@@ -21,7 +21,7 @@
 
 #include <cinttypes>
 
-#include "../../GameNetworkingSockets/include/steam/steamnetworkingtypes.h"
+#include <steam/steamnetworkingtypes.h>
 
 namespace icon6
 {
