@@ -23,6 +23,7 @@
 
 #include <memory>
 #include <vector>
+#include <queue>
 
 #include <steam/isteamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
@@ -53,7 +54,7 @@ public:
 	void SetReceiveCallback(void (*callback)(Peer *, ByteReader &,
 											 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
-	
+
 	SteamNetConnectionRealTimeStatus_t GetRealTimeStats();
 
 public:
@@ -66,9 +67,9 @@ public:
 
 public:
 	// thread unsafe
-	void _InternalSend(const void *data, uint32_t length, Flags flags);
+	bool _InternalSend(const void *data, uint32_t length, Flags flags);
 	// thread unsafe
-	void _InternalSend(std::vector<uint8_t> &data, Flags flags);
+	void _InternalSendOrQueue(std::vector<uint8_t> &data, Flags flags);
 	// thread unsafe
 	void _InternalDisconnect();
 
@@ -78,16 +79,18 @@ private:
 	void CallCallbackReceive(ISteamNetworkingMessage *msg);
 	void CallCallbackDisconnect();
 
-	enum SteamMessageFlags {
-		INTERNAL_SEQUENCED = k_nSteamNetworkingSend_Reliable,
-		INTERNAL_UNRELIABLE = k_nSteamNetworkingSend_UnreliableNoNagle,
+	struct SendCommand {
+		std::vector<uint8_t> data;
+		Flags flags;
 	};
+
+	void _InternalFlushQueuedSends();
 
 protected:
 	Peer(Host *host, HSteamNetConnection connection);
 
 private:
-	std::vector<uint8_t> receivedData;
+	std::queue<SendCommand> queuedSends;
 
 	Host *host;
 	HSteamNetConnection peer;

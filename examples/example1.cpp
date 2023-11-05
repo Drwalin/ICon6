@@ -9,7 +9,7 @@
 
 std::vector<uint8_t> MakeVector(const char *str)
 {
-	return std::vector<uint8_t>(str, str + (size_t)strlen(str)+1);
+	return std::vector<uint8_t>(str, str + (size_t)strlen(str) + 1);
 }
 
 int main()

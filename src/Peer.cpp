@@ -34,7 +34,7 @@ SteamNetConnectionRealTimeStatus_t Peer::GetRealTimeStats()
 	host->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
 	return status;
 }
-	
+
 Peer::Peer(Host *host, HSteamNetConnection connection)
 	: host(host), peer(connection)
 {
@@ -58,35 +58,46 @@ void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 	host->EnqueueCommand(std::move(command));
 }
 
-void Peer::_InternalSend(std::vector<uint8_t> &data, Flags flags)
+void Peer::_InternalSendOrQueue(std::vector<uint8_t> &data, Flags flags)
 {
-	int steamFlags = 0;
-	if (flags & FLAG_RELIABLE) {
-		steamFlags = k_nSteamNetworkingSend_Reliable;
-	} else {
-		steamFlags = k_nSteamNetworkingSend_Unreliable;
+	bool wasQueued = !queuedSends.empty();
+	_InternalFlushQueuedSends();
+	if (queuedSends.empty() ||
+		((flags & FLAG_UNRELIABLE_NO_NAGLE) == FLAG_UNRELIABLE_NO_NAGLE)) {
+		if (_InternalSend(data.data(), data.size(), flags) == true) {
+			if (wasQueued) {
+				host->peersQueuedSends.erase(this);
+				host->peersQueuedSendsIterator = host->peersQueuedSends.begin();
+			}
+			return;
+		}
 	}
-	auto result = host->host->SendMessageToConnection(peer, data.data(), data.size(), steamFlags,
-										nullptr);
-	if (result == k_EResultLimitExceeded) {
-		Send(std::move(data), flags);
-		return;
-	}
+	queuedSends.emplace();
+	queuedSends.back().data.swap(data);
+	queuedSends.back().flags = flags;
+	host->peersQueuedSends.insert(this);
+	host->peersQueuedSendsIterator = host->peersQueuedSends.begin();
 }
 
-void Peer::_InternalSend(const void *data, uint32_t length, const Flags flags)
+bool Peer::_InternalSend(const void *data, uint32_t length, const Flags flags)
 {
-	int steamFlags = 0;
-	if (flags & FLAG_RELIABLE) {
-		steamFlags = k_nSteamNetworkingSend_Reliable;
-	} else {
-		steamFlags = k_nSteamNetworkingSend_Unreliable;
-	}
-	auto result = host->host->SendMessageToConnection(peer, data, length, steamFlags,
-										nullptr);
+	auto result = host->host->SendMessageToConnection(peer, data, length,
+													  flags.field, nullptr);
 	if (result == k_EResultLimitExceeded) {
-		Send(std::vector<uint8_t>((uint8_t*)data, (uint8_t*)data+length), flags);
-		return;
+		return false;
+	}
+	return true;
+}
+
+void Peer::_InternalFlushQueuedSends()
+{
+	while (queuedSends.empty() == false) {
+		SendCommand &cmd = queuedSends.front();
+		if (_InternalSend(cmd.data.data(), cmd.data.size(), cmd.flags)) {
+			queuedSends.pop();
+		} else {
+			break;
+		}
 	}
 }
 
@@ -118,7 +129,7 @@ void Peer::CallCallbackReceive(ISteamNetworkingMessage *packet)
 		if (packet->m_nFlags & k_nSteamNetworkingSend_Reliable) {
 			flags = FLAG_RELIABLE;
 		}
-		
+
 		callbackOnReceive(this, reader, flags);
 	}
 }

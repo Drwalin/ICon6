@@ -60,7 +60,8 @@ void CommandExecutionQueue::TryDequeueBulkAny(std::vector<Command> &commands)
 	commands.resize(nextSize);
 }
 
-void CommandExecutionQueue::TryDequeueBulkNotMore(std::vector<Command> &commands, uint32_t max)
+void CommandExecutionQueue::TryDequeueBulkNotMore(
+	std::vector<Command> &commands, uint32_t max)
 {
 	commands.clear();
 	size_t size = ((QueueType *)concurrentQueueCommands)->size_approx();

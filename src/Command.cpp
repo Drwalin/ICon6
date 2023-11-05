@@ -50,10 +50,7 @@ void ExecuteConnect::Execute()
 		onConnected.Execute();
 }
 
-void ExecuteSend::Execute()
-{
-	peer->_InternalSend(data, flags);
-}
+void ExecuteSend::Execute() { peer->_InternalSendOrQueue(data, flags); }
 
 void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(); }
 

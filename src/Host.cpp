@@ -124,6 +124,7 @@ void Host::Destroy()
 			delete it.second;
 		}
 		peers.clear();
+		peersQueuedSends.clear();
 		if (listeningSocket != k_HSteamListenSocket_Invalid) {
 			host->CloseListenSocket(listeningSocket);
 			listeningSocket = k_HSteamListenSocket_Invalid;
@@ -155,6 +156,7 @@ void Host::DisconnectAllGracefully()
 	for (auto p : peers) {
 		p.second->_InternalDisconnect();
 	}
+	peersQueuedSends.clear();
 }
 
 void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
@@ -168,7 +170,7 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 		while (!(flags & TO_STOP)) {
 			host->RunCallbacks();
 			int receivedMessages = 0;
-			for (receivedMessages = 0; receivedMessages < 128;
+			for (receivedMessages = 0; receivedMessages < 512;
 				 ++receivedMessages) {
 				ISteamNetworkingMessage *msg = nullptr;
 				int numMsgs =
@@ -183,10 +185,11 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 			if (mpe != nullptr) {
 				mpe->CheckForTimeoutFunctionCalls(6);
 			}
-			uint32_t dispatchedNum = DispatchAllEventsFromQueue(64);
+			FlushPeersQueuedSends(16);
+			uint32_t dispatchedNum = DispatchAllEventsFromQueue(512);
 			if (receivedMessages == 0) {
 				if (dispatchedNum == 0) {
-					std::this_thread::sleep_for(std::chrono::microseconds(1000));
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				} else if (dispatchedNum < 3) {
 					std::this_thread::sleep_for(std::chrono::microseconds(100));
 				} else if (dispatchedNum < 9) {
@@ -338,7 +341,7 @@ std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 void Host::Connect(std::string address, uint16_t port)
 {
 	commands::ExecuteOnPeer com;
-	com.function = [](auto a, auto b, auto c){};
+	com.function = [](auto a, auto b, auto c) {};
 	Connect(address, port, std::move(com), nullptr);
 }
 
@@ -397,6 +400,31 @@ void Host::SetMessagePassingEnvironment(MessagePassingEnvironment *mpe)
 			peer->GetHost()->GetMessagePassingEnvironment()->OnReceive(
 				peer, reader, flags);
 		};
+	}
+}
+
+void Host::FlushPeersQueuedSends(int amount)
+{
+	if (!peersQueuedSends.empty()) {
+		if (peersQueuedSendsIterator == peersQueuedSends.end()) {
+			peersQueuedSendsIterator = peersQueuedSends.begin();
+		}
+		Peer *lastChecked = nullptr;
+		std::vector<Peer *> toRemove;
+		for (int i = 0;
+			 peersQueuedSendsIterator != peersQueuedSends.end() && i < amount;
+			 ++peersQueuedSendsIterator, ++i) {
+			Peer *peer = *peersQueuedSendsIterator;
+			peer->_InternalFlushQueuedSends();
+			if (peer->queuedSends.empty()) {
+				toRemove.emplace_back(peer);
+			}
+			lastChecked = peer;
+		}
+		for (Peer *peer : toRemove) {
+			peersQueuedSends.erase(peer);
+		}
+		peersQueuedSendsIterator = peersQueuedSends.find(lastChecked);
 	}
 }
 

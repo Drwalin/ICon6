@@ -16,7 +16,7 @@
 icon6::MessagePassingEnvironment mpe;
 
 icon6::Host *host = nullptr;
-const uint32_t CLIENTS_NUM = 512;
+const uint32_t CLIENTS_NUM = 10;
 const uint16_t serverPort = 4000;
 
 extern "C" int processId;
@@ -143,23 +143,22 @@ template <typename... Args> void Print(const char *fmt, Args... args)
 void Runner(icon6::Peer *peer)
 {
 	while (peer->IsReadyToUse() == false) {
-		std::this_thread::sleep_for(std::chrono::microseconds(10));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 	std::vector<TestStruct> data;
 	uint32_t msgSent = 0;
 	for (uint32_t i = 0; i < ipc->countMessages; ++i) {
 		if (ipc->runTestFlag == 0)
 			break;
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(15));
 		for (uint32_t j = 0; j < ((processId == -1) ? 4 : 1); ++j) {
 			uint32_t s = (processId == -1) ? GetRandomMessageSize() : 100;
 			data.resize(s / 21);
 			auto now = std::chrono::steady_clock::now();
 			double dt = std::chrono::duration<double>(now - originTime).count();
-			icon6::Flags flag = ((processId >= 0) || ((msgSent % 1000) == 0))
-						 ? icon6::FLAG_RELIABLE
-						 : icon6::Flags(0);
-			mpe.Send(peer, flag, "first", data, dt);
+			icon6::Flags flag = ((processId >= 0) || ((msgSent % 16) == 0))
+									? icon6::FLAG_RELIABLE_NO_NAGLE
+									: icon6::FLAG_UNRELIABLE_NO_NAGLE;
 			++msgSent;
 			uint64_t bytes = data.size() * 21 + 8 + 4 + 7;
 			if (processId >= 0) {
@@ -169,6 +168,7 @@ void Runner(icon6::Peer *peer)
 				ipc->counterSentByServer++;
 				ipc->serverSendBytes += bytes;
 			}
+			mpe.Send(peer, flag, "first", data, dt);
 		}
 	}
 	ipc->flags += 1;
@@ -274,11 +274,10 @@ void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	ipc->runTestFlag = 0;
 	auto end = std::chrono::steady_clock::now();
 	ipc->slavesRunningCount = 0;
-
-	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 	const double t = std::chrono::duration<double>(end - beg).count();
 

@@ -211,8 +211,7 @@ public:
 	void Execute();
 
 public:
-	Command(commands::ExecuteNOP &&executeNOP)
-		: executeNOP(), hasValue(true)
+	Command(commands::ExecuteNOP &&executeNOP) : executeNOP(), hasValue(true)
 	{
 		this->executeNOP = std::move(executeNOP);
 	}

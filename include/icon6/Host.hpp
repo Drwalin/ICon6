@@ -119,11 +119,16 @@ private:
 	void Init(const SteamNetworkingIPAddr *address);
 	void SteamNetConnectionStatusChangedCallback(
 		SteamNetConnectionStatusChangedCallback_t *pInfo);
-	uint32_t DispatchAllEventsFromQueue(uint32_t maxEventsDispatched=100);
+	uint32_t DispatchAllEventsFromQueue(uint32_t maxEventsDispatched = 100);
 	void DispatchPopedEventsFromQueue();
 	void EnqueueCommand(Command &&command);
 
 	static Host *_InternalGetSetThreadLocalHost(bool set, Host *host);
+
+private:
+	std::unordered_set<Peer *> peersQueuedSends;
+	decltype(peersQueuedSends.begin()) peersQueuedSendsIterator;
+	void FlushPeersQueuedSends(int amount);
 
 private:
 	MessagePassingEnvironment *mpe;
