@@ -9,13 +9,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(ICON6_BUILD_EXAMPLES "Build examples" ON)
 option(ICON6_BUILD_TEST "Build tests" ON)
 
-add_subdirectory(enet)
-target_compile_definitions(enet PRIVATE -DENET_DEBUG)
+add_subdirectory(GameNetworkingSockets PRIVATE)
 
 add_subdirectory(bitscpp)
 
 include_directories(./include/)
-include_directories(./enet/include/)
+include_directories(./GameNetworkingSockets/include/)
 include_directories(./bitscpp/include/)
 
 aux_source_directory(./include/icon6/ header_files)
@@ -25,49 +24,16 @@ add_library(icon6 STATIC
 	${header_files}
 	${source_files}
 )
-# TODO: add code to find if libsodium is installed on system
-target_link_libraries(icon6 enet sodium)
+target_link_libraries(icon6 GameNetworkingSockets::shared)
 
-add_executable(keygen src/keygen)
-target_link_libraries(keygen icon6)
-
-add_executable(certgen src/certgen)
-target_link_libraries(certgen icon6)
-
-add_executable(certreq src/certreq)
-target_link_libraries(certreq icon6)
-
-# if(ICON6_BUILD_TESTS)
-# 	add_executable(tests
-# 		tests/TestMain
-# 	)
-# 	target_link_libraries(tests icon6)
-# endif()
+if(ICON6_BUILD_TEST)
+	add_executable(stress_test
+		tests/stress_test
+	)
+	target_link_libraries(stress_test icon6)
+endif()
 
 if(ICON6_BUILD_EXAMPLES)
-	add_executable(example1
-		examples/example1
-	)
-	target_link_libraries(example1 icon6)
-	add_executable(example2
-		examples/example2
-	)
-	target_link_libraries(example2 icon6)
-	add_executable(example3
-		examples/example3
-	)
-	target_link_libraries(example3 icon6)
-	add_executable(example4
-		examples/example4
-	)
-	target_link_libraries(example4 icon6)
-	add_executable(example5
-		examples/example5
-	)
-	target_link_libraries(example5 icon6)
-	add_executable(example6
-		examples/example6
-	)
-	target_link_libraries(example6 icon6)
+	add_subdirectory(examples)
 endif()
 

@@ -20,20 +20,16 @@
 #define ICON6_HOST_HPP
 
 #include <string>
-#include <memory>
 #include <future>
 #include <atomic>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
-#include <enet/enet.h>
+#include <steam/isteamnetworkingsockets.h>
+#include <steam/isteamnetworkingutils.h>
 
 #include "Flags.hpp"
-#include "Peer.hpp"
-#include "Command.hpp"
 #include "CommandExecutionQueue.hpp"
-
-#include "Cert.hpp"
 
 #define DEBUG(...) icon6::Debug(__FILE__, __LINE__, __VA_ARGS__)
 
@@ -45,84 +41,86 @@ class Peer;
 class ConnectionEncryptionState;
 class MessagePassingEnvironment;
 
-enum class PeerAcceptancePolicy {
-	ACCEPT_ALL,
-	ACCEPT_DIRECTLY_TRUSTED,
-	ACCEPT_INDIRECTLY_TRUSTED_BY_CA,
-};
-
 class Host final
 {
 public:
-	static Host *Make(uint16_t port, uint32_t maximumHostsNumber);
-
 	void SetMessagePassingEnvironment(MessagePassingEnvironment *mpe);
 	inline MessagePassingEnvironment *GetMessagePassingEnvironment()
 	{
 		return mpe;
 	}
 
-	// create host on 127.0.0.1:port
-	Host(uint16_t port, uint32_t maximumHostsNumber);
-
-	// create client host on any port
-	Host(uint32_t maximumHostsNumber);
+	// create host on given port
+	Host(uint16_t port);
+	// create client host with automatic port
+	Host();
 	~Host();
 
-	void SetCertificatePolicy(PeerAcceptancePolicy peerAcceptancePolicy);
-	void AddTrustedRootCA(crypto::Cert *rootCA);
-	void SetSelfCertificate(crypto::Cert *root);
-	void InitRandomSelfsignedCertificate();
-	void SetPolicyMaximumDepthOfCertificateAcceptable(uint32_t maxDepth);
-
+	// thread unsafe
 	void Destroy();
 
 	void RunAsync();
+	// thread unsafe
 	void RunSync();
+	// thread unsafe
 	void RunSingleLoop(uint32_t maxWaitTimeMilliseconds = 4);
 
+	// thread unsafe
 	void DisconnectAllGracefully();
 
 	void SetConnect(void (*callback)(Peer *));
-	void SetReceive(void (*callback)(Peer *, std::vector<uint8_t> &data,
-									 Flags flags));
-	void SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData));
+	void SetReceive(void (*callback)(Peer *, ByteReader &, Flags flags));
+	void SetDisconnect(void (*callback)(Peer *));
 
 	void Stop();
 	void WaitStop();
 
+	// Thread unsafe.
+	template <typename TFunc> void ForEachPeer(TFunc &&func)
+	{
+		for (auto it : peers) {
+			func(it.second);
+		}
+	}
+
 public:
-	// thread safe function to connect to a remote host
 	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);
-	// thread safe function to connect to a remote host
+	void Connect(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port,
 				 commands::ExecuteOnPeer &&onConnected,
 				 CommandExecutionQueue *queue = nullptr);
 
-	Peer *_InternalConnect(ENetAddress address);
+	// thread unsafe.
+	Peer *_InternalConnect(const SteamNetworkingIPAddr *address);
+
+	static Host *GetThreadLocalHost();
+	static void SetThreadLocalHost(Host *host);
 
 public:
-	void *userData;
-	std::shared_ptr<void> userSharedPointer;
+	uint64_t userData;
+	void *userPointer;
 
 	friend class Peer;
 	friend class ConnectionEncryptionState;
 
 private:
-	void Init(ENetAddress *address, uint32_t maximumHostsNumber);
-	void DispatchEvent(ENetEvent &event);
-	void DispatchAllEventsFromQueue();
+	static void StaticSteamNetConnectionStatusChangedCallback(
+		SteamNetConnectionStatusChangedCallback_t *pInfo);
+	void Init(const SteamNetworkingIPAddr *address);
+	void SteamNetConnectionStatusChangedCallback(
+		SteamNetConnectionStatusChangedCallback_t *pInfo);
+	uint32_t DispatchAllEventsFromQueue(uint32_t maxEventsDispatched = 100);
 	void DispatchPopedEventsFromQueue();
 	void EnqueueCommand(Command &&command);
 
-private:
-	// 		crypto::Cert *cert;
-	crypto::CertKey *certKey;
-	// 		std::vector<crypto::Cert *> trustedRootCertificates;
-	PeerAcceptancePolicy peerAcceptancePolicy =
-		PeerAcceptancePolicy::ACCEPT_ALL;
-	// 		uint32_t maxCertificateDepthAcceptable = 16;
+	static Host *_InternalGetSetThreadLocalHost(bool set, Host *host);
 
+private:
+	std::unordered_set<Peer *> peersQueuedSends;
+	decltype(peersQueuedSends.begin()) peersQueuedSendsIterator;
+	void FlushPeersQueuedSends(int amount);
+
+private:
 	MessagePassingEnvironment *mpe;
 
 	enum HostFlags : uint32_t {
@@ -130,19 +128,21 @@ private:
 		TO_STOP = 1 << 1,
 	};
 
-	ENetHost *host;
+	ISteamNetworkingSockets *host;
+	HSteamListenSocket listeningSocket;
+	HSteamNetPollGroup pollGroup;
 	std::atomic<uint32_t> flags;
 
-	std::unordered_set<Peer *> peers;
+	std::unordered_map<HSteamNetConnection, Peer *> peers;
 
 	CommandExecutionQueue *commandQueue;
-	std::vector<Command> popedCommands;
 
 	void (*callbackOnConnect)(Peer *);
-	void (*callbackOnReceive)(Peer *, std::vector<uint8_t> &data, Flags flags);
-	void (*callbackOnDisconnect)(Peer *, uint32_t disconnectData);
+	void (*callbackOnReceive)(Peer *, ByteReader &, Flags);
+	void (*callbackOnDisconnect)(Peer *);
 };
 
+void EnableSteamNetworkingDebug(bool value);
 uint32_t Initialize();
 void Deinitialize();
 } // namespace icon6

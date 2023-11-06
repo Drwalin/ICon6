@@ -26,7 +26,8 @@ namespace icon6
 {
 namespace commands
 {
-void ExecuteOnPeer::Execute() { function(peer, data, customSharedData); }
+void ExecuteOnPeer::Execute() { function(peer, data, userPointer); }
+
 void ExecuteOnPeerNoArgs::Execute() { function(peer); }
 
 void ExecuteRPC::Execute() { messageConverter->Call(peer, reader, flags); }
@@ -40,16 +41,16 @@ void ExecuteReturnRC::Execute() { function(peer, flags, reader, funcPtr); }
 
 void ExecuteConnect::Execute()
 {
-	onConnected.peer = host->_InternalConnect(address);
+	onConnected.peer = host->_InternalConnect(&address);
 	if (executionQueue)
 		executionQueue->EnqueueCommand(Command(std::move(onConnected)));
 	else
 		onConnected.Execute();
 }
 
-void ExecuteSend::Execute() { peer->_InternalSend(std::move(data), flags); }
+void ExecuteSend::Execute() { peer->_InternalSendOrQueue(data, flags); }
 
-void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(disconnectData); }
+void ExecuteDisconnect::Execute() { peer->_InternalDisconnect(); }
 
 void ExecuteFunctionPointer::Execute() { function(); }
 } // namespace commands
@@ -84,5 +85,11 @@ Command::~Command()
 	}
 }
 
-void Command::Execute() { ((BaseCommandExecute *)(&executeOnPeer))->Execute(); }
+void Command::Execute()
+{
+	if (hasValue) {
+		((BaseCommandExecute *)(&executeOnPeer))->Execute();
+		this->~Command();
+	}
+}
 } // namespace icon6

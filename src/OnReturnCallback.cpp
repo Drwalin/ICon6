@@ -29,9 +29,8 @@ bool OnReturnCallback::IsExpired(
 void OnReturnCallback::Execute(Peer *peer, Flags flags, ByteReader &reader)
 {
 	if (peer != this->peer) {
-		// TODO: implement check
-		throw "Received return value from different peer than request was "
-			  "sent to.";
+		DEBUG("OnReturnedCallback executed by different peer than the request "
+			  "was sent to");
 	}
 
 	if (executionQueue) {

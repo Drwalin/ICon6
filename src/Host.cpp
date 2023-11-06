@@ -19,11 +19,12 @@
 #include <cstdarg>
 
 #include <chrono>
-#include <memory>
-#include <exception>
 #include <thread>
 #include <mutex>
 #include <vector>
+
+#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingutils.h>
 
 #include "../include/icon6/Peer.hpp"
 #include "../include/icon6/MessagePassingEnvironment.hpp"
@@ -41,85 +42,97 @@ void Debug(const char *file, int line, const char *fmt, ...)
 	va_list va;
 	va_start(va, fmt);
 	static std::mutex mutex;
-	std::lock_guard<std::mutex> lock(mutex);
-	fprintf(stderr, "%s:%i\t\t [ %2i ] \t ", file, line, id);
-	vfprintf(stderr, fmt, va);
-	fprintf(stderr, "\n");
-	fflush(stderr);
+	std::lock_guard lock(mutex);
+	fprintf(stdout, "%s:%i\t\t [ %2i ] \t ", file, line, id);
+	vfprintf(stdout, fmt, va);
+	fprintf(stdout, "\n");
+	fflush(stdout);
 }
 
-Host *Host::Make(uint16_t port, uint32_t maximumHostsNumber)
+Host *Host::_InternalGetSetThreadLocalHost(bool set, Host *host)
 {
-	return new Host(port, maximumHostsNumber);
+	static thread_local Host *_host = nullptr;
+	if (set) {
+		_host = host;
+	}
+	return _host;
 }
 
-Host::Host(uint16_t port, uint32_t maximumHostsNumber)
+Host *Host::GetThreadLocalHost()
 {
-	ENetAddress addr;
-	addr.host = ENET_HOST_ANY;
-	addr.port = port;
-	Init(&addr, maximumHostsNumber);
+	return _InternalGetSetThreadLocalHost(false, nullptr);
 }
 
-Host::Host(uint32_t maximumHostsNumber) { Init(nullptr, maximumHostsNumber); }
+void Host::SetThreadLocalHost(Host *host)
+{
+	_InternalGetSetThreadLocalHost(true, host);
+}
+
+Host::Host(uint16_t port)
+{
+	SteamNetworkingIPAddr serverLocalAddr;
+	serverLocalAddr.Clear();
+	serverLocalAddr.m_port = port;
+	Init(&serverLocalAddr);
+}
+
+Host::Host() { Init(nullptr); }
 
 Host::~Host() { Destroy(); }
 
-void Host::SetCertificatePolicy(PeerAcceptancePolicy peerAcceptancePolicy)
+void Host::StaticSteamNetConnectionStatusChangedCallback(
+	SteamNetConnectionStatusChangedCallback_t *pInfo)
 {
-	if (peerAcceptancePolicy == PeerAcceptancePolicy::ACCEPT_ALL) {
-		this->peerAcceptancePolicy = peerAcceptancePolicy;
-	} else {
-		throw "Please use only "
-			  "Host::SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL)";
-	}
+	Host *host = Host::GetThreadLocalHost();
+	host->SteamNetConnectionStatusChangedCallback(pInfo);
 }
 
-void Host::AddTrustedRootCA(crypto::Cert *rootCA)
+void Host::Init(const SteamNetworkingIPAddr *address)
 {
-	throw "Host::SetSelfCertificate not implemented yet. Please use only "
-		  "Host::SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL)";
-}
-
-void Host::SetSelfCertificate(crypto::Cert *root)
-{
-	throw "Host::SetSelfCertificate not implemented yet. Please use only "
-		  "Host::InitRandomSelfsignedCertificate()";
-}
-
-void Host::InitRandomSelfsignedCertificate()
-{
-	certKey = crypto::CertKey::GenerateKey();
-	// TODO: generate self signed certificate
-}
-
-void Host::Init(ENetAddress *address, uint32_t maximumHostsNumber)
-{
+	mpe = nullptr;
 	commandQueue = new CommandExecutionQueue();
 	flags = 0;
 	callbackOnConnect = nullptr;
 	callbackOnReceive = nullptr;
 	callbackOnDisconnect = nullptr;
-	userData = nullptr;
-	host = enet_host_create(address, maximumHostsNumber, 2, 0, 0);
-	SetCertificatePolicy(PeerAcceptancePolicy::ACCEPT_ALL);
-	InitRandomSelfsignedCertificate();
+	userData = 0;
+	userPointer = nullptr;
+
+	host = SteamNetworkingSockets();
+	if (address) {
+		SteamNetworkingConfigValue_t opt;
+		opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
+				   (void *)Host::StaticSteamNetConnectionStatusChangedCallback);
+		listeningSocket = host->CreateListenSocketIP(*address, 1, &opt);
+	} else {
+		listeningSocket = k_HSteamListenSocket_Invalid;
+	}
+
+	pollGroup = host->CreatePollGroup();
 }
 
 void Host::Destroy()
 {
-	DispatchAllEventsFromQueue();
-	WaitStop();
-	DispatchAllEventsFromQueue();
-	for (Peer *peer : peers) {
-		peer->_InternalDisconnect(0);
-		delete peer;
+	if (host) {
+		DispatchAllEventsFromQueue();
+		WaitStop();
+		DispatchAllEventsFromQueue();
+		for (auto it : peers) {
+			it.second->_InternalDisconnect();
+			delete it.second;
+		}
+		peers.clear();
+		peersQueuedSends.clear();
+		if (listeningSocket != k_HSteamListenSocket_Invalid) {
+			host->CloseListenSocket(listeningSocket);
+			listeningSocket = k_HSteamListenSocket_Invalid;
+		}
+		host->DestroyPollGroup(pollGroup);
+		pollGroup = k_HSteamNetPollGroup_Invalid;
+		host = nullptr;
+		delete commandQueue;
+		commandQueue = nullptr;
 	}
-	peers.clear();
-	enet_host_destroy(host);
-	host = nullptr;
-	delete commandQueue;
-	commandQueue = nullptr;
 }
 
 void Host::RunAsync()
@@ -139,87 +152,158 @@ void Host::RunSync()
 void Host::DisconnectAllGracefully()
 {
 	for (auto p : peers) {
-		p->_InternalDisconnect(0);
+		p.second->_InternalDisconnect();
 	}
-	ENetEvent event;
-	for (int i = 0; i < 1000000 && enet_host_service(host, &event, 10) >= 0;
-		 ++i) {
-		DispatchEvent(event);
-		if (event.type == ENET_EVENT_TYPE_CONNECT) {
-			enet_peer_disconnect(event.peer, 0);
-		} else if (event.type == ENET_EVENT_TYPE_NONE && i % 10 == 0) {
-			for (auto p : peers) {
-				p->_InternalDisconnect(0);
-			}
-		}
-		if (peers.empty()) {
-			break;
-		}
-	}
+	peersQueuedSends.clear();
 }
 
 void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 {
+	Host::SetThreadLocalHost(this);
 	if (flags & TO_STOP) {
 		DisconnectAllGracefully();
 		flags &= ~RUNNING;
 	} else {
 		flags |= RUNNING;
-		ENetEvent event;
 		while (!(flags & TO_STOP)) {
-			enet_host_service(host, &event, maxWaitTimeMilliseconds);
+			host->RunCallbacks();
+			int receivedMessages = 0;
+			for (receivedMessages = 0; receivedMessages < 512;
+				 ++receivedMessages) {
+				ISteamNetworkingMessage *msg = nullptr;
+				int numMsgs =
+					host->ReceiveMessagesOnPollGroup(pollGroup, &msg, 1);
+				if (numMsgs == 1) {
+					Peer *peer = (Peer *)msg->m_nConnUserData;
+					peer->CallCallbackReceive(msg);
+				} else {
+					break;
+				}
+			}
 			if (mpe != nullptr) {
 				mpe->CheckForTimeoutFunctionCalls(6);
 			}
-			DispatchAllEventsFromQueue();
-			DispatchEvent(event);
+			FlushPeersQueuedSends(16);
+			uint32_t dispatchedNum = DispatchAllEventsFromQueue(512);
+			if (receivedMessages == 0) {
+				if (dispatchedNum == 0) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				} else if (dispatchedNum < 3) {
+					std::this_thread::sleep_for(std::chrono::microseconds(100));
+				} else if (dispatchedNum < 9) {
+					std::this_thread::yield();
+				}
+			}
 		}
 	}
 }
 
-void Host::DispatchEvent(ENetEvent &event)
+void Host::SteamNetConnectionStatusChangedCallback(
+	SteamNetConnectionStatusChangedCallback_t *pInfo)
 {
-	switch (event.type) {
-	case ENET_EVENT_TYPE_CONNECT: {
-		if (event.peer->data == nullptr) {
-			Peer *peer(new Peer(this, event.peer));
-			peers.insert(peer);
+	switch (pInfo->m_info.m_eState) {
+	case k_ESteamNetworkingConnectionState_None:
+	case k_ESteamNetworkingConnectionState_ClosedByPeer:
+	case k_ESteamNetworkingConnectionState_ProblemDetectedLocally: {
+		if (pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connected) {
+			auto userData = host->GetConnectionUserData(pInfo->m_hConn);
+			Peer *peer = nullptr;
+			if (userData == -1) {
+				peer = new Peer(this, pInfo->m_hConn);
+				peers[pInfo->m_hConn] = peer;
+			} else {
+				peer = (Peer *)userData;
+			}
+
+			if (peer) {
+				peer->CallCallbackDisconnect();
+				// TODO: delay Peer object destruction
+				// delete peer;
+				peers.erase(pInfo->m_hConn);
+			}
 		}
-		((Peer *)event.peer->data)->_InternalStartHandshake();
-	} break;
-	case ENET_EVENT_TYPE_RECEIVE: {
-		Flags flags = 0;
-		if (event.packet->flags & ENET_PACKET_FLAG_RELIABLE)
-			flags &= FLAG_RELIABLE;
-		if (!(event.packet->flags & ENET_PACKET_FLAG_UNSEQUENCED))
-			flags &= FLAG_SEQUENCED;
-		Peer *peer = (Peer *)event.peer->data;
-		peer->CallCallbackReceive(event.packet, flags);
-		enet_packet_destroy(event.packet);
-	} break;
-	case ENET_EVENT_TYPE_DISCONNECT: {
-		Peer *peer = (Peer *)event.peer->data;
-		peer->CallCallbackDisconnect(event.data);
-		peers.erase((Peer *)(event.peer->data));
-	} break;
-	case ENET_EVENT_TYPE_NONE:;
+
+		host->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+		break;
+	}
+
+	case k_ESteamNetworkingConnectionState_Connecting: {
+		if (peers.find(pInfo->m_hConn) != peers.end()) { // this is outgoing
+														 // connection, thus
+														 // icon6::Peer* object
+														 // already exists.
+			break;
+		}
+		if (host->AcceptConnection(pInfo->m_hConn) != k_EResultOK) {
+			host->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+			DEBUG("Can't accept connection.  (It was already closed?)");
+			break;
+		}
+
+		if (!host->SetConnectionPollGroup(pInfo->m_hConn, pollGroup)) {
+			host->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+			DEBUG("Failed to set poll group?");
+			break;
+		}
+
+		auto userData = host->GetConnectionUserData(pInfo->m_hConn);
+		Peer *peer = nullptr;
+		if (userData == -1) {
+			peer = new Peer(this, pInfo->m_hConn);
+			peers[pInfo->m_hConn] = peer;
+		} else {
+			peer = (Peer *)userData;
+		}
+
+		break;
+	}
+
+	case k_ESteamNetworkingConnectionState_Connected: {
+		Peer *peer = (Peer *)host->GetConnectionUserData(pInfo->m_hConn);
+		peer->SetReadyToUse();
+		if (callbackOnConnect) {
+			callbackOnConnect(peer);
+		}
+		break;
+	}
+
+	case k_ESteamNetworkingConnectionState_Dead:
+	case k_ESteamNetworkingConnectionState_Linger:
+	case k_ESteamNetworkingConnectionState_FinWait:
+	case k_ESteamNetworkingConnectionState_FindingRoute:
+	case k_ESteamNetworkingConnectionState__Force32Bit:
+		break;
 	}
 }
 
-void Host::DispatchAllEventsFromQueue()
+uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 {
-	for (int i = 0; i < 10; ++i) {
-		popedCommands.clear();
-		commandQueue->TryDequeueBulkAny(popedCommands);
+	uint32_t i = 0;
+	const uint32_t MAX_DEQUEUE_COMMANDS = 128;
+	maxEvents = std::min(maxEvents, MAX_DEQUEUE_COMMANDS);
+	struct PopedCommand {
+		Command commands[MAX_DEQUEUE_COMMANDS];
+	};
+	union X {
+		X() {}
+		~X() {}
+		PopedCommand com;
+		uint32_t __pad;
+	} x;
+	new (&x.com) PopedCommand;
+	for (i = 0; i < 10; ++i) {
+		const uint32_t dequeued =
+			commandQueue->TryDequeueBulkAny(x.com.commands, maxEvents);
 
-		if (popedCommands.empty())
-			return;
-		for (Command &c : popedCommands) {
-			c.Execute();
-			++i;
+		if (dequeued == 0) {
+			break;
 		}
-		popedCommands.clear();
+		for (uint32_t i = 0; i < dequeued; ++i) {
+			x.com.commands[i].Execute();
+			x.com.commands[i].~Command();
+		}
 	}
+	return i;
 }
 
 void Host::SetConnect(void (*callback)(Peer *))
@@ -227,13 +311,12 @@ void Host::SetConnect(void (*callback)(Peer *))
 	callbackOnConnect = callback;
 }
 
-void Host::SetReceive(void (*callback)(Peer *, std::vector<uint8_t> &data,
-									   Flags flags))
+void Host::SetReceive(void (*callback)(Peer *, ByteReader &, Flags flags))
 {
 	callbackOnReceive = callback;
 }
 
-void Host::SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData))
+void Host::SetDisconnect(void (*callback)(Peer *))
 {
 	callbackOnDisconnect = callback;
 }
@@ -250,18 +333,24 @@ void Host::WaitStop()
 
 std::future<Peer *> Host::ConnectPromise(std::string address, uint16_t port)
 {
-	std::shared_ptr<std::promise<Peer *>> promise =
-		std::make_shared<std::promise<Peer *>>();
+	std::promise<Peer *> *promise = new std::promise<Peer *>();
 	commands::ExecuteOnPeer onConnected;
-	onConnected.customSharedData = promise;
-	onConnected.function = [](auto peer, auto data, auto customSharedData) {
-		std::shared_ptr<std::promise<Peer *>> promise =
-			std::static_pointer_cast<std::promise<Peer *>>(customSharedData);
+	onConnected.userPointer = promise;
+	onConnected.function = [](auto peer, auto data, auto userPointer) {
+		std::promise<Peer *> *promise = (std::promise<Peer *> *)(userPointer);
 		promise->set_value(peer);
+		delete promise;
 	};
 	auto future = promise->get_future();
 	Connect(address, port, std::move(onConnected), nullptr);
 	return future;
+}
+
+void Host::Connect(std::string address, uint16_t port)
+{
+	commands::ExecuteOnPeer com;
+	com.function = [](auto a, auto b, auto c) {};
+	Connect(address, port, std::move(com), nullptr);
 }
 
 void Host::Connect(std::string address, uint16_t port,
@@ -276,8 +365,9 @@ void Host::Connect(std::string address, uint16_t port,
 			commands::ExecuteConnect &com = command.executeConnect;
 			com.onConnected = std::move(onConnected);
 			com.executionQueue = queue;
-			enet_address_set_host(&com.address, address.c_str());
-			com.address.port = port;
+			com.address.Clear();
+			com.address.ParseString(address.c_str());
+			com.address.m_port = port;
 			com.host = host;
 			host->EnqueueCommand(std::move(command));
 		},
@@ -285,13 +375,22 @@ void Host::Connect(std::string address, uint16_t port,
 		.detach();
 }
 
-Peer *Host::_InternalConnect(ENetAddress address)
+Peer *Host::_InternalConnect(const SteamNetworkingIPAddr *address)
 {
-	ENetPeer *peer = enet_host_connect(host, &address, 2, 0);
-	enet_host_flush(host);
-	Peer *p(new Peer(this, peer));
-	peer->data = p;
-	peers.insert(p);
+	SteamNetworkingConfigValue_t opt;
+	opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
+			   (void *)Host::StaticSteamNetConnectionStatusChangedCallback);
+
+	auto connection = host->ConnectByIPAddress(*address, 1, &opt);
+
+	if (!host->SetConnectionPollGroup(connection, pollGroup)) {
+		host->CloseConnection(connection, 0, nullptr, false);
+		DEBUG("Failed to set poll group?");
+		return nullptr;
+	}
+
+	Peer *p = new Peer(this, connection);
+	peers[connection] = p;
 	return p;
 }
 
@@ -304,16 +403,64 @@ void Host::SetMessagePassingEnvironment(MessagePassingEnvironment *mpe)
 {
 	this->mpe = mpe;
 	if (mpe) {
-		this->callbackOnReceive = [](Peer *peer, std::vector<uint8_t> &data,
+		this->callbackOnReceive = [](Peer *peer, ByteReader &reader,
 									 Flags flags) {
-			ByteReader reader(std::move(data), 0);
 			peer->GetHost()->GetMessagePassingEnvironment()->OnReceive(
 				peer, reader, flags);
 		};
 	}
 }
 
-uint32_t Initialize() { return enet_initialize(); }
+void Host::FlushPeersQueuedSends(int amount)
+{
+	if (!peersQueuedSends.empty()) {
+		if (peersQueuedSendsIterator == peersQueuedSends.end()) {
+			peersQueuedSendsIterator = peersQueuedSends.begin();
+		}
+		Peer *lastChecked = nullptr;
+		std::vector<Peer *> toRemove;
+		for (int i = 0;
+			 peersQueuedSendsIterator != peersQueuedSends.end() && i < amount;
+			 ++peersQueuedSendsIterator, ++i) {
+			Peer *peer = *peersQueuedSendsIterator;
+			peer->_InternalFlushQueuedSends();
+			if (peer->queuedSends.empty()) {
+				toRemove.emplace_back(peer);
+			}
+			lastChecked = peer;
+		}
+		for (Peer *peer : toRemove) {
+			peersQueuedSends.erase(peer);
+		}
+		peersQueuedSendsIterator = peersQueuedSends.find(lastChecked);
+	}
+}
 
-void Deinitialize() { enet_deinitialize(); }
+static bool _enableSteamNetworkingDebugPrinting = false;
+
+void EnableSteamNetworkingDebug(bool value)
+{
+	_enableSteamNetworkingDebugPrinting = value;
+}
+
+uint32_t Initialize()
+{
+	SteamDatagramErrMsg errMsg;
+	if (!GameNetworkingSockets_Init(nullptr, errMsg)) {
+		DEBUG("GameNetworkingSockets_Init failed: %s",
+			  ((std::string)errMsg).c_str());
+		return -1;
+	}
+
+	SteamNetworkingUtils()->SetDebugOutputFunction(
+		k_ESteamNetworkingSocketsDebugOutputType_Msg,
+		[](ESteamNetworkingSocketsDebugOutputType eType, const char *msg) {
+			if (_enableSteamNetworkingDebugPrinting) {
+				DEBUG("%s     ::: type(%i)", msg, eType);
+			}
+		});
+	return 0;
+}
+
+void Deinitialize() { GameNetworkingSockets_Kill(); }
 } // namespace icon6

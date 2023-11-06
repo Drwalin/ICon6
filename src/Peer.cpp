@@ -16,33 +16,41 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <thread>
-#include <memory>
 #include <cstring>
 
+#include <thread>
+
 #include "../include/icon6/MessagePassingEnvironment.hpp"
-#include "../include/icon6/Cert.hpp"
 #include "../include/icon6/Host.hpp"
 #include "../include/icon6/Command.hpp"
-#include "../include/icon6/Cert.hpp"
 
 #include "../include/icon6/Peer.hpp"
 
 namespace icon6
 {
-Peer::Peer(Host *host, ENetPeer *peer) : host(host), peer(peer)
+SteamNetConnectionRealTimeStatus_t Peer::GetRealTimeStats()
 {
-	peer->data = this;
+	SteamNetConnectionRealTimeStatus_t status;
+	host->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
+	return status;
+}
+
+Peer::Peer(Host *host, HSteamNetConnection connection)
+	: host(host), peer(connection)
+{
+	userData = 0;
+	userPointer = nullptr;
+	host->host->SetConnectionUserData(peer, (uint64_t)(size_t)this);
 	callbackOnReceive = host->callbackOnReceive;
 	callbackOnDisconnect = host->callbackOnDisconnect;
+	readyToUse = false;
 }
 Peer::~Peer() {}
 
 void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 {
-	if (GetState() != STATE_READY_TO_USE) {
-		throw "Peer::Send Handshake is not finished yet. Sending is not "
-			  "posible.";
+	if (!IsReadyToUse()) {
+		DEBUG("Send called on peer %p before ready to use", this);
 	}
 	Command command{commands::ExecuteSend{}};
 	commands::ExecuteSend &com = command.executeSend;
@@ -52,104 +60,102 @@ void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 	host->EnqueueCommand(std::move(command));
 }
 
-void Peer::_InternalSend(std::vector<uint8_t> &&data, Flags flags)
+void Peer::_InternalSendOrQueue(std::vector<uint8_t> &data, Flags flags)
 {
-	const uint32_t packetSize =
-		PeerEncryptor::GetEncryptedMessageLength(data.size());
-
-	ENetPacket *packet = enet_packet_create(
-		nullptr, packetSize,
-		0 | (flags & FLAG_SEQUENCED ? 0 : ENET_PACKET_FLAG_UNSEQUENCED) |
-			(flags & FLAG_RELIABLE ? ENET_PACKET_FLAG_RELIABLE : 0));
-
-	encryptionState.EncryptMessage(packet->data, data.data(), data.size(),
-								   flags);
-
-	uint8_t channel = flags & (FLAG_RELIABLE | FLAG_SEQUENCED) ? 0 : 1;
-	enet_peer_send(peer, channel, packet);
+	bool wasQueued = !queuedSends.empty();
+	_InternalFlushQueuedSends();
+	if (queuedSends.empty() ||
+		((flags & FLAG_UNRELIABLE_NO_NAGLE) == FLAG_UNRELIABLE_NO_NAGLE)) {
+		if (_InternalSend(data.data(), data.size(), flags) == true) {
+			if (wasQueued) {
+				host->peersQueuedSends.erase(this);
+				host->peersQueuedSendsIterator = host->peersQueuedSends.begin();
+			}
+			return;
+		}
+	}
+	queuedSends.emplace();
+	queuedSends.back().data.swap(data);
+	queuedSends.back().flags = flags;
+	host->peersQueuedSends.insert(this);
+	host->peersQueuedSendsIterator = host->peersQueuedSends.begin();
 }
 
-void Peer::Disconnect(uint32_t disconnectData)
+bool Peer::_InternalSend(const void *data, uint32_t length, const Flags flags)
+{
+	auto result = host->host->SendMessageToConnection(peer, data, length,
+													  flags.field, nullptr);
+	if (result == k_EResultLimitExceeded) {
+		return false;
+	}
+	return true;
+}
+
+void Peer::_InternalFlushQueuedSends()
+{
+	while (queuedSends.empty() == false) {
+		SendCommand &cmd = queuedSends.front();
+		if (_InternalSend(cmd.data.data(), cmd.data.size(), cmd.flags)) {
+			queuedSends.pop();
+		} else {
+			break;
+		}
+	}
+}
+
+void Peer::Disconnect()
 {
 	Command command{commands::ExecuteDisconnect{}};
 	commands::ExecuteDisconnect &com = command.executeDisconnect;
 	com.peer = this;
-	com.disconnectData = disconnectData;
 	host->EnqueueCommand(std::move(command));
 }
 
-void Peer::_InternalDisconnect(uint32_t disconnectData)
+void Peer::_InternalDisconnect()
 {
 	if (peer) {
-		enet_peer_disconnect(peer, disconnectData);
-		peer = nullptr;
+		host->host->CloseConnection(peer, 0, nullptr, true);
 	}
 }
 
-void Peer::_InternalStartHandshake() { encryptionState.StartHandshake(this); }
-
-void Peer::SetReceiveCallback(void (*callback)(Peer *,
-											   std::vector<uint8_t> &data,
-											   Flags flags))
+void Peer::SetReceiveCallback(void (*callback)(Peer *, ByteReader &, Flags))
 {
 	callbackOnReceive = callback;
 }
 
-void Peer::CallCallbackReceive(ENetPacket *packet, Flags flags)
+void Peer::CallCallbackReceive(ISteamNetworkingMessage *packet)
 {
-	switch (GetState()) {
-	case STATE_SENT_CERT:
-		encryptionState.ReceivedWhenStateSentCert(this, packet, flags);
-		break;
-
-	case STATE_SENT_KEX:
-		encryptionState.ReceivedWhenStateSentKex(this, packet, flags);
-
-		if (GetState() == STATE_BEFORE_ON_CONNECT_CALLBACK) {
-			if (host->callbackOnConnect)
-				host->callbackOnConnect(this);
-			if (GetState() == STATE_BEFORE_ON_CONNECT_CALLBACK)
-				encryptionState.state = STATE_READY_TO_USE;
+	ByteReader reader(packet, 0);
+	if (callbackOnReceive) {
+		Flags flags = 0;
+		if (packet->m_nFlags & k_nSteamNetworkingSend_Reliable) {
+			flags = FLAG_RELIABLE;
 		}
-		break;
 
-	case STATE_READY_TO_USE: {
-		encryptionState.DecryptMessage(receivedData, packet->data,
-									   packet->dataLength, flags);
-		if (GetState() == STATE_READY_TO_USE) {
-			if (callbackOnReceive) {
-				callbackOnReceive(this, receivedData, flags);
-			}
-		}
-		fflush(stdout);
-	} break;
-
-	case STATE_ZOMBIE:
-	case STATE_DISCONNECTED:
-	case STATE_FAILED_TO_AUTHENTICATE:
-	case STATE_FAILED_TO_VERIFY_MESSAGE:
-		break;
-	default:
-		DEBUG("icon6::Peer::CallCallbackReceive other states handling is "
-			  "invalid");
-		throw "icon6::Peer::CallCallbackReceive other states handling is "
-			  "invalid";
+		callbackOnReceive(this, reader, flags);
 	}
 }
 
-void Peer::SetDisconnect(void (*callback)(Peer *, uint32_t disconnectData))
+void Peer::SetDisconnect(void (*callback)(Peer *))
 {
 	callbackOnDisconnect = callback;
 }
 
-void Peer::CallCallbackDisconnect(uint32_t data)
+void Peer::CallCallbackDisconnect()
 {
-	if (GetState() == STATE_READY_TO_USE) {
-		if (callbackOnDisconnect) {
-			callbackOnDisconnect(this, data);
-		} else if (host->callbackOnDisconnect) {
-			host->callbackOnDisconnect(this, data);
-		}
+	if (callbackOnDisconnect) {
+		callbackOnDisconnect(this);
+	} else if (host->callbackOnDisconnect) {
+		host->callbackOnDisconnect(this);
 	}
+}
+
+void Peer::SetReadyToUse() { readyToUse = true; }
+
+uint32_t Peer::GetRoundTripTime() const
+{
+	SteamNetConnectionRealTimeStatus_t status;
+	host->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
+	return status.m_nPing;
 }
 } // namespace icon6

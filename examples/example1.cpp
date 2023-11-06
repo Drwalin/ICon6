@@ -1,70 +1,79 @@
 #include <chrono>
 #include <thread>
 
-#include "../include/icon6/Host.hpp"
-#include "icon6/Command.hpp"
+#include <unistd.h>
+#include <signal.h>
+
+#include <icon6/Host.hpp>
+#include <icon6/Peer.hpp>
 
 std::vector<uint8_t> MakeVector(const char *str)
 {
-	return std::vector<uint8_t>(str, str + (size_t)strlen(str));
+	return std::vector<uint8_t>(str, str + (size_t)strlen(str) + 1);
 }
 
 int main()
 {
 	uint16_t port1 = 4000, port2 = 4001;
 
+	pid_t c_pid = fork();
+
 	icon6::Initialize();
 
-	auto host1 = icon6::Host::Make(port1, 16);
-	auto host2 = icon6::Host::Make(port2, 16);
+	if (c_pid == -1) {
+		perror("fork");
+		exit(EXIT_FAILURE);
+	} else if (c_pid <= 0) {
+		auto host1 = new icon6::Host(port1);
 
-	host1->SetReceive(
-		[](icon6::Peer *p, std::vector<uint8_t> &data, icon6::Flags flags) {
-			printf(" message in host1: %s\n", data.data());
+		host1->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
+							 icon6::Flags flags) {
+			printf(" message received by client: %s\n", (char *)reader.data());
 			fflush(stdout);
 		});
-	host2->SetReceive(
-		[](icon6::Peer *p, std::vector<uint8_t> &data, icon6::Flags flags) {
-			printf(" message in host2: %s\n", data.data());
+		host1->RunAsync();
+
+		auto P1 = host1->ConnectPromise("127.0.0.1", port2);
+		P1.wait();
+		auto p1 = P1.get();
+
+		if (p1 != nullptr) {
+			p1->Send(MakeVector("Message 1"), 0);
+			p1->Send(MakeVector("Message 2"), 0);
+			p1->Send(MakeVector("Message 3"), 0);
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+			p1->Disconnect();
+		} else {
+			throw "Didn't connect to peer.";
+		}
+
+		host1->WaitStop();
+		delete host1;
+	} else {
+		auto host2 = new icon6::Host(port2);
+
+		host2->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
+							 icon6::Flags flags) {
+			printf(" message received by server: %s\n", (char *)reader.data());
 			fflush(stdout);
-			std::string res = (char *)data.data();
+			fflush(stdout);
+			std::string res = (char *)reader.data();
 			res = "Response " + res;
 			p->Send(MakeVector(res.c_str()), flags);
 		});
 
-	host1->RunAsync();
-	host2->RunAsync();
+		host2->RunAsync();
 
-	auto P1 = host1->ConnectPromise("localhost", port2);
-	P1.wait();
-	auto p1 = P1.get();
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-	auto time_end = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-	while (time_end > std::chrono::steady_clock::now()) {
-		if (p1->GetState() == icon6::STATE_READY_TO_USE) {
-			break;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		host2->Stop();
+		host2->WaitStop();
+		delete host2;
+
+		kill(c_pid, SIGKILL);
 	}
-
-	if (p1 != nullptr) {
-		p1->Send(MakeVector("Message 1"), 0);
-		p1->Send(MakeVector("Message 2"), 0);
-		p1->Send(MakeVector("Message 3"), 0);
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-		p1->Disconnect(0);
-	} else {
-		throw "Didn't connect to peer.";
-	}
-
-	host2->Stop();
-	host1->WaitStop();
-	host2->WaitStop();
-
-	delete host1;
-	delete host2;
 
 	icon6::Deinitialize();
 	return 0;

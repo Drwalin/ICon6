@@ -21,6 +21,8 @@
 
 #include <cinttypes>
 
+#include <steam/steamnetworkingtypes.h>
+
 namespace icon6
 {
 struct Flags {
@@ -51,8 +53,14 @@ struct Flags {
 	inline operator bool() const { return field; }
 };
 
-inline const static Flags FLAG_SEQUENCED = 1 << 0;
-inline const static Flags FLAG_RELIABLE = 1 << 1;
+inline const static Flags FLAG_UNRELIABLE = k_nSteamNetworkingSend_Unreliable;
+inline const static Flags FLAG_RELIABLE = k_nSteamNetworkingSend_Reliable;
+inline const static Flags FLAG_NO_NAGLE = k_nSteamNetworkingSend_NoNagle;
+
+inline const static Flags FLAG_UNRELIABLE_NO_NAGLE =
+	FLAG_UNRELIABLE | FLAG_NO_NAGLE;
+inline const static Flags FLAG_RELIABLE_NO_NAGLE =
+	FLAG_RELIABLE | FLAG_NO_NAGLE;
 
 namespace MethodProtocolSendFlags
 {

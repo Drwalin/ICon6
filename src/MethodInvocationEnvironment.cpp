@@ -43,8 +43,8 @@ Class *MethodInvocationEnvironment::GetClassByName(std::string name)
 void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 											Flags flags)
 {
-	if (reader.bytes[0] == MethodProtocolSendFlags::METHOD_SEND_PREFIX ||
-		reader.bytes[0] == MethodProtocolSendFlags::METHOD_CALL_PREFIX) {
+	if (reader.data()[0] == MethodProtocolSendFlags::METHOD_SEND_PREFIX ||
+		reader.data()[0] == MethodProtocolSendFlags::METHOD_CALL_PREFIX) {
 		uint8_t b;
 		reader.op(b);
 
@@ -70,14 +70,14 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 					mtd->Call(object->second.objectPtr, peer, reader, flags);
 				}
 			} else { // method name does not exists
-				printf(" Method %s not found for object %lu of type %s\n",
-					   name.c_str(), objectId,
-					   object->second.objectClass->name.c_str());
 				// TODO: do something, show error or anything
+				DEBUG(" Method %s not found for object %lu of type %s\n",
+					  name.c_str(), objectId,
+					  object->second.objectClass->name.c_str());
 			}
 		} else { // this object does not exists locally
 				 // TODO: do something, show error or anything
-			printf(" Object %lu not found\n", objectId);
+			DEBUG(" Object %lu not found\n", objectId);
 		}
 	} else {
 		MessagePassingEnvironment::OnReceive(peer, reader, flags);

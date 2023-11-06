@@ -47,6 +47,12 @@ public:
 		value = peer;
 	}
 
+	inline static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
+								ByteReader *&value)
+	{
+		value = &reader;
+	}
+
 	template <typename T>
 	inline static void ReadType(Peer *peer, Flags flags, ByteReader &reader,
 								T &value)

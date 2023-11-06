@@ -22,10 +22,10 @@
 #include <cinttypes>
 
 #include <string>
-#include <memory>
 #include <vector>
 
-#include <enet/enet.h>
+#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingutils.h>
 
 #include "Flags.hpp"
 #include "ByteReader.hpp"
@@ -68,9 +68,9 @@ class ExecuteOnPeer final : public BaseCommandExecute
 public:
 	Peer *peer;
 	std::vector<uint8_t> data;
-	std::shared_ptr<void> customSharedData;
+	void *userPointer;
 	void (*function)(Peer *peer, std::vector<uint8_t> &data,
-					 std::shared_ptr<void> customSharedData);
+					 void *customSharedData);
 
 	virtual void Execute() override;
 };
@@ -135,7 +135,7 @@ class ExecuteConnect final : public BaseCommandExecute
 {
 public:
 	Host *host;
-	ENetAddress address;
+	SteamNetworkingIPAddr address;
 
 	CommandExecutionQueue *executionQueue;
 	ExecuteOnPeer onConnected;
@@ -157,7 +157,6 @@ class ExecuteDisconnect final : public BaseCommandExecute
 {
 public:
 	Peer *peer;
-	uint32_t disconnectData;
 
 	virtual void Execute() override;
 };

@@ -62,7 +62,10 @@ public:
 			cls->RegisterMethod(methodName, mtd);
 			methodConverters.insert(mtd);
 		} else {
-			throw std::string("No class named '") + className + "' found.";
+			std::string str =
+				std::string("No class named '") + className + "' found.";
+			DEBUG(str.c_str());
+			throw str;
 		}
 	}
 

@@ -16,14 +16,17 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <enet/enet.h>
+#include <cstring>
 
-#include "../include/icon6/ConnectionEncryptionState.hpp"
+#include <bitscpp/Endianness.hpp>
+
+#include "../include/icon6/Flags.hpp"
 
 namespace icon6
 {
 void Flags::GetNetworkOrder(void *ptr) const
 {
-	*(decltype(field) *)ptr = htonl(field);
+	uint32_t v = bitscpp::HostToNetworkUint(field);
+	memcpy(ptr, &v, sizeof(uint32_t));
 }
 } // namespace icon6
