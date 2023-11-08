@@ -35,7 +35,8 @@ void OnReturnCallback::Execute(Peer *peer, Flags flags, ByteReader &reader)
 
 	if (executionQueue) {
 		Command command{commands::ExecuteReturnRC{std::move(reader)}};
-		commands::ExecuteReturnRC &com = command.executeReturnRC;
+		commands::ExecuteReturnRC &com =
+			std::get<commands::ExecuteReturnRC>(command.cmd);
 		com.peer = this->peer;
 		com.function = _internalOnReturnedValue;
 		com.funcPtr = onReturned;
@@ -51,7 +52,8 @@ void OnReturnCallback::ExecuteTimeout()
 	if (onTimeout) {
 		if (executionQueue) {
 			Command command{commands::ExecuteOnPeerNoArgs{}};
-			commands::ExecuteOnPeerNoArgs &com = command.executeOnPeerNoArgs;
+			commands::ExecuteOnPeerNoArgs &com =
+				std::get<commands::ExecuteOnPeerNoArgs>(command.cmd);
 			com.peer = peer;
 			com.function = onTimeout;
 			executionQueue->EnqueueCommand(std::move(command));

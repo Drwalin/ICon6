@@ -53,7 +53,7 @@ void Peer::Send(std::vector<uint8_t> &&data, Flags flags)
 		DEBUG("Send called on peer %p before ready to use", this);
 	}
 	Command command{commands::ExecuteSend{}};
-	commands::ExecuteSend &com = command.executeSend;
+	commands::ExecuteSend &com = std::get<commands::ExecuteSend>(command.cmd);
 	com.flags = flags;
 	com.peer = this;
 	com.data = std::move(data);
@@ -106,7 +106,8 @@ void Peer::_InternalFlushQueuedSends()
 void Peer::Disconnect()
 {
 	Command command{commands::ExecuteDisconnect{}};
-	commands::ExecuteDisconnect &com = command.executeDisconnect;
+	commands::ExecuteDisconnect &com =
+		std::get<commands::ExecuteDisconnect>(command.cmd);
 	com.peer = this;
 	host->EnqueueCommand(std::move(command));
 }

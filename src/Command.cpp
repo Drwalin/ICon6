@@ -42,10 +42,11 @@ void ExecuteReturnRC::Execute() { function(peer, flags, reader, funcPtr); }
 void ExecuteConnect::Execute()
 {
 	onConnected.peer = host->_InternalConnect(&address);
-	if (executionQueue)
+	if (executionQueue) {
 		executionQueue->EnqueueCommand(Command(std::move(onConnected)));
-	else
+	} else {
 		onConnected.Execute();
+	}
 }
 
 void ExecuteSend::Execute() { peer->_InternalSendOrQueue(data, flags); }
@@ -57,39 +58,16 @@ void ExecuteFunctionPointer::Execute() { function(); }
 
 using namespace commands;
 
-Command::Command() : hasValue(false) {}
-
-Command::Command(Command &&other)
-{
-	this->hasValue = false;
-	(*this) = std::move(other);
-}
-
-Command &Command::operator=(Command &&other)
-{
-	if (hasValue)
-		this->~Command();
-	struct _CopyTypeStruct {
-		uint8_t b[sizeof(Command)];
-	};
-	*(_CopyTypeStruct *)this = *(_CopyTypeStruct *)&other;
-	other.hasValue = false;
-	return *this;
-}
-
-Command::~Command()
-{
-	if (hasValue) {
-		((BaseCommandExecute *)(&executeOnPeer))->~BaseCommandExecute();
-		hasValue = false;
-	}
-}
-
 void Command::Execute()
 {
-	if (hasValue) {
-		((BaseCommandExecute *)(&executeOnPeer))->Execute();
-		this->~Command();
-	}
+	std::visit(
+		[](auto &&c) -> int {
+			if constexpr (std::is_same_v<std::decay_t<decltype(c)>, int> ==
+						  false)
+				c.Execute();
+			return 0;
+		},
+		std::move(cmd));
+	cmd = 0;
 }
 } // namespace icon6

@@ -65,7 +65,8 @@ void MessagePassingEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 			auto mtd = it->second;
 			if (mtd->executionQueue) {
 				Command command{commands::ExecuteRPC(std::move(reader))};
-				commands::ExecuteRPC &com = command.executeRPC;
+				commands::ExecuteRPC &com =
+					std::get<commands::ExecuteRPC>(command.cmd);
 				com.peer = peer;
 				com.flags = flags;
 				com.messageConverter = mtd;

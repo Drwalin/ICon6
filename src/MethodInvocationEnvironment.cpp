@@ -60,7 +60,8 @@ void MethodInvocationEnvironment::OnReceive(Peer *peer, ByteReader &reader,
 				auto mtd = method->second;
 				if (mtd->executionQueue) {
 					Command command{commands::ExecuteRMI(std::move(reader))};
-					commands::ExecuteRMI &com = command.executeRMI;
+					commands::ExecuteRMI &com =
+						std::get<commands::ExecuteRMI>(command.cmd);
 					com.peer = peer;
 					com.flags = flags;
 					com.methodInvoker = mtd;

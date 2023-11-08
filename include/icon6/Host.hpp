@@ -96,6 +96,8 @@ public:
 	static Host *GetThreadLocalHost();
 	static void SetThreadLocalHost(Host *host);
 
+	void EnqueueCommand(Command &&command);
+
 public:
 	uint64_t userData;
 	void *userPointer;
@@ -111,7 +113,6 @@ private:
 		SteamNetConnectionStatusChangedCallback_t *pInfo);
 	uint32_t DispatchAllEventsFromQueue(uint32_t maxEventsDispatched = 100);
 	void DispatchPopedEventsFromQueue();
-	void EnqueueCommand(Command &&command);
 
 	static Host *_InternalGetSetThreadLocalHost(bool set, Host *host);
 

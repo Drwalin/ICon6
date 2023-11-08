@@ -282,11 +282,9 @@ void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 
 	Print(" all_in(%fs)", t);
 
-	static std::vector<icon6::Peer *> peers;
-	peers.clear();
-	host->ForEachPeer([](auto p) { peers.emplace_back(p); });
-	for (auto p : peers)
-		p->Disconnect();
+	icon6::Command com(icon6::commands::ExecuteFunctionPointer{
+		[]() { host->ForEachPeer([](auto p) { p->Disconnect(); }); }});
+	host->EnqueueCommand(std::move(com));
 
 	double clientMiBpsRecv =
 		double(ipc->clientsReceivedBytes) / (t * 1024.0 * 1024.0);
@@ -310,14 +308,19 @@ void runTestSlave()
 {
 	host->Connect("127.0.0.1", serverPort);
 	while (ipc->runTestFlag != 0) {
-		host->ForEachPeer([](auto p) {
-			auto stats = p->GetRealTimeStats();
-			ipc->pendingReliable[processId] = stats.m_cbPendingReliable;
-			ipc->unackedReliable[processId] = stats.m_cbSentUnackedReliable;
-		});
+		icon6::Command com(icon6::commands::ExecuteFunctionPointer{[]() {
+			host->ForEachPeer([](auto p) {
+				auto stats = p->GetRealTimeStats();
+				ipc->pendingReliable[processId] = stats.m_cbPendingReliable;
+				ipc->unackedReliable[processId] = stats.m_cbSentUnackedReliable;
+			});
+		}});
+		host->EnqueueCommand(std::move(com));
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	host->ForEachPeer([](auto p) { p->Disconnect(); });
+	icon6::Command com(icon6::commands::ExecuteFunctionPointer{
+		[]() { host->ForEachPeer([](auto p) { p->Disconnect(); }); }});
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 int main()

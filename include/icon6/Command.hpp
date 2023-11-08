@@ -21,8 +21,8 @@
 
 #include <cinttypes>
 
-#include <string>
 #include <vector>
+#include <variant>
 
 #include <steam/steamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
@@ -45,39 +45,39 @@ class CommandExecutionQueue;
 
 namespace commands
 {
-
-class BaseCommandExecute
+class ExecuteOnPeerNoArgs final
 {
 public:
-	virtual ~BaseCommandExecute() = default;
+	ExecuteOnPeerNoArgs(ExecuteOnPeerNoArgs &&) = default;
+	ExecuteOnPeerNoArgs &operator=(ExecuteOnPeerNoArgs &&) = default;
 
-	virtual void Execute() = 0;
-};
-
-class ExecuteOnPeerNoArgs final : public BaseCommandExecute
-{
-public:
 	Peer *peer;
 	void (*function)(Peer *peer);
 
-	virtual void Execute() override;
+	void Execute();
 };
 
-class ExecuteOnPeer final : public BaseCommandExecute
+class ExecuteOnPeer final
 {
 public:
+	ExecuteOnPeer() = default;
+	ExecuteOnPeer(ExecuteOnPeer &&) = default;
+	ExecuteOnPeer &operator=(ExecuteOnPeer &&) = default;
+
 	Peer *peer;
 	std::vector<uint8_t> data;
 	void *userPointer;
 	void (*function)(Peer *peer, std::vector<uint8_t> &data,
 					 void *customSharedData);
 
-	virtual void Execute() override;
+	void Execute();
 };
 
-class ExecuteRPC final : public BaseCommandExecute
+class ExecuteRPC final
 {
 public:
+	ExecuteRPC &operator=(ExecuteRPC &&) = default;
+
 	ExecuteRPC(ByteReader &&reader) : reader(std::move(reader)) {}
 	ExecuteRPC(ExecuteRPC &&o)
 		: peer(std::move(o.peer)), reader(std::move(o.reader)),
@@ -90,12 +90,14 @@ public:
 	MessageConverter *messageConverter;
 	Flags flags;
 
-	virtual void Execute() override;
+	void Execute();
 };
 
-class ExecuteRMI final : public BaseCommandExecute
+class ExecuteRMI final
 {
 public:
+	ExecuteRMI &operator=(ExecuteRMI &&) = default;
+
 	ExecuteRMI(ByteReader &&reader) : reader(std::move(reader)) {}
 	ExecuteRMI(ExecuteRMI &&o)
 		: peer(std::move(o.peer)), reader(std::move(o.reader)),
@@ -109,12 +111,14 @@ public:
 	rmi::MethodInvocationConverter *methodInvoker;
 	Flags flags;
 
-	virtual void Execute() override;
+	void Execute();
 };
 
-class ExecuteReturnRC final : public BaseCommandExecute
+class ExecuteReturnRC final
 {
 public:
+	ExecuteReturnRC &operator=(ExecuteReturnRC &&) = default;
+
 	ExecuteReturnRC(ByteReader &&reader) : reader(std::move(reader)) {}
 	ExecuteReturnRC(ExecuteReturnRC &&o)
 		: peer(std::move(o.peer)), reader(std::move(o.reader)),
@@ -128,121 +132,111 @@ public:
 	void (*function)(Peer *, Flags, ByteReader &, void *);
 	Flags flags;
 
-	virtual void Execute() override;
+	void Execute();
 };
 
-class ExecuteConnect final : public BaseCommandExecute
+class ExecuteConnect final
 {
 public:
+	ExecuteConnect(ExecuteConnect &&) = default;
+	ExecuteConnect &operator=(ExecuteConnect &&) = default;
+
 	Host *host;
 	SteamNetworkingIPAddr address;
 
 	CommandExecutionQueue *executionQueue;
 	ExecuteOnPeer onConnected;
 
-	virtual void Execute() override;
+	void Execute();
 };
 
-class ExecuteSend final : public BaseCommandExecute
+class ExecuteSend final
 {
 public:
+	ExecuteSend(ExecuteSend &&) = default;
+	ExecuteSend &operator=(ExecuteSend &&) = default;
+
 	std::vector<uint8_t> data;
 	Peer *peer;
 	Flags flags;
 
-	virtual void Execute() override;
+	void Execute();
 };
 
-class ExecuteDisconnect final : public BaseCommandExecute
+class ExecuteDisconnect final
 {
 public:
+	ExecuteDisconnect(ExecuteDisconnect &&) = default;
+	ExecuteDisconnect &operator=(ExecuteDisconnect &&) = default;
+
 	Peer *peer;
 
-	virtual void Execute() override;
+	void Execute();
 };
 
-class ExecuteFunctionPointer final : public BaseCommandExecute
+class ExecuteFunctionPointer final
 {
 public:
+	ExecuteFunctionPointer(ExecuteFunctionPointer &&) = default;
+	ExecuteFunctionPointer &operator=(ExecuteFunctionPointer &&) = default;
+
 	void (*function)();
 
-	virtual void Execute() override;
+	void Execute();
 };
 } // namespace commands
 
 class Command final
 {
 public:
-	Command();
-	~Command();
-	Command(Command &&other);
+	Command() : cmd(0) {}
+	~Command() = default;
+	Command(Command &&other) = default;
 	Command(Command &other) = delete;
 	Command(const Command &other) = delete;
 
-	Command &operator=(Command &&other);
+	Command &operator=(Command &&other) = default;
 	Command &operator=(Command &other) = delete;
 	Command &operator=(const Command &other) = delete;
 
-	template <typename T> T *Ptr() { return (T *)&executeOnPeer; }
-	template <typename T> T &Ref() { return *(T *)&executeOnPeer; }
-
-	union {
-		commands::ExecuteOnPeer executeOnPeer;
-		commands::ExecuteOnPeerNoArgs executeOnPeerNoArgs;
-		commands::ExecuteRPC executeRPC;
-		commands::ExecuteRMI executeRMI;
-		commands::ExecuteReturnRC executeReturnRC;
-		commands::ExecuteConnect executeConnect;
-		commands::ExecuteSend executeSend;
-		commands::ExecuteDisconnect executeDisconnect;
-		commands::ExecuteFunctionPointer executeFunctionPointer;
-	};
-
-	bool hasValue;
+	std::variant<int, commands::ExecuteOnPeer, commands::ExecuteOnPeerNoArgs,
+				 commands::ExecuteRPC, commands::ExecuteRMI,
+				 commands::ExecuteReturnRC, commands::ExecuteConnect,
+				 commands::ExecuteSend, commands::ExecuteDisconnect,
+				 commands::ExecuteFunctionPointer>
+		cmd;
 
 	void Execute();
 
 public:
 	Command(commands::ExecuteOnPeer &&executeOnPeer)
-		: executeOnPeer(), hasValue(true)
+		: cmd(std::move(executeOnPeer))
 	{
-		this->executeOnPeer = std::move(executeOnPeer);
 	}
 	Command(commands::ExecuteOnPeerNoArgs &&executeOnPeerNoArgs)
-		: executeOnPeerNoArgs(), hasValue(true)
-	{
-		this->executeOnPeerNoArgs = std::move(executeOnPeerNoArgs);
-	}
-	Command(commands::ExecuteRPC &&executeRPC)
-		: executeRPC(std::move(executeRPC)), hasValue(true)
+		: cmd(std::move(executeOnPeerNoArgs))
 	{
 	}
-	Command(commands::ExecuteRMI &&executeRMI)
-		: executeRMI(std::move(executeRMI)), hasValue(true)
-	{
-	}
+	Command(commands::ExecuteRPC &&executeRPC) : cmd(std::move(executeRPC)) {}
+	Command(commands::ExecuteRMI &&executeRMI) : cmd(std::move(executeRMI)) {}
 	Command(commands::ExecuteReturnRC &&executeReturnRC)
-		: executeReturnRC(std::move(executeReturnRC)), hasValue(true)
+		: cmd(std::move(executeReturnRC))
 	{
 	}
 	Command(commands::ExecuteConnect &&executeConnect)
-		: executeConnect(), hasValue(true)
+		: cmd(std::move(executeConnect))
 	{
-		this->executeConnect = std::move(executeConnect);
 	}
-	Command(commands::ExecuteSend &&executeSend) : executeSend(), hasValue(true)
+	Command(commands::ExecuteSend &&executeSend) : cmd(std::move(executeSend))
 	{
-		this->executeSend = std::move(executeSend);
 	}
 	Command(commands::ExecuteDisconnect &&executeDisconnect)
-		: executeDisconnect(), hasValue(true)
+		: cmd(std::move(executeDisconnect))
 	{
-		this->executeDisconnect = std::move(executeDisconnect);
 	}
 	Command(commands::ExecuteFunctionPointer &&executeFunctionPointer)
-		: executeFunctionPointer(), hasValue(true)
+		: cmd(std::move(executeFunctionPointer))
 	{
-		this->executeFunctionPointer = std::move(executeFunctionPointer);
 	}
 };
 } // namespace icon6

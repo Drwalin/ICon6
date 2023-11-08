@@ -278,32 +278,17 @@ void Host::SteamNetConnectionStatusChangedCallback(
 
 uint32_t Host::DispatchAllEventsFromQueue(uint32_t maxEvents)
 {
-	uint32_t i = 0;
 	const uint32_t MAX_DEQUEUE_COMMANDS = 128;
 	maxEvents = std::min(maxEvents, MAX_DEQUEUE_COMMANDS);
-	struct PopedCommand {
-		Command commands[MAX_DEQUEUE_COMMANDS];
-	};
-	union X {
-		X() {}
-		~X() {}
-		PopedCommand com;
-		uint32_t __pad;
-	} x;
-	new (&x.com) PopedCommand;
-	for (i = 0; i < 10; ++i) {
-		const uint32_t dequeued =
-			commandQueue->TryDequeueBulkAny(x.com.commands, maxEvents);
+	Command commands[MAX_DEQUEUE_COMMANDS];
+	const uint32_t dequeued =
+		commandQueue->TryDequeueBulkAny(commands, maxEvents);
 
-		if (dequeued == 0) {
-			break;
-		}
-		for (uint32_t i = 0; i < dequeued; ++i) {
-			x.com.commands[i].Execute();
-			x.com.commands[i].~Command();
-		}
+	for (uint32_t i = 0; i < dequeued; ++i) {
+		commands[i].Execute();
+		commands[i].~Command();
 	}
-	return i;
+	return dequeued;
 }
 
 void Host::SetConnect(void (*callback)(Peer *))
@@ -362,7 +347,8 @@ void Host::Connect(std::string address, uint16_t port,
 		   commands::ExecuteOnPeer &&onConnected,
 		   CommandExecutionQueue *queue) {
 			Command command(commands::ExecuteConnect{});
-			commands::ExecuteConnect &com = command.executeConnect;
+			commands::ExecuteConnect &com =
+				std::get<commands::ExecuteConnect>(command.cmd);
 			com.onConnected = std::move(onConnected);
 			com.executionQueue = queue;
 			com.address.Clear();
