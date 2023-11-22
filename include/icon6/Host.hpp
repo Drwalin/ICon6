@@ -38,8 +38,16 @@ namespace icon6
 void Debug(const char *file, int line, const char *fmt, ...);
 
 class Peer;
-class ConnectionEncryptionState;
+namespace gns
+{
+class Peer;
+}
 class MessagePassingEnvironment;
+
+namespace gns
+{
+class Peer;
+}
 
 class Host final
 {
@@ -79,7 +87,7 @@ public:
 	template <typename TFunc> void ForEachPeer(TFunc &&func)
 	{
 		for (auto it : peers) {
-			func(it.second);
+			func((icon6::Peer *)it.second);
 		}
 	}
 
@@ -91,7 +99,7 @@ public:
 				 CommandExecutionQueue *queue = nullptr);
 
 	// thread unsafe.
-	Peer *_InternalConnect(const SteamNetworkingIPAddr *address);
+	gns::Peer *_InternalConnect(const SteamNetworkingIPAddr *address);
 
 	static Host *GetThreadLocalHost();
 	static void SetThreadLocalHost(Host *host);
@@ -103,7 +111,7 @@ public:
 	void *userPointer;
 
 	friend class Peer;
-	friend class ConnectionEncryptionState;
+	friend class gns::Peer;
 
 private:
 	static void StaticSteamNetConnectionStatusChangedCallback(
@@ -134,7 +142,7 @@ private:
 	HSteamNetPollGroup pollGroup;
 	std::atomic<uint32_t> flags;
 
-	std::unordered_map<HSteamNetConnection, Peer *> peers;
+	std::unordered_map<HSteamNetConnection, gns::Peer *> peers;
 
 	CommandExecutionQueue *commandQueue;
 

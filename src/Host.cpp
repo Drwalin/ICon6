@@ -26,7 +26,7 @@
 #include <steam/steamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
 
-#include "../include/icon6/Peer.hpp"
+#include "../include/icon6/PeerGNS.hpp"
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 
 #include "../include/icon6/Host.hpp"
@@ -174,7 +174,7 @@ void Host::RunSingleLoop(uint32_t maxWaitTimeMilliseconds)
 				int numMsgs =
 					host->ReceiveMessagesOnPollGroup(pollGroup, &msg, 1);
 				if (numMsgs == 1) {
-					Peer *peer = (Peer *)msg->m_nConnUserData;
+					gns::Peer *peer = (gns::Peer *)msg->m_nConnUserData;
 					peer->CallCallbackReceive(msg);
 				} else {
 					break;
@@ -207,12 +207,12 @@ void Host::SteamNetConnectionStatusChangedCallback(
 	case k_ESteamNetworkingConnectionState_ProblemDetectedLocally: {
 		if (pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connected) {
 			auto userData = host->GetConnectionUserData(pInfo->m_hConn);
-			Peer *peer = nullptr;
+			gns::Peer *peer = nullptr;
 			if (userData == -1) {
-				peer = new Peer(this, pInfo->m_hConn);
+				peer = new gns::Peer(this, pInfo->m_hConn);
 				peers[pInfo->m_hConn] = peer;
 			} else {
-				peer = (Peer *)userData;
+				peer = (gns::Peer *)userData;
 			}
 
 			if (peer) {
@@ -247,12 +247,11 @@ void Host::SteamNetConnectionStatusChangedCallback(
 		}
 
 		auto userData = host->GetConnectionUserData(pInfo->m_hConn);
-		Peer *peer = nullptr;
 		if (userData == -1) {
-			peer = new Peer(this, pInfo->m_hConn);
+			gns::Peer *peer = new gns::Peer(this, pInfo->m_hConn);
 			peers[pInfo->m_hConn] = peer;
-		} else {
-			peer = (Peer *)userData;
+// 		} else {
+// 			peer = (Peer *)userData;
 		}
 
 		break;
@@ -346,9 +345,9 @@ void Host::Connect(std::string address, uint16_t port,
 		[](std::string address, uint16_t port, Host *host,
 		   commands::ExecuteOnPeer &&onConnected,
 		   CommandExecutionQueue *queue) {
-			Command command(commands::ExecuteConnect{});
-			commands::ExecuteConnect &com =
-				std::get<commands::ExecuteConnect>(command.cmd);
+			Command command(commands::ExecuteConnectGNS{});
+			commands::ExecuteConnectGNS &com =
+				std::get<commands::ExecuteConnectGNS>(command.cmd);
 			com.onConnected = std::move(onConnected);
 			com.executionQueue = queue;
 			com.address.Clear();
@@ -361,7 +360,7 @@ void Host::Connect(std::string address, uint16_t port,
 		.detach();
 }
 
-Peer *Host::_InternalConnect(const SteamNetworkingIPAddr *address)
+gns::Peer *Host::_InternalConnect(const SteamNetworkingIPAddr *address)
 {
 	SteamNetworkingConfigValue_t opt;
 	opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
@@ -375,7 +374,7 @@ Peer *Host::_InternalConnect(const SteamNetworkingIPAddr *address)
 		return nullptr;
 	}
 
-	Peer *p = new Peer(this, connection);
+	gns::Peer *p = new gns::Peer(this, connection);
 	peers[connection] = p;
 	return p;
 }

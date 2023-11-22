@@ -28,19 +28,11 @@
 
 namespace icon6
 {
-SteamNetConnectionRealTimeStatus_t Peer::GetRealTimeStats()
-{
-	SteamNetConnectionRealTimeStatus_t status;
-	host->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
-	return status;
-}
-
-Peer::Peer(Host *host, HSteamNetConnection connection)
-	: host(host), peer(connection)
+Peer::Peer(Host *host)
+	: host(host)
 {
 	userData = 0;
 	userPointer = nullptr;
-	host->host->SetConnectionUserData(peer, (uint64_t)(size_t)this);
 	callbackOnReceive = host->callbackOnReceive;
 	callbackOnDisconnect = host->callbackOnDisconnect;
 	readyToUse = false;
@@ -81,16 +73,6 @@ void Peer::_InternalSendOrQueue(std::vector<uint8_t> &data, Flags flags)
 	host->peersQueuedSendsIterator = host->peersQueuedSends.begin();
 }
 
-bool Peer::_InternalSend(const void *data, uint32_t length, const Flags flags)
-{
-	auto result = host->host->SendMessageToConnection(peer, data, length,
-													  flags.field, nullptr);
-	if (result == k_EResultLimitExceeded) {
-		return false;
-	}
-	return true;
-}
-
 void Peer::_InternalFlushQueuedSends()
 {
 	while (queuedSends.empty() == false) {
@@ -112,29 +94,9 @@ void Peer::Disconnect()
 	host->EnqueueCommand(std::move(command));
 }
 
-void Peer::_InternalDisconnect()
-{
-	if (peer) {
-		host->host->CloseConnection(peer, 0, nullptr, true);
-	}
-}
-
 void Peer::SetReceiveCallback(void (*callback)(Peer *, ByteReader &, Flags))
 {
 	callbackOnReceive = callback;
-}
-
-void Peer::CallCallbackReceive(ISteamNetworkingMessage *packet)
-{
-	ByteReader reader(packet, 0);
-	if (callbackOnReceive) {
-		Flags flags = 0;
-		if (packet->m_nFlags & k_nSteamNetworkingSend_Reliable) {
-			flags = FLAG_RELIABLE;
-		}
-
-		callbackOnReceive(this, reader, flags);
-	}
 }
 
 void Peer::SetDisconnect(void (*callback)(Peer *))
@@ -142,21 +104,5 @@ void Peer::SetDisconnect(void (*callback)(Peer *))
 	callbackOnDisconnect = callback;
 }
 
-void Peer::CallCallbackDisconnect()
-{
-	if (callbackOnDisconnect) {
-		callbackOnDisconnect(this);
-	} else if (host->callbackOnDisconnect) {
-		host->callbackOnDisconnect(this);
-	}
-}
-
 void Peer::SetReadyToUse() { readyToUse = true; }
-
-uint32_t Peer::GetRoundTripTime() const
-{
-	SteamNetConnectionRealTimeStatus_t status;
-	host->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
-	return status.m_nPing;
-}
 } // namespace icon6

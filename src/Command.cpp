@@ -19,6 +19,7 @@
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 #include "../include/icon6/CommandExecutionQueue.hpp"
+#include "../include/icon6/PeerGNS.hpp"
 
 #include "../include/icon6/Command.hpp"
 
@@ -39,7 +40,7 @@ void ExecuteRMI::Execute()
 
 void ExecuteReturnRC::Execute() { function(peer, flags, reader, funcPtr); }
 
-void ExecuteConnect::Execute()
+void ExecuteConnectGNS::Execute()
 {
 	onConnected.peer = host->_InternalConnect(&address);
 	if (executionQueue) {

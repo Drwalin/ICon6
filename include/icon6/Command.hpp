@@ -135,11 +135,11 @@ public:
 	void Execute();
 };
 
-class ExecuteConnect final
+class ExecuteConnectGNS final
 {
 public:
-	ExecuteConnect(ExecuteConnect &&) = default;
-	ExecuteConnect &operator=(ExecuteConnect &&) = default;
+	ExecuteConnectGNS(ExecuteConnectGNS &&) = default;
+	ExecuteConnectGNS &operator=(ExecuteConnectGNS &&) = default;
 
 	Host *host;
 	SteamNetworkingIPAddr address;
@@ -201,7 +201,7 @@ public:
 
 	std::variant<int, commands::ExecuteOnPeer, commands::ExecuteOnPeerNoArgs,
 				 commands::ExecuteRPC, commands::ExecuteRMI,
-				 commands::ExecuteReturnRC, commands::ExecuteConnect,
+				 commands::ExecuteReturnRC, commands::ExecuteConnectGNS,
 				 commands::ExecuteSend, commands::ExecuteDisconnect,
 				 commands::ExecuteFunctionPointer>
 		cmd;
@@ -223,7 +223,7 @@ public:
 		: cmd(std::move(executeReturnRC))
 	{
 	}
-	Command(commands::ExecuteConnect &&executeConnect)
+	Command(commands::ExecuteConnectGNS &&executeConnect)
 		: cmd(std::move(executeConnect))
 	{
 	}

@@ -24,9 +24,6 @@
 #include <vector>
 #include <queue>
 
-#include <steam/isteamnetworkingsockets.h>
-#include <steam/isteamnetworkingutils.h>
-
 #include "Flags.hpp"
 #include "ByteReader.hpp"
 
@@ -34,17 +31,17 @@ namespace icon6
 {
 class Host;
 
-class Peer final
+class Peer
 {
 public:
-	~Peer();
+	virtual ~Peer();
 
 	void Send(std::vector<uint8_t> &&data, Flags flags);
 
 	void Disconnect();
 
-	static constexpr uint32_t GetMaxMessagePayload() { return 1200; }
-	uint32_t GetRoundTripTime() const;
+	static constexpr uint32_t GetMaxSinglePacketMessagePayload() { return 1200; }
+	virtual uint32_t GetRoundTripTime() const = 0;
 
 	inline bool IsReadyToUse() const { return readyToUse; }
 
@@ -54,27 +51,22 @@ public:
 											 Flags flags));
 	void SetDisconnect(void (*callback)(Peer *));
 
-	SteamNetConnectionRealTimeStatus_t GetRealTimeStats();
-
 public:
 	uint64_t userData;
 	void *userPointer;
 
 	friend class Host;
-	friend class ConnectionEncryptionState;
 
-public:
 	// thread unsafe
-	bool _InternalSend(const void *data, uint32_t length, Flags flags);
+	virtual bool _InternalSend(const void *data, uint32_t length, Flags flags) = 0;
 	// thread unsafe
 	void _InternalSendOrQueue(std::vector<uint8_t> &data, Flags flags);
 	// thread unsafe
-	void _InternalDisconnect();
+	virtual void _InternalDisconnect() = 0;
 
-private:
+protected:
 	void SetReadyToUse();
-
-	void CallCallbackReceive(ISteamNetworkingMessage *msg);
+	
 	void CallCallbackDisconnect();
 
 	struct SendCommand {
@@ -85,13 +77,12 @@ private:
 	void _InternalFlushQueuedSends();
 
 protected:
-	Peer(Host *host, HSteamNetConnection connection);
+	Peer(Host *host);
 
-private:
+protected:
 	std::queue<SendCommand> queuedSends;
 
 	Host *host;
-	HSteamNetConnection peer;
 
 	void (*callbackOnReceive)(Peer *, ByteReader &, Flags);
 	void (*callbackOnDisconnect)(Peer *);

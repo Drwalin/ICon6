@@ -11,6 +11,7 @@
 #include <icon6/Host.hpp>
 #include <icon6/MessagePassingEnvironment.hpp>
 #include <icon6/Flags.hpp>
+#include <icon6/PeerGNS.hpp>
 
 icon6::MessagePassingEnvironment mpe;
 
@@ -283,7 +284,7 @@ void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 	Print(" all_in(%fs)", t);
 
 	icon6::Command com(icon6::commands::ExecuteFunctionPointer{
-		[]() { host->ForEachPeer([](auto p) { p->Disconnect(); }); }});
+		[]() { host->ForEachPeer([](icon6::Peer *p) { p->Disconnect(); }); }});
 	host->EnqueueCommand(std::move(com));
 
 	double clientMiBpsRecv =
@@ -310,7 +311,7 @@ void runTestSlave()
 	while (ipc->runTestFlag != 0) {
 		icon6::Command com(icon6::commands::ExecuteFunctionPointer{[]() {
 			host->ForEachPeer([](auto p) {
-				auto stats = p->GetRealTimeStats();
+				auto stats = ((icon6::gns::Peer *)p)->GetRealTimeStats();
 				ipc->pendingReliable[processId] = stats.m_cbPendingReliable;
 				ipc->unackedReliable[processId] = stats.m_cbSentUnackedReliable;
 			});
