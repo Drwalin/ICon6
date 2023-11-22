@@ -4,7 +4,7 @@
 #include <chrono>
 #include <thread>
 
-#include <icon6/Host.hpp>
+#include <icon6/HostGNS.hpp>
 #include <icon6/Peer.hpp>
 #include <icon6/MethodInvocationEnvironment.hpp>
 #include <icon6/Flags.hpp>
@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 			   message.c_str());
 	});
 
-	icon6::Host host;
+	icon6::gns::Host host;
 	host.SetMessagePassingEnvironment(&mpi);
 	host.RunAsync();
 

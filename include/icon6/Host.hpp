@@ -25,9 +25,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <steam/isteamnetworkingsockets.h>
-#include <steam/isteamnetworkingutils.h>
-
 #include "Flags.hpp"
 #include "CommandExecutionQueue.hpp"
 
@@ -38,18 +35,9 @@ namespace icon6
 void Debug(const char *file, int line, const char *fmt, ...);
 
 class Peer;
-namespace gns
-{
-class Peer;
-}
 class MessagePassingEnvironment;
 
-namespace gns
-{
-class Peer;
-}
-
-class Host final
+class Host
 {
 public:
 	void SetMessagePassingEnvironment(MessagePassingEnvironment *mpe);
@@ -58,23 +46,19 @@ public:
 		return mpe;
 	}
 
-	// create host on given port
-	Host(uint16_t port);
-	// create client host with automatic port
-	Host();
-	~Host();
+	virtual ~Host();
 
 	// thread unsafe
-	void Destroy();
+	virtual void Destroy();
 
 	void RunAsync();
 	// thread unsafe
 	void RunSync();
 	// thread unsafe
-	void RunSingleLoop(uint32_t maxWaitTimeMilliseconds = 4);
+	virtual void RunSingleLoop(uint32_t maxWaitTimeMilliseconds = 4) = 0;
 
 	// thread unsafe
-	void DisconnectAllGracefully();
+	virtual void DisconnectAllGracefully() = 0;
 
 	void SetConnect(void (*callback)(Peer *));
 	void SetReceive(void (*callback)(Peer *, ByteReader &, Flags flags));
@@ -84,22 +68,16 @@ public:
 	void WaitStop();
 
 	// Thread unsafe.
-	template <typename TFunc> void ForEachPeer(TFunc &&func)
-	{
-		for (auto it : peers) {
-			func((icon6::Peer *)it.second);
-		}
-	}
+	virtual void ForEachPeer(void(func)(icon6::Peer *)) = 0;
+	// Thread unsafe.
+	virtual void ForEachPeer(std::function<void(icon6::Peer *)> func) = 0;
 
 public:
 	std::future<Peer *> ConnectPromise(std::string address, uint16_t port);
 	void Connect(std::string address, uint16_t port);
-	void Connect(std::string address, uint16_t port,
-				 commands::ExecuteOnPeer &&onConnected,
-				 CommandExecutionQueue *queue = nullptr);
-
-	// thread unsafe.
-	gns::Peer *_InternalConnect(const SteamNetworkingIPAddr *address);
+	virtual void Connect(std::string address, uint16_t port,
+						 commands::ExecuteOnPeer &&onConnected,
+						 CommandExecutionQueue *queue = nullptr) = 0;
 
 	static Host *GetThreadLocalHost();
 	static void SetThreadLocalHost(Host *host);
@@ -111,25 +89,24 @@ public:
 	void *userPointer;
 
 	friend class Peer;
-	friend class gns::Peer;
 
-private:
-	static void StaticSteamNetConnectionStatusChangedCallback(
-		SteamNetConnectionStatusChangedCallback_t *pInfo);
-	void Init(const SteamNetworkingIPAddr *address);
-	void SteamNetConnectionStatusChangedCallback(
-		SteamNetConnectionStatusChangedCallback_t *pInfo);
+protected:
 	uint32_t DispatchAllEventsFromQueue(uint32_t maxEventsDispatched = 100);
 	void DispatchPopedEventsFromQueue();
 
 	static Host *_InternalGetSetThreadLocalHost(bool set, Host *host);
 
-private:
+protected:
 	std::unordered_set<Peer *> peersQueuedSends;
 	decltype(peersQueuedSends.begin()) peersQueuedSendsIterator;
 	void FlushPeersQueuedSends(int amount);
 
-private:
+	// create host on given port
+	Host(uint16_t port);
+	// create client host with automatic port
+	Host();
+
+protected:
 	MessagePassingEnvironment *mpe;
 
 	enum HostFlags : uint32_t {
@@ -137,12 +114,7 @@ private:
 		TO_STOP = 1 << 1,
 	};
 
-	ISteamNetworkingSockets *host;
-	HSteamListenSocket listeningSocket;
-	HSteamNetPollGroup pollGroup;
 	std::atomic<uint32_t> flags;
-
-	std::unordered_map<HSteamNetConnection, gns::Peer *> peers;
 
 	CommandExecutionQueue *commandQueue;
 
@@ -151,7 +123,6 @@ private:
 	void (*callbackOnDisconnect)(Peer *);
 };
 
-void EnableSteamNetworkingDebug(bool value);
 uint32_t Initialize();
 void Deinitialize();
 } // namespace icon6

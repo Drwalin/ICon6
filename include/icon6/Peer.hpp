@@ -40,7 +40,10 @@ public:
 
 	void Disconnect();
 
-	static constexpr uint32_t GetMaxSinglePacketMessagePayload() { return 1200; }
+	static constexpr uint32_t GetMaxSinglePacketMessagePayload()
+	{
+		return 1200;
+	}
 	virtual uint32_t GetRoundTripTime() const = 0;
 
 	inline bool IsReadyToUse() const { return readyToUse; }
@@ -58,7 +61,8 @@ public:
 	friend class Host;
 
 	// thread unsafe
-	virtual bool _InternalSend(const void *data, uint32_t length, Flags flags) = 0;
+	virtual bool _InternalSend(const void *data, uint32_t length,
+							   Flags flags) = 0;
 	// thread unsafe
 	void _InternalSendOrQueue(std::vector<uint8_t> &data, Flags flags);
 	// thread unsafe
@@ -66,7 +70,7 @@ public:
 
 protected:
 	void SetReadyToUse();
-	
+
 	void CallCallbackDisconnect();
 
 	struct SendCommand {

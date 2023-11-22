@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <icon6/Host.hpp>
+#include <icon6/HostGNS.hpp>
 #include <icon6/Peer.hpp>
 
 std::vector<uint8_t> MakeVector(const char *str)
@@ -24,7 +24,7 @@ int main()
 		perror("fork");
 		exit(EXIT_FAILURE);
 	} else if (c_pid <= 0) {
-		auto host1 = new icon6::Host(port1);
+		auto host1 = new icon6::gns::Host(port1);
 
 		host1->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
 							 icon6::Flags flags) {
@@ -52,7 +52,7 @@ int main()
 		host1->WaitStop();
 		delete host1;
 	} else {
-		auto host2 = new icon6::Host(port2);
+		auto host2 = new icon6::gns::Host(port2);
 
 		host2->SetReceive([](icon6::Peer *p, icon6::ByteReader &reader,
 							 icon6::Flags flags) {

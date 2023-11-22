@@ -34,10 +34,9 @@
 
 namespace icon6
 {
-class Host;
-
 namespace gns
 {
+class Host;
 
 class Peer final : public icon6::Peer
 {
@@ -50,24 +49,24 @@ public:
 
 public:
 	// thread unsafe
-	virtual bool _InternalSend(const void *data, uint32_t length, Flags flags) override;
+	virtual bool _InternalSend(const void *data, uint32_t length,
+							   Flags flags) override;
 	// thread unsafe
 	virtual void _InternalDisconnect() override;
 
-	friend class icon6::Host;
+	friend class icon6::gns::Host;
 
 private:
 	void CallCallbackReceive(ISteamNetworkingMessage *msg);
 	void CallCallbackDisconnect();
 
-protected:
+private:
 	Peer(Host *host, HSteamNetConnection connection);
 
 private:
-
 	HSteamNetConnection peer;
 };
-}
+} // namespace gns
 } // namespace icon6
 
 #endif

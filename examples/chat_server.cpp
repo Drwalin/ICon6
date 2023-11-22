@@ -4,7 +4,7 @@
 #include <chrono>
 #include <thread>
 
-#include <icon6/Host.hpp>
+#include <icon6/HostGNS.hpp>
 #include <icon6/Peer.hpp>
 #include <icon6/MethodInvocationEnvironment.hpp>
 #include <icon6/Flags.hpp>
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 							}
 						});
 
-	icon6::Host host(port);
+	icon6::gns::Host host(port);
 	host.SetDisconnect([](icon6::Peer *peer) {
 		if (peer->userPointer != nullptr) {
 			std::string *oldName = (std::string *)(peer->userPointer);

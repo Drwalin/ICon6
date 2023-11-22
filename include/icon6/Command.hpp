@@ -36,6 +36,13 @@ namespace icon6
 class Host;
 class Peer;
 class MessageConverter;
+
+namespace gns
+{
+class Peer;
+class Host;
+} // namespace gns
+
 namespace rmi
 {
 class MethodInvocationConverter;
@@ -141,7 +148,7 @@ public:
 	ExecuteConnectGNS(ExecuteConnectGNS &&) = default;
 	ExecuteConnectGNS &operator=(ExecuteConnectGNS &&) = default;
 
-	Host *host;
+	gns::Host *host;
 	SteamNetworkingIPAddr address;
 
 	CommandExecutionQueue *executionQueue;

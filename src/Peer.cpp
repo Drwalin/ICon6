@@ -28,8 +28,7 @@
 
 namespace icon6
 {
-Peer::Peer(Host *host)
-	: host(host)
+Peer::Peer(Host *host) : host(host)
 {
 	userData = 0;
 	userPointer = nullptr;

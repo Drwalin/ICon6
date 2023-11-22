@@ -8,14 +8,14 @@
 #include <signal.h>
 #include <sys/mman.h>
 
-#include <icon6/Host.hpp>
+#include <icon6/HostGNS.hpp>
 #include <icon6/MessagePassingEnvironment.hpp>
 #include <icon6/Flags.hpp>
 #include <icon6/PeerGNS.hpp>
 
 icon6::MessagePassingEnvironment mpe;
 
-icon6::Host *host = nullptr;
+icon6::gns::Host *host = nullptr;
 const uint32_t CLIENTS_NUM = 10;
 const uint16_t serverPort = 4000;
 
@@ -284,7 +284,7 @@ void runTestMaster(uint32_t messages, const uint32_t clientsNum)
 	Print(" all_in(%fs)", t);
 
 	icon6::Command com(icon6::commands::ExecuteFunctionPointer{
-		[]() { host->ForEachPeer([](icon6::Peer *p) { p->Disconnect(); }); }});
+		[]() { host->ForEachPeer(+[](icon6::Peer *p) { p->Disconnect(); }); }});
 	host->EnqueueCommand(std::move(com));
 
 	double clientMiBpsRecv =
@@ -310,7 +310,7 @@ void runTestSlave()
 	host->Connect("127.0.0.1", serverPort);
 	while (ipc->runTestFlag != 0) {
 		icon6::Command com(icon6::commands::ExecuteFunctionPointer{[]() {
-			host->ForEachPeer([](auto p) {
+			host->ForEachPeer(+[](icon6::Peer *p) {
 				auto stats = ((icon6::gns::Peer *)p)->GetRealTimeStats();
 				ipc->pendingReliable[processId] = stats.m_cbPendingReliable;
 				ipc->unackedReliable[processId] = stats.m_cbSentUnackedReliable;
@@ -320,7 +320,7 @@ void runTestSlave()
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 	icon6::Command com(icon6::commands::ExecuteFunctionPointer{
-		[]() { host->ForEachPeer([](auto p) { p->Disconnect(); }); }});
+		[]() { host->ForEachPeer(+[](icon6::Peer *p) { p->Disconnect(); }); }});
 	std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
@@ -362,9 +362,9 @@ int main()
 	icon6::Initialize();
 
 	if (processId < 0) {
-		host = new icon6::Host(serverPort);
+		host = new icon6::gns::Host(serverPort);
 	} else {
-		host = new icon6::Host();
+		host = new icon6::gns::Host();
 	}
 
 	host->SetMessagePassingEnvironment(&mpe);

@@ -4,7 +4,7 @@
 #include <chrono>
 #include <thread>
 
-#include <icon6/Host.hpp>
+#include <icon6/HostGNS.hpp>
 #include <icon6/Peer.hpp>
 
 int main(int argc, char **argv)
@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 
 	icon6::Initialize();
 
-	icon6::Host host(port);
+	icon6::gns::Host host(port);
 
 	host.SetReceive([](icon6::Peer *peer, icon6::ByteReader &reader,
 					   icon6::Flags flags) {

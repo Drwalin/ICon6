@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <icon6/Host.hpp>
+#include <icon6/HostGNS.hpp>
 #include <icon6/MethodInvocationEnvironment.hpp>
 #include <icon6/Peer.hpp>
 
@@ -97,7 +97,7 @@ int main()
 		perror("fork");
 		exit(EXIT_FAILURE);
 	} else if (c_pid <= 0) {
-		auto host2 = new icon6::Host(port2);
+		auto host2 = new icon6::gns::Host(port2);
 		host2->SetMessagePassingEnvironment(mpe2);
 		host2->RunAsync();
 		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
@@ -106,7 +106,7 @@ int main()
 		delete host2;
 	} else {
 
-		auto host1 = new icon6::Host(port1);
+		auto host1 = new icon6::gns::Host(port1);
 
 		host1->SetMessagePassingEnvironment(mpe);
 

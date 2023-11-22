@@ -21,7 +21,7 @@
 #include <thread>
 
 #include "../include/icon6/MessagePassingEnvironment.hpp"
-#include "../include/icon6/Host.hpp"
+#include "../include/icon6/HostGNS.hpp"
 #include "../include/icon6/Command.hpp"
 
 #include "../include/icon6/PeerGNS.hpp"
@@ -33,7 +33,8 @@ namespace gns
 SteamNetConnectionRealTimeStatus_t Peer::GetRealTimeStats()
 {
 	SteamNetConnectionRealTimeStatus_t status;
-	host->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
+	((gns::Host *)host)
+		->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
 	return status;
 }
 
@@ -51,7 +52,8 @@ Peer::~Peer() {}
 
 bool Peer::_InternalSend(const void *data, uint32_t length, const Flags flags)
 {
-	auto result = host->host->SendMessageToConnection(peer, data, length,
+	auto result = ((gns::Host *)host)
+					  ->host->SendMessageToConnection(peer, data, length,
 													  flags.field, nullptr);
 	if (result == k_EResultLimitExceeded) {
 		return false;
@@ -62,7 +64,7 @@ bool Peer::_InternalSend(const void *data, uint32_t length, const Flags flags)
 void Peer::_InternalDisconnect()
 {
 	if (peer) {
-		host->host->CloseConnection(peer, 0, nullptr, true);
+		((gns::Host *)host)->host->CloseConnection(peer, 0, nullptr, true);
 	}
 }
 
@@ -83,16 +85,17 @@ void Peer::CallCallbackDisconnect()
 {
 	if (callbackOnDisconnect) {
 		callbackOnDisconnect(this);
-	} else if (host->callbackOnDisconnect) {
-		host->callbackOnDisconnect(this);
+	} else if (((gns::Host *)host)->callbackOnDisconnect) {
+		((gns::Host *)host)->callbackOnDisconnect(this);
 	}
 }
 
 uint32_t Peer::GetRoundTripTime() const
 {
 	SteamNetConnectionRealTimeStatus_t status;
-	host->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
+	((gns::Host *)host)
+		->host->GetConnectionRealTimeStatus(peer, &status, 0, nullptr);
 	return status.m_nPing;
 }
-}
+} // namespace gns
 } // namespace icon6

@@ -20,6 +20,7 @@
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 #include "../include/icon6/CommandExecutionQueue.hpp"
 #include "../include/icon6/PeerGNS.hpp"
+#include "../include/icon6/HostGNS.hpp"
 
 #include "../include/icon6/Command.hpp"
 
