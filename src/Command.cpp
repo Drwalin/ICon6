@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <steam/steamnetworkingsockets.h>
+
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 #include "../include/icon6/MethodInvocationEnvironment.hpp"
 #include "../include/icon6/CommandExecutionQueue.hpp"

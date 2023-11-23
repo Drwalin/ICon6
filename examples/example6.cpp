@@ -97,7 +97,7 @@ int main()
 		perror("fork");
 		exit(EXIT_FAILURE);
 	} else if (c_pid <= 0) {
-		auto host2 = new icon6::gns::Host(port2);
+		icon6::Host *host2 = icon6::Host::MakeGameNetworkingSocketsHost(port2);
 		host2->SetMessagePassingEnvironment(mpe2);
 		host2->RunAsync();
 		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
@@ -105,8 +105,7 @@ int main()
 		host2->WaitStop();
 		delete host2;
 	} else {
-
-		auto host1 = new icon6::gns::Host(port1);
+		icon6::Host *host1 = icon6::Host::MakeGameNetworkingSocketsHost(port1);
 
 		host1->SetMessagePassingEnvironment(mpe);
 

@@ -38,13 +38,15 @@ namespace gns
 
 Host::Host(uint16_t port)
 {
-	SteamNetworkingIPAddr serverLocalAddr;
-	serverLocalAddr.Clear();
-	serverLocalAddr.m_port = port;
-	Init(&serverLocalAddr);
+	if (port) {
+		SteamNetworkingIPAddr serverLocalAddr;
+		serverLocalAddr.Clear();
+		serverLocalAddr.m_port = port;
+		Init(&serverLocalAddr);
+	} else {
+		Init(nullptr);
+	}
 }
-
-Host::Host() { Init(nullptr); }
 
 Host::~Host() { Destroy(); }
 
@@ -286,6 +288,27 @@ void EnableSteamNetworkingDebug(bool value)
 {
 	_enableSteamNetworkingDebugPrinting = value;
 }
+
+uint32_t Initialize()
+{
+	SteamDatagramErrMsg errMsg;
+	if (!GameNetworkingSockets_Init(nullptr, errMsg)) {
+		DEBUG("GameNetworkingSockets_Init failed: %s",
+			  ((std::string)errMsg).c_str());
+		return -1;
+	}
+
+	SteamNetworkingUtils()->SetDebugOutputFunction(
+		k_ESteamNetworkingSocketsDebugOutputType_Msg,
+		[](ESteamNetworkingSocketsDebugOutputType eType, const char *msg) {
+			if (_enableSteamNetworkingDebugPrinting) {
+				DEBUG("%s     ::: type(%i)", msg, eType);
+			}
+		});
+	return 0;
+}
+
+void Deinitialize() { GameNetworkingSockets_Kill(); }
 
 } // namespace gns
 } // namespace icon6

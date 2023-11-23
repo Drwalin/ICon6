@@ -21,8 +21,6 @@
 
 #include <cinttypes>
 
-#include <steam/steamnetworkingtypes.h>
-
 namespace icon6
 {
 struct Flags {
@@ -51,11 +49,13 @@ struct Flags {
 	inline bool operator==(const Flags o) const { return field == o.field; }
 	inline bool operator!=(const Flags o) const { return field != o.field; }
 	inline operator bool() const { return field; }
+
+	uint32_t GetSteamFlags() const;
 };
 
-inline const static Flags FLAG_UNRELIABLE = k_nSteamNetworkingSend_Unreliable;
-inline const static Flags FLAG_RELIABLE = k_nSteamNetworkingSend_Reliable;
-inline const static Flags FLAG_NO_NAGLE = k_nSteamNetworkingSend_NoNagle;
+inline const static Flags FLAG_UNRELIABLE = 0;
+inline const static Flags FLAG_RELIABLE = 8;
+inline const static Flags FLAG_NO_NAGLE = 1;
 
 inline const static Flags FLAG_UNRELIABLE_NO_NAGLE =
 	FLAG_UNRELIABLE | FLAG_NO_NAGLE;

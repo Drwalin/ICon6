@@ -8,14 +8,14 @@
 #include <signal.h>
 #include <sys/mman.h>
 
-#include <icon6/HostGNS.hpp>
+#include <icon6/Host.hpp>
 #include <icon6/MessagePassingEnvironment.hpp>
 #include <icon6/Flags.hpp>
 #include <icon6/PeerGNS.hpp>
 
 icon6::MessagePassingEnvironment mpe;
 
-icon6::gns::Host *host = nullptr;
+icon6::Host *host = nullptr;
 const uint32_t CLIENTS_NUM = 10;
 const uint16_t serverPort = 4000;
 
@@ -362,9 +362,9 @@ int main()
 	icon6::Initialize();
 
 	if (processId < 0) {
-		host = new icon6::gns::Host(serverPort);
+		host = icon6::Host::MakeGameNetworkingSocketsHost(serverPort);
 	} else {
-		host = new icon6::gns::Host();
+		host = icon6::Host::MakeGameNetworkingSocketsHost();
 	}
 
 	host->SetMessagePassingEnvironment(&mpe);

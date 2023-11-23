@@ -4,7 +4,7 @@
 #include <chrono>
 #include <thread>
 
-#include <icon6/HostGNS.hpp>
+#include <icon6/Host.hpp>
 #include <icon6/Peer.hpp>
 #include <icon6/MethodInvocationEnvironment.hpp>
 #include <icon6/Flags.hpp>
@@ -77,8 +77,8 @@ int main(int argc, char **argv)
 							}
 						});
 
-	icon6::gns::Host host(port);
-	host.SetDisconnect([](icon6::Peer *peer) {
+	icon6::Host *host = icon6::Host::MakeGameNetworkingSocketsHost(port);
+	host->SetDisconnect([](icon6::Peer *peer) {
 		if (peer->userPointer != nullptr) {
 			std::string *oldName = (std::string *)(peer->userPointer);
 			peers.erase(*oldName);
@@ -86,8 +86,8 @@ int main(int argc, char **argv)
 			peer->userPointer = nullptr;
 		}
 	});
-	host.SetMessagePassingEnvironment(&mpi);
-	host.RunAsync();
+	host->SetMessagePassingEnvironment(&mpi);
+	host->RunAsync();
 
 	printf("To exit write: quit\n");
 
@@ -95,13 +95,13 @@ int main(int argc, char **argv)
 		std::string str;
 		std::cin >> str;
 		if (str == "quit") {
-			host.Stop();
-			host.WaitStop();
+			host->Stop();
+			host->WaitStop();
 			break;
 		}
 	}
 
-	host.Destroy();
+	delete host;
 
 	icon6::Deinitialize();
 	return 0;

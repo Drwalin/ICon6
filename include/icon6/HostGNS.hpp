@@ -48,9 +48,7 @@ class Host final : public icon6::Host
 {
 public:
 	// create host on given port
-	Host(uint16_t port);
-	// create client host with automatic port
-	Host();
+	Host(uint16_t port = 0); // 0 means automatic port
 	virtual ~Host() override;
 
 	// thread unsafe
@@ -111,6 +109,9 @@ private:
 };
 
 void EnableSteamNetworkingDebug(bool value);
+
+uint32_t Initialize();
+void Deinitialize();
 
 } // namespace gns
 } // namespace icon6

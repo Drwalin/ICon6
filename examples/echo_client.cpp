@@ -5,7 +5,7 @@
 #include <string>
 #include <thread>
 
-#include <icon6/HostGNS.hpp>
+#include <icon6/Host.hpp>
 #include <icon6/Peer.hpp>
 
 int main(int argc, char **argv)
@@ -19,17 +19,17 @@ int main(int argc, char **argv)
 
 	icon6::Initialize();
 
-	icon6::gns::Host host;
+	icon6::Host *host = icon6::Host::MakeGameNetworkingSocketsHost();
 
-	host.SetReceive(
+	host->SetReceive(
 		[](icon6::Peer *peer, icon6::ByteReader &reader, icon6::Flags flags) {
 			printf("String returned: `");
 			fwrite(reader.data(), reader.get_remaining_bytes(), 1, stdout);
 			printf("`\n");
 		});
-	host.RunAsync();
+	host->RunAsync();
 
-	icon6::Peer *peer = host.ConnectPromise(argv[1], port).get();
+	icon6::Peer *peer = host->ConnectPromise(argv[1], port).get();
 
 	printf("To exit write: quit\n");
 
@@ -39,8 +39,8 @@ int main(int argc, char **argv)
 		if (str.substr(0, 4) == "quit" && str.size() <= 6) {
 			peer->Disconnect();
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-			host.Stop();
-			host.WaitStop();
+			host->Stop();
+			host->WaitStop();
 			break;
 		} else {
 			std::vector<uint8_t> data((char *)str.c_str(),
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	host.Destroy();
+	delete host;
 
 	icon6::Deinitialize();
 	return 0;

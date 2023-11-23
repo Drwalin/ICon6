@@ -4,7 +4,6 @@
 #include <chrono>
 #include <thread>
 
-#include <icon6/HostGNS.hpp>
 #include <icon6/Peer.hpp>
 #include <icon6/MethodInvocationEnvironment.hpp>
 #include <icon6/Flags.hpp>
@@ -41,11 +40,11 @@ int main(int argc, char **argv)
 			   message.c_str());
 	});
 
-	icon6::gns::Host host;
-	host.SetMessagePassingEnvironment(&mpi);
-	host.RunAsync();
+	icon6::Host *host = icon6::Host::MakeGameNetworkingSocketsHost();
+	host->SetMessagePassingEnvironment(&mpi);
+	host->RunAsync();
 
-	icon6::Peer *peer = host.ConnectPromise(argv[1], port).get();
+	icon6::Peer *peer = host->ConnectPromise(argv[1], port).get();
 
 	printf("To exit write: quit\n");
 
@@ -55,8 +54,8 @@ int main(int argc, char **argv)
 		if (str.substr(0, 4) == "quit" && str.size() <= 6) {
 			peer->Disconnect();
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-			host.Stop();
-			host.WaitStop();
+			host->Stop();
+			host->WaitStop();
 			break;
 		} else if (str.substr(0, 5) == "nick ") {
 			mpi.Send(peer, icon6::FLAG_RELIABLE, "SetNickname",
@@ -72,7 +71,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	host.Destroy();
+	delete host;
 
 	icon6::Deinitialize();
 	return 0;

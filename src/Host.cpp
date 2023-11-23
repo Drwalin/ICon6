@@ -25,6 +25,7 @@
 
 #include "../include/icon6/Peer.hpp"
 #include "../include/icon6/MessagePassingEnvironment.hpp"
+#include "../include/icon6/HostGNS.hpp"
 
 #include "../include/icon6/Host.hpp"
 
@@ -46,6 +47,11 @@ void Debug(const char *file, int line, const char *fmt, ...)
 	fflush(stdout);
 }
 
+Host *Host::MakeGameNetworkingSocketsHost(uint16_t port)
+{
+	return new gns::Host(port);
+}
+
 Host *Host::_InternalGetSetThreadLocalHost(bool set, Host *host)
 {
 	static thread_local Host *_host = nullptr;
@@ -65,20 +71,20 @@ void Host::SetThreadLocalHost(Host *host)
 	_InternalGetSetThreadLocalHost(true, host);
 }
 
-Host::Host(uint16_t port) {}
-
 Host::Host() {}
 
 Host::~Host() { Destroy(); }
 
 void Host::Destroy()
 {
-	DispatchAllEventsFromQueue();
-	WaitStop();
-	DispatchAllEventsFromQueue();
-	peersQueuedSends.clear();
-	delete commandQueue;
-	commandQueue = nullptr;
+	if (commandQueue) {
+		DispatchAllEventsFromQueue();
+		WaitStop();
+		DispatchAllEventsFromQueue();
+		peersQueuedSends.clear();
+		delete commandQueue;
+		commandQueue = nullptr;
+	}
 }
 
 void Host::RunAsync()
@@ -199,31 +205,7 @@ void Host::FlushPeersQueuedSends(int amount)
 	}
 }
 
-static bool _enableSteamNetworkingDebugPrinting = false;
+uint32_t Initialize() { return gns::Initialize(); }
 
-void EnableSteamNetworkingDebug(bool value)
-{
-	_enableSteamNetworkingDebugPrinting = value;
-}
-
-uint32_t Initialize()
-{
-	SteamDatagramErrMsg errMsg;
-	if (!GameNetworkingSockets_Init(nullptr, errMsg)) {
-		DEBUG("GameNetworkingSockets_Init failed: %s",
-			  ((std::string)errMsg).c_str());
-		return -1;
-	}
-
-	SteamNetworkingUtils()->SetDebugOutputFunction(
-		k_ESteamNetworkingSocketsDebugOutputType_Msg,
-		[](ESteamNetworkingSocketsDebugOutputType eType, const char *msg) {
-			if (_enableSteamNetworkingDebugPrinting) {
-				DEBUG("%s     ::: type(%i)", msg, eType);
-			}
-		});
-	return 0;
-}
-
-void Deinitialize() { GameNetworkingSockets_Kill(); }
+void Deinitialize() { gns::Deinitialize(); }
 } // namespace icon6

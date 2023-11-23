@@ -18,27 +18,17 @@
 
 #include <cstring>
 
-#include <steam/steamnetworkingtypes.h>
+#include <steam/steamnetworkingsockets.h>
 
-#include <bitscpp/Endianness.hpp>
-
-#include "../include/icon6/Flags.hpp"
+#include "../include/icon6/ByteReader.hpp"
 
 namespace icon6
 {
-void Flags::GetNetworkOrder(void *ptr) const
+ByteReader::~ByteReader()
 {
-	uint32_t v = bitscpp::HostToNetworkUint(field);
-	memcpy(ptr, &v, sizeof(uint32_t));
-}
-
-uint32_t Flags::GetSteamFlags() const
-{
-	uint32_t ret = 0;
-	if (field & FLAG_RELIABLE)
-		ret |= k_nSteamNetworkingSend_Reliable;
-	if (field & FLAG_NO_NAGLE)
-		ret |= k_nSteamNetworkingSend_NoNagle;
-	return ret;
+	if (packet) {
+		packet->Release();
+		packet = nullptr;
+	}
 }
 } // namespace icon6

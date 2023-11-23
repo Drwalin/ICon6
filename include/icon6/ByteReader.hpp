@@ -19,8 +19,6 @@
 #ifndef ICON6_BYTE_READER_HPP
 #define ICON6_BYTE_READER_HPP
 
-#include <steam/steamnetworkingsockets.h>
-
 #include "../../bitscpp/include/bitscpp/ByteReaderExtensions.hpp"
 
 namespace icon6
@@ -28,38 +26,40 @@ namespace icon6
 class ByteReader : public bitscpp::ByteReader<true>
 {
 public:
-	ISteamNetworkingMessage *packet;
+	union {
+#ifdef ISTEAMNETWORKINGSOCKETS
+		ISteamNetworkingMessage *packet;
+#endif
+		void *_packet;
+	};
 
 public:
+#ifdef ISTEAMNETWORKINGSOCKETS
 	ByteReader(ISteamNetworkingMessage *packet, uint32_t offset)
 		: bitscpp::ByteReader<true>((uint8_t *)packet->m_pData, offset,
 									packet->m_cbSize),
 		  packet(packet)
 	{
 	}
-	~ByteReader()
-	{
-		if (packet) {
-			packet->Release();
-			packet = nullptr;
-		}
-	}
+#endif
+	~ByteReader();
 
 	ByteReader(ByteReader &&o)
-		: bitscpp::ByteReader<true>((uint8_t *)o.packet->m_pData, o.offset,
-									o.packet->m_cbSize),
-		  packet(o.packet)
+		: bitscpp::ByteReader<true>(o.buffer, o.offset, o.size),
+		  _packet(o._packet)
 	{
-		o.packet = nullptr;
+		errorReading_bufferToSmall = o.errorReading_bufferToSmall;
+		o._packet = nullptr;
 	}
-	ByteReader &operator=(ByteReader &&o)
+
+	inline ByteReader &operator=(ByteReader &&o)
 	{
 		this->~ByteReader();
 		new (this) ByteReader(std::move(o));
 		return *this;
 	}
 
-	inline uint8_t *data() { return (uint8_t *)packet->m_pData; }
+	inline uint8_t const *data() { return buffer; }
 
 	ByteReader(ByteReader &) = delete;
 	ByteReader(const ByteReader &) = delete;

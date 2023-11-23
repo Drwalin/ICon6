@@ -24,9 +24,6 @@
 #include <vector>
 #include <variant>
 
-#include <steam/steamnetworkingsockets.h>
-#include <steam/isteamnetworkingutils.h>
-
 #include "Flags.hpp"
 #include "ByteReader.hpp"
 
@@ -148,8 +145,29 @@ public:
 	ExecuteConnectGNS(ExecuteConnectGNS &&) = default;
 	ExecuteConnectGNS &operator=(ExecuteConnectGNS &&) = default;
 
+#pragma pack(push, 1)
+	struct MockSteamNetworkingIPAddr {
+		struct IPv4MappedAddress {
+			uint64_t m_8zeros;
+			uint16_t m_0000;
+			uint16_t m_ffff;
+			uint8_t m_ip[4];
+		};
+		union {
+			uint8_t m_ipv6[16];
+			IPv4MappedAddress m_ipv4;
+		};
+		uint16_t m_port;
+	};
+#pragma pack(pop)
+
 	gns::Host *host;
-	SteamNetworkingIPAddr address;
+	union {
+		MockSteamNetworkingIPAddr mockAddress;
+#ifdef ISTEAMNETWORKINGSOCKETS
+		SteamNetworkingIPAddr address;
+#endif
+	};
 
 	CommandExecutionQueue *executionQueue;
 	ExecuteOnPeer onConnected;

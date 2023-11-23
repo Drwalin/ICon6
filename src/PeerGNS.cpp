@@ -20,6 +20,9 @@
 
 #include <thread>
 
+#include <steam/isteamnetworkingsockets.h>
+#include <steam/isteamnetworkingutils.h>
+
 #include "../include/icon6/MessagePassingEnvironment.hpp"
 #include "../include/icon6/HostGNS.hpp"
 #include "../include/icon6/Command.hpp"
@@ -53,8 +56,8 @@ Peer::~Peer() {}
 bool Peer::_InternalSend(const void *data, uint32_t length, const Flags flags)
 {
 	auto result = ((gns::Host *)host)
-					  ->host->SendMessageToConnection(peer, data, length,
-													  flags.field, nullptr);
+					  ->host->SendMessageToConnection(
+						  peer, data, length, flags.GetSteamFlags(), nullptr);
 	if (result == k_EResultLimitExceeded) {
 		return false;
 	}

@@ -25,11 +25,14 @@ namespace rmi
 MethodInvocationEnvironment::~MethodInvocationEnvironment()
 {
 	objects.clear();
-	classes.clear();
 	for (auto mtd : methodConverters) {
 		delete mtd;
 	}
 	methodConverters.clear();
+	for (auto cls : classes) {
+		delete cls.second;
+	}
+	classes.clear();
 }
 
 Class *MethodInvocationEnvironment::GetClassByName(std::string name)

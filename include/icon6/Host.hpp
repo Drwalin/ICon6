@@ -40,6 +40,8 @@ class MessagePassingEnvironment;
 class Host
 {
 public:
+	static Host *MakeGameNetworkingSocketsHost(uint16_t port = 0);
+
 	void SetMessagePassingEnvironment(MessagePassingEnvironment *mpe);
 	inline MessagePassingEnvironment *GetMessagePassingEnvironment()
 	{
