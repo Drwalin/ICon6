@@ -1,6 +1,8 @@
 
 # ICon6
 
+!!! Superseded by https://github.com/Drwalin/ICon7
+
 Provides secure communication between two endpoints with UPD socket. Any client
 can connect to any other client (calling them servers is purely semantical).
 Networking and encryption is done with ValveSoftware/GameNetworkingSockets.
